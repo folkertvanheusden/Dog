@@ -18,7 +18,9 @@
 #include <libchess/UCIService.h>
 
 
-std::atomic_bool stop { false };
+std::atomic_bool stop  { false };
+
+uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
 	stop = true;
@@ -196,12 +198,6 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::M
 	if (stop)
 		return 0;
 
-	if (depth == 0)
-		return eval(pos);
-
-	if (pos.is_repeat() || is_insufficient_material_draw(pos))
-		return 0;
-
 	auto gs = pos.game_state();
 
 	if (gs != libchess::Position::GameState::IN_PROGRESS) {
@@ -219,6 +215,14 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::M
 
 		return 0;
 	}
+
+	nodes++;
+
+	if (pos.is_repeat() || is_insufficient_material_draw(pos))
+		return 0;
+
+	if (depth == 0)
+		return eval(pos);
 
 	*m = libchess::Move(0);
 
@@ -307,7 +311,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-			printf("# %d: %d %llu (%s)\n", max_depth, score, thought_ms, best_move.to_str().c_str());
+			printf("info depth %d score cp %d nodes %u time %llu nps %llu pv %s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, best_move.to_str().c_str());
 
 			if (thought_ms > search_time / 2)
 				break;
@@ -321,6 +325,8 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	esp_timer_stop(think_timeout_timer);
 
+	printf("# heap free: %u\n", esp_get_free_heap_size());
+
 	return best_move;
 }
 
@@ -330,7 +336,9 @@ void main_task(void *)
 	std::cout.setf(std::ios::unitbuf);
 
 	auto go_handler = [&position, &stop](const libchess::UCIGoParameters & go_parameters) {
-		stop = false;
+		stop  = false;
+
+		nodes = 0;
 
 		int moves_to_go = 40 - position.fullmoves();
 
