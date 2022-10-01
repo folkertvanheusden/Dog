@@ -249,6 +249,8 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 {
 	std::thread time_out([search_time] { vTaskDelay(search_time / portTICK_PERIOD_MS); stop = true; });
 
+	uint64_t t_offset = esp_timer_get_time();
+
 	libchess::Move best_move { 0 };
 
 	int alpha     = -32767;
@@ -291,7 +293,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 			best_move = cur_move;
 
-			printf("# %d: %d (%s)\n", max_depth, score, best_move.to_str().c_str());
+			printf("# %d: %d %llu (%s)\n", max_depth, score, (esp_timer_get_time() - t_offset) / 1000, best_move.to_str().c_str());
 
 			add_alpha = 75;
 			add_beta = 75;
