@@ -20,6 +20,18 @@
 
 std::atomic_bool stop { false };
 
+void think_timeout(void *arg) {
+	stop = true;
+}
+
+const esp_timer_create_args_t think_timeout_pars = {
+            .callback = &think_timeout,
+            .arg = nullptr,
+            .name = "searchto"
+};
+
+esp_timer_handle_t think_timeout_timer;
+
 libchess::Position position { libchess::constants::STARTPOS_FEN };
 
 auto position_handler = [&position](const libchess::UCIPositionParameters & position_parameters) {
@@ -108,7 +120,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"esp32chesstest", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog", "Folkert van Heusden", std::cout, is};
 
 auto stop_handler = [&stop]() { stop = true; };
 
@@ -247,7 +259,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::M
 
 libchess::Move search_it(libchess::Position & pos, const int search_time)
 {
-	std::thread time_out([search_time] { vTaskDelay(search_time / portTICK_PERIOD_MS); stop = true; });
+	esp_timer_start_once(think_timeout_timer, search_time * 1000);
 
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -293,7 +305,12 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 			best_move = cur_move;
 
-			printf("# %d: %d %llu (%s)\n", max_depth, score, (esp_timer_get_time() - t_offset) / 1000, best_move.to_str().c_str());
+			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+
+			printf("# %d: %d %llu (%s)\n", max_depth, score, thought_ms, best_move.to_str().c_str());
+
+			if (thought_ms > search_time / 2)
+				break;
 
 			add_alpha = 75;
 			add_beta = 75;
@@ -302,7 +319,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 		}
 	}
 
-	time_out.join();
+	esp_timer_stop(think_timeout_timer);
 
 	return best_move;
 }
@@ -315,7 +332,41 @@ void main_task(void *)
 	auto go_handler = [&position, &stop](const libchess::UCIGoParameters & go_parameters) {
 		stop = false;
 
-		auto best_move = search_it(position, 1000 /* TODO */);
+		int moves_to_go = 40 - position.fullmoves();
+
+		auto movetime = go_parameters.movetime();
+
+		auto a_w_time = go_parameters.wtime();
+		auto a_b_time = go_parameters.btime();
+
+		int w_time = a_w_time.has_value() ? a_w_time.value() : 0;
+		int b_time = a_b_time.has_value() ? a_b_time.value() : 0;
+
+		auto a_w_inc = go_parameters.winc();
+		auto a_b_inc = go_parameters.binc();
+
+		int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
+		int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
+
+		int think_time = 0;
+
+		if (movetime.has_value())
+			think_time = movetime.value();
+		else {
+			int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
+
+			int time_inc    = position.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
+
+			int ms          = position.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+
+			think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+
+			int limit_duration_min = ms / 15;
+			if (think_time > limit_duration_min)
+				think_time = limit_duration_min;
+		}
+
+		auto best_move = search_it(position, think_time);
 
 		libchess::UCIService::bestmove(best_move.to_str());
 	};
@@ -340,6 +391,8 @@ void main_task(void *)
 extern "C" void app_main()
 {
 	esp_task_wdt_init(30, false);
+
+	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	TaskHandle_t main_task_handle;
 	xTaskCreate(main_task, "chess", 65536, NULL, 10, &main_task_handle);
