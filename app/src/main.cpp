@@ -23,6 +23,8 @@
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
+#include "psq.h"
+
 
 #define LED (GPIO_NUM_2)
 
@@ -199,18 +201,63 @@ int eval_piece(const libchess::PieceType & piece)
 	return values[piece];
 }
 
+int game_phase(const int counts[2][6])
+{
+        const int num_knights = counts[libchess::constants::WHITE][libchess::constants::KNIGHT] + counts[libchess::constants::BLACK][libchess::constants::KNIGHT];
+        const int num_bishops = counts[libchess::constants::WHITE][libchess::constants::BISHOP] + counts[libchess::constants::BLACK][libchess::constants::BISHOP];
+        const int num_rooks   = counts[libchess::constants::WHITE][libchess::constants::ROOK]   + counts[libchess::constants::BLACK][libchess::constants::ROOK];
+        const int num_queens  = counts[libchess::constants::WHITE][libchess::constants::QUEEN]  + counts[libchess::constants::BLACK][libchess::constants::QUEEN];
+
+        // from https://www.chessprogramming.org/Tapered_Eval
+        constexpr int knight_phase = 1;
+        constexpr int bishop_phase = 1;
+        constexpr int rook_phase   = 2;
+        constexpr int queen_phase  = 4;
+
+        constexpr int total_phase = knight_phase * 4 + bishop_phase * 4 + rook_phase * 4 + queen_phase * 2;
+
+        int phase = total_phase;
+
+        phase -= knight_phase * num_knights;
+        phase -= bishop_phase * num_bishops;
+        phase -= rook_phase   * num_rooks;
+        phase -= queen_phase  * num_queens;
+
+        return (phase * 256 + (total_phase / 2)) / total_phase;
+}
+
 int eval(libchess::Position & pos)
 {
-	int score = 0;
+	int counts[2][6] = { 0 };
 
 	for(libchess::Color color : libchess::constants::COLORS) {
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
 
-			int mul = color == libchess::constants::WHITE ? 1 : -1;
+			counts[color][type] += piece_bb.popcount();
+		}
+	}
+
+	int score = 0;
+
+	int phase = game_phase(counts);
+
+	for(libchess::Color color : libchess::constants::COLORS) {
+		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
+
+			int                mul      = color == libchess::constants::WHITE ? 1 : -1;
 
 			// material
 			score += eval_piece(type) * piece_bb.popcount() * mul;
+
+			// psq
+			while (piece_bb) {
+				libchess::Square sq = piece_bb.forward_bitscan();
+				piece_bb.forward_popbit();
+
+				score += psq(sq, color, type, phase) * mul * 402 / 546;
+			}
 		}
 	}
 
