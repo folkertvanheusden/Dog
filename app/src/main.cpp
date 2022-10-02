@@ -298,17 +298,47 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	ssize_t n_moves    = move_list.size();
 
+	int     n_played   = 0;
+
+	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
+
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
 		libchess::Move new_move { 0 };
 
+		bool is_lmr    = false;
+		int  new_depth = depth - 1;
+
+		if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
+			is_lmr = true;
+
+			if (n_played >= lmr_start + 2)
+				new_depth = (depth - 1) * 2 / 3;
+			else
+				new_depth = depth - 2;
+		}
+
 		pos.make_move(move);
 
-		int score = -search(pos, depth - 1, -beta, -alpha, false, max_depth, &new_move);
+		int score = -10000;
+
+		bool check_after_move = pos.in_check();
+
+		if (check_after_move)
+			goto skip_lmr;
+
+		score = -search(pos, new_depth, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+
+		if (is_lmr && score > alpha) {
+		skip_lmr:
+			score = -search(pos, depth - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+		}
 
 		pos.unmake_move();
+
+		n_played++;
 
 		if (score > best_score) {
 			best_score = score;
