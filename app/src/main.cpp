@@ -130,7 +130,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.1", "Folkert van Heusden", std::cout, is};
 
 auto stop_handler = [&stop]() { stop = true; };
 
@@ -463,7 +463,7 @@ extern "C" void app_main()
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	TaskHandle_t main_task_handle;
-	xTaskCreate(main_task, "chess", 65535, NULL, 10, &main_task_handle);
+	xTaskCreate(main_task, "chess", 8192, NULL, 10, &main_task_handle);
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
