@@ -130,7 +130,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.1", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.2", "Folkert van Heusden", std::cout, is};
 
 auto stop_handler = [&stop]() { stop = true; };
 
@@ -235,7 +235,8 @@ int eval(libchess::Position & pos)
 
 	return score;
 }
-int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::Move *const m)
+
+int search(libchess::Position & pos, int depth, int alpha, int beta, const bool is_null_move, const int max_depth, libchess::Move *const m)
 {
 	if (stop)
 		return 0;
@@ -266,6 +267,29 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::M
 	if (depth == 0)
 		return eval(pos);
 
+	bool is_root_position = max_depth == depth;
+
+	bool in_check = pos.in_check();
+
+	///// null move
+	int nm_reduce_depth = depth > 6 ? 4 : 3;
+	if (depth >= nm_reduce_depth && !in_check && !is_root_position && !is_null_move) {
+		pos.make_null_move();
+
+		libchess::Move ignore;
+		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, true, max_depth, &ignore);
+
+		pos.unmake_move();
+
+                if (nmscore >= beta) {
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, false, max_depth, &ignore);
+
+			if (verification >= beta)
+				return beta;
+                }
+	}
+	///////////////
+
 	*m = libchess::Move(0);
 
 	int     best_score = -32767;
@@ -282,7 +306,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, libchess::M
 
 		pos.make_move(move);
 
-		int score = -search(pos, depth - 1, -beta, -alpha, &new_move);
+		int score = -search(pos, depth - 1, -beta, -alpha, false, max_depth, &new_move);
 
 		pos.unmake_move();
 
@@ -321,7 +345,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	for(;;) {
 		libchess::Move cur_move;
-		int score = search(pos, max_depth, alpha, beta, &cur_move);
+		int score = search(pos, max_depth, alpha, beta, false, max_depth, &cur_move);
 
 		if (stop)
 			break;
