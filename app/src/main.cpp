@@ -1,3 +1,7 @@
+// This code was written by Folkert van Heusden.
+// Released under the MIT license.
+// Some parts are not mine (e.g. the inbuf class): see the url
+// above it for details.
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -130,7 +134,6 @@ libchess::UCIService uci_service{"Dog", "Folkert van Heusden", std::cout, is};
 
 auto stop_handler = [&stop]() { stop = true; };
 
-#if 0
 void vTaskGetRunTimeStats()
 {
 	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
@@ -164,7 +167,6 @@ void vTaskGetRunTimeStats()
 
 	vPortFree(pxTaskStatusArray);
 }
-#endif
 
 bool is_check(libchess::Position & pos)
 {
@@ -367,7 +369,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	printf("# heap free: %u\n", esp_get_free_heap_size());
 
-//	vTaskGetRunTimeStats();
+	vTaskGetRunTimeStats();
 
 	return best_move;
 }
