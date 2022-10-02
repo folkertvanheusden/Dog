@@ -5,18 +5,22 @@
 #include <streambuf>
 
 #include <driver/uart.h>
+
+#include <driver/gpio.h>
 #include <esp32/rom/uart.h>
 
 #include <esp_task_wdt.h>
 
 #include <esp_timer.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
+
+#define LED (GPIO_NUM_2)
 
 std::atomic_bool stop  { false };
 
@@ -303,7 +307,7 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	uint64_t t_offset = esp_timer_get_time();
 
-	libchess::Move best_move { 0 };
+	libchess::Move best_move { *pos.legal_move_list().begin() };
 
 	int alpha     = -32767;
 	int beta      = 32767;
@@ -378,6 +382,8 @@ void main_task(void *)
 
 		nodes = 0;
 
+		gpio_set_level(LED, 1);
+
 		int moves_to_go = 40 - position.fullmoves();
 
 		auto movetime = go_parameters.movetime();
@@ -414,6 +420,8 @@ void main_task(void *)
 
 		auto best_move = search_it(position, think_time);
 
+		gpio_set_level(LED, 0);
+
 		libchess::UCIService::bestmove(best_move.to_str());
 	};
 
@@ -437,6 +445,18 @@ void main_task(void *)
 extern "C" void app_main()
 {
 	esp_task_wdt_init(30, false);
+
+	gpio_config_t io_conf { };
+	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
+	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
+	io_conf.pin_bit_mask = (1ULL<<LED);//bit mask of the pins that you want to set,e.g.GPIO18
+	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;//disable pull-down mode
+	io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;//disable pull-up mode
+	esp_err_t error      = gpio_config(&io_conf);//configure GPIO with the given settings
+	if (error!=ESP_OK)
+		printf("error configuring outputs\n");
+
+	gpio_set_level(LED, 0);
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
