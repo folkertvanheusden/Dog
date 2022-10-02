@@ -126,6 +126,42 @@ libchess::UCIService uci_service{"Dog", "Folkert van Heusden", std::cout, is};
 
 auto stop_handler = [&stop]() { stop = true; };
 
+#if 0
+void vTaskGetRunTimeStats()
+{
+	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
+
+	TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+
+	uint32_t ulTotalRunTime = 0;
+	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
+
+	ulTotalRunTime /= 100UL;
+
+	if (ulTotalRunTime > 0) {
+		for(int x = 0; x < uxArraySize; x++) {
+			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
+
+			if (ulStatsAsPercentage > 0UL) {
+				printf("# %s\t%u\t%u%%\t%u\n",
+						pxTaskStatusArray[x].pcTaskName,
+						pxTaskStatusArray[x].ulRunTimeCounter,
+						ulStatsAsPercentage,
+						pxTaskStatusArray[x].usStackHighWaterMark);
+			}
+			else {
+				printf("# %s\t%u\t%u\n",
+						pxTaskStatusArray[x].pcTaskName,
+						pxTaskStatusArray[x].ulRunTimeCounter,
+						pxTaskStatusArray[x].usStackHighWaterMark);
+			}
+		}
+	}
+
+	vPortFree(pxTaskStatusArray);
+}
+#endif
+
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -327,6 +363,8 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	printf("# heap free: %u\n", esp_get_free_heap_size());
 
+//	vTaskGetRunTimeStats();
+
 	return best_move;
 }
 
@@ -403,7 +441,7 @@ extern "C" void app_main()
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	TaskHandle_t main_task_handle;
-	xTaskCreate(main_task, "chess", 65536, NULL, 10, &main_task_handle);
+	xTaskCreate(main_task, "chess", 65535, NULL, 10, &main_task_handle);
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
