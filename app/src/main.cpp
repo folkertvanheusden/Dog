@@ -24,6 +24,7 @@
 #include <libchess/UCIService.h>
 
 #include "psq.h"
+#include "tt.h"
 
 
 #define LED (GPIO_NUM_2)
@@ -133,6 +134,8 @@ class inbuf : public std::streambuf {
 inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v0.2", "Folkert van Heusden", std::cout, is};
+
+tt tti(65536);
 
 auto stop_handler = []() { stop = true; };
 
@@ -478,6 +481,15 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Mov
 	return best_score;
 }
 
+bool is_move_in_movelist(libchess::MoveList & move_list, libchess::Move & m)
+{
+	return std::any_of(move_list.begin(), move_list.end(), [m](const libchess::Move & move) {
+			return move.from_square() == m.from_square() &&
+			move.to_square() == m.to_square() &&
+			move.promotion_piece_type() == m.promotion_piece_type();
+			});
+}
+
 int search(libchess::Position & pos, int depth, int alpha, int beta, const bool is_null_move, const int max_depth, libchess::Move *const m)
 {
 	if (stop)
@@ -511,7 +523,48 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	bool is_root_position = max_depth == depth;
 
-	bool in_check = pos.in_check();
+	bool in_check         = pos.in_check();
+
+	std::optional<libchess::MoveList> move_list { };
+
+	int start_alpha       = alpha;
+
+	// TT //
+	std::optional<libchess::Move> tt_move { };
+	uint64_t       hash        = pos.hash();
+	std::optional<tt_entry> te = tti.lookup(hash);
+
+        if (te.has_value()) {
+		if (te.value().data_._data.m)
+			tt_move = libchess::Move(te.value().data_._data.m);
+
+		move_list = pos.pseudo_legal_move_list();
+
+		if (tt_move.has_value() && (!is_move_in_movelist(move_list.value(), tt_move.value()) || pos.is_legal_generated_move(tt_move.value()) == false)) {
+			tt_move.reset();
+		}
+		else if (te.value().data_._data.depth >= depth) {
+			bool use = false;
+
+			int csd = max_depth - depth;
+			int score = te.value().data_._data.score;
+			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
+
+			if (te.value().data_._data.flags == EXACT)
+				use = true;
+			else if (te.value().data_._data.flags == LOWERBOUND && work_score >= beta)
+				use = true;
+			else if (te.value().data_._data.flags == UPPERBOUND && work_score <= alpha)
+				use = true;
+
+			if (use && (!is_root_position || tt_move.has_value())) {
+				*m = tt_move.value();
+
+				return work_score;
+			}
+		}
+	}
+	////////
 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
@@ -536,18 +589,20 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	int     best_score = -32767;
 
-	auto    move_list  = pos.pseudo_legal_move_list();
+	if (move_list.has_value() == false)
+		move_list  = pos.pseudo_legal_move_list();
 
 	sort_movelist_compare smc(&pos);
-	//smc.add_first_move(tt_move);
-	//smc.add_first_move(iid_move);
-	sort_movelist(pos, move_list, smc);
+	if (tt_move.has_value())
+		smc.add_first_move(tt_move.value());
+
+	sort_movelist(pos, move_list.value(), smc);
 
 	int     n_played   = 0;
 
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
-	for(auto move : move_list) {
+	for(auto move : move_list.value()) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
@@ -597,6 +652,18 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 					break;
 			}
 		}
+	}
+
+	if (stop == false) {
+		tt_entry_flag flag = EXACT;
+
+		if (best_score <= start_alpha)
+			flag = UPPERBOUND;
+		else if (best_score >= beta)
+			flag = LOWERBOUND;
+
+		tti.store(hash, flag, depth, best_score, 
+				best_score > start_alpha || tt_move.has_value() == false ? *m : tt_move.value());
 	}
 
 	return best_score;
