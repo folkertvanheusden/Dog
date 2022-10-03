@@ -720,8 +720,12 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-			if (!is_t2)
+			if (!is_t2) {
+				if (thought_ms == 0)
+					thought_ms = 1;
+
 				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv %s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, best_move.to_str().c_str());
+			}
 
 			if (thought_ms > search_time / 2)
 				break;
