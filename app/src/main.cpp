@@ -46,7 +46,7 @@ esp_timer_handle_t think_timeout_timer;
 
 libchess::Position position { libchess::constants::STARTPOS_FEN };
 
-auto position_handler = [&position](const libchess::UCIPositionParameters & position_parameters) {
+auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	position = libchess::Position { position_parameters.fen() };
 
 	if (!position_parameters.move_list())
@@ -134,7 +134,7 @@ inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v0.2", "Folkert van Heusden", std::cout, is};
 
-auto stop_handler = [&stop]() { stop = true; };
+auto stop_handler = []() { stop = true; };
 
 void vTaskGetRunTimeStats()
 {
@@ -170,6 +170,75 @@ void vTaskGetRunTimeStats()
 	vPortFree(pxTaskStatusArray);
 }
 
+int eval_piece(const libchess::PieceType & piece)
+{
+	constexpr int values[] = { 100, 325, 325, 500, 950, 10000 };
+
+	return values[piece];
+}
+
+class sort_movelist_compare
+{
+private:
+        libchess::Position       *const p;
+        std::vector<libchess::Move>     first_moves;
+        std::optional<libchess::Square> previous_move_target;
+
+public:
+        sort_movelist_compare(libchess::Position *const p) : p(p) {
+                if (p->previous_move())
+                        previous_move_target = p->previous_move()->to_square();
+        }
+
+        void add_first_move(const libchess::Move move) {
+                if (move.value())
+                        first_moves.push_back(move);
+        }
+
+        int move_evaluater(const libchess::Move move) const {
+                for(int i=0; i<first_moves.size(); i++) {
+                        if (move == first_moves.at(i))
+                                return INT_MAX - i;
+                }
+
+                auto piece_from = p->piece_on(move.from_square());
+		if (piece_from.has_value() == false)  // should not happen but is possible due to psuedo_legal_moves
+			return -1;
+
+                int score       = 0;
+
+                if (p->is_promotion_move(move))
+                        score += eval_piece(*move.promotion_piece_type()) << 18;
+
+                if (p->is_capture_move(move)) {
+                        auto piece_to = p->piece_on(move.to_square());
+			if (piece_to.has_value() == false)  // cannot happen
+				return -1;
+
+                        // victim
+                        score += (move.type() == libchess::Move::Type::ENPASSANT ? 100 : eval_piece(piece_to->type())) << 18;
+
+                        if (piece_from->type() != libchess::constants::KING)
+                                score += (950 - eval_piece(piece_from->type())) << 8;
+
+//                      if (move.to_square() == previous_move_target)
+//                              score += 100 << 8;
+                }
+                else {
+//                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
+                }
+
+                score += -psq(move.from_square(), piece_from->color(), piece_from->type(), 0) + psq(move.to_square(), piece_from->color(), piece_from->type(), 0);
+
+                return score;
+        }
+};
+
+void sort_movelist(libchess::Position & pos, libchess::MoveList & move_list, sort_movelist_compare & smc)
+{
+	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+}
+
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -192,13 +261,6 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		return false;
 
 	return true;
-}
-
-int eval_piece(const libchess::PieceType & piece)
-{
-	constexpr int values[] = { 100, 325, 325, 500, 950, 10000 };
-
-	return values[piece];
 }
 
 int game_phase(const int counts[2][6])
@@ -343,7 +405,10 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	auto    move_list  = pos.pseudo_legal_move_list();
 
-	ssize_t n_moves    = move_list.size();
+	sort_movelist_compare smc(&pos);
+	//smc.add_first_move(tt_move);
+	//smc.add_first_move(iid_move);
+	sort_movelist(pos, move_list, smc);
 
 	int     n_played   = 0;
 
@@ -480,7 +545,7 @@ void main_task(void *)
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	auto go_handler = [&position, &stop](const libchess::UCIGoParameters & go_parameters) {
+	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
 		stop  = false;
 
 		nodes = 0;
