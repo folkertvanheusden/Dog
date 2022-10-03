@@ -8,6 +8,11 @@
 #include <iostream>
 #include <streambuf>
 
+#ifdef linux
+#include <limits.h>
+#include <pthread.h>
+#include <sys/time.h>
+#else
 #include <driver/uart.h>
 
 #include <driver/gpio.h>
@@ -19,6 +24,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#endif
 
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
@@ -26,8 +32,6 @@
 #include "psq.h"
 #include "tt.h"
 
-
-#define LED (GPIO_NUM_2)
 
 std::atomic_bool stop  { false };
 
@@ -37,6 +41,9 @@ void think_timeout(void *arg) {
 	stop = true;
 }
 
+#ifdef ESP32
+#define LED (GPIO_NUM_2)
+
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
             .arg = nullptr,
@@ -44,6 +51,9 @@ const esp_timer_create_args_t think_timeout_pars = {
 };
 
 esp_timer_handle_t think_timeout_timer;
+#else
+#define LED 0
+#endif
 
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
@@ -115,7 +125,9 @@ class inbuf : public std::streambuf {
 		if (c >= 0)
 			break;
 
+#ifdef ESP32
 		vTaskDelay(1);
+#endif
 	}
 
 	buffer[4] = c;
@@ -140,6 +152,7 @@ tt tti(65536);
 
 auto stop_handler = []() { stop = true; };
 
+#ifdef ESP32
 void vTaskGetRunTimeStats()
 {
 	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
@@ -173,10 +186,12 @@ void vTaskGetRunTimeStats()
 
 	vPortFree(pxTaskStatusArray);
 }
+#endif
 
 int eval_piece(const libchess::PieceType & piece)
 {
-	constexpr int values[] = { 100, 325, 325, 500, 950, 10000 };
+	// constexpr int values[] = { 100, 325, 325, 500, 950, 10000 };
+	constexpr int values[] = { 108, 433, 436, 697, 1390, 10000 };
 
 	return values[piece];
 }
@@ -327,6 +342,66 @@ int eval(libchess::Position & pos)
 		}
 	}
 
+	if (phase >= 224) { // endgame?
+		int scores[] = { 20, 10, 5, 0, 0, 5, 10, 20 };  
+
+		libchess::Square kw = pos.king_square(libchess::constants::WHITE);
+		libchess::Square kb = pos.king_square(libchess::constants::BLACK);
+
+		score += scores[kb.rank()];
+		score += scores[kb.file()];
+
+		score -= scores[kw.rank()];
+		score -= scores[kw.file()];
+	}
+
+	// number of bishops
+	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * 41;
+
+	// 8 pawns: not good
+	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 8) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 8)) * 13;
+
+	// 0 pawns: also not good
+	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * -2;
+
+	const auto bb_pawns_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
+	const auto bb_pawns_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
+
+	int n_pawns_w[8] { 0 }, n_pawns_b[8] { 0 };
+
+	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
+		n_pawns_w[x] = (bb_pawns_w & libchess::lookups::file_mask(x)).popcount();
+
+		n_pawns_b[x] = (bb_pawns_b & libchess::lookups::file_mask(x)).popcount();
+	}
+
+	const auto bb_rooks_w = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE);
+	const auto bb_rooks_b = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK);
+
+	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
+		// double pawns
+		if (n_pawns_w[x] >= 2)
+			score -= (n_pawns_w[x] - 1) * 15;
+		if (n_pawns_b[x] >= 2)
+			score += (n_pawns_b[x] - 1) * 15;
+
+		// rooks on open files
+		int n_rooks_w = (bb_rooks_w & libchess::lookups::file_mask(x)).popcount();
+		int n_rooks_b = (bb_rooks_b & libchess::lookups::file_mask(x)).popcount();
+
+		score += ((n_pawns_w[x] == 0 && n_rooks_w > 0) - (n_pawns_b[x] == 0 && n_rooks_b > 0)) * 30;
+
+		// isolated pawns
+		int wleft = x > 0 ? n_pawns_w[x - 1] : 0;
+		int wright = x < 7 ? n_pawns_w[x + 1] : 0;
+		score += (wleft == 0 && wright == 0) * -18;
+
+		int bleft = x > 0 ? n_pawns_b[x - 1] : 0;
+		int bright = x < 7 ? n_pawns_b[x + 1] : 0;
+		score -= (bleft == 0 && bright == 0) * -18;
+	}
+
+	/*
 	if (pos.side_to_move() == libchess::constants::WHITE) {
 		score += pos.legal_move_list().size();
 
@@ -342,6 +417,7 @@ int eval(libchess::Position & pos)
 		score += pos.legal_move_list().size();
 		pos.unmake_move();
 	}
+	*/
 
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		return -score;
@@ -365,8 +441,11 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 
 int md = 0;
 
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Move *m)
+int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 {
+	if (stop)
+		return 0;
+
 	auto gs = pos.game_state();
 
 	if (gs != libchess::Position::GameState::IN_PROGRESS) {
@@ -393,10 +472,12 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Mov
 	if (qsdepth > md) {
 		md = qsdepth;
 
+#ifdef ESP32
 		printf("# heap free: %u\n", esp_get_free_heap_size());
 		vTaskGetRunTimeStats();
 
 		printf("# depth: %d\n", qsdepth);
+#endif
 	}
 
 	int  best_score = -32767;
@@ -453,15 +534,12 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Mov
 
 		n_played++;
 
-		libchess::Move curm { 0 };
-		int score = -qs(pos, -beta, -alpha, qsdepth + 1, &curm);
+		int score = -qs(pos, -beta, -alpha, qsdepth + 1);
 
 		pos.unmake_move();
 
 		if (score > best_score) {
 			best_score = score;
-
-			*m = move;
 
 			if (score > alpha) {
 				alpha = score;
@@ -497,7 +575,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		return 0;
 
 	if (depth == 0)
-		return qs(pos, alpha, beta, max_depth, m);
+		return qs(pos, alpha, beta, max_depth);
 
 	auto gs = pos.game_state();
 
@@ -519,10 +597,10 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	nodes++;
 
-	if (pos.is_repeat() || is_insufficient_material_draw(pos))
-		return 0;
-
 	bool is_root_position = max_depth == depth;
+
+	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
+		return 0;
 
 	bool in_check         = pos.in_check();
 
@@ -655,7 +733,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		}
 	}
 
-	if (stop == false) {
+	if (stop == false && *m != libchess::Move(0)) {
 		tt_entry_flag flag = EXACT;
 
 		if (best_score <= start_alpha)
@@ -670,16 +748,30 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 	return best_score;
 }
 
+#ifdef linux
+uint64_t esp_timer_get_time()
+{
+	struct timeval tv;
+
+	gettimeofday(&tv, nullptr);
+
+	return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+#endif
+
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2)
 {
-	esp_timer_start_once(think_timeout_timer, search_time * 1000);
+#ifdef ESP32
+	if (is_t2 == false)
+		esp_timer_start_once(think_timeout_timer, search_time * 1000);
+#endif
 
 	uint64_t t_offset = esp_timer_get_time();
 
 	libchess::Move best_move { *pos->legal_move_list().begin() };
 
 	int alpha     = -32767;
-	int beta      = 32767;
+	int beta      =  32767;
 
 	int add_alpha = 75;
 	int add_beta  = 75;
@@ -687,7 +779,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	int max_depth = 1 + is_t2;
 
 	for(;;) {
-		libchess::Move cur_move;
+		libchess::Move cur_move { 0 };
 		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move);
 
 		if (stop)
@@ -737,15 +829,21 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		}
 	}
 
-	esp_timer_stop(think_timeout_timer);
-
+#ifdef ESP32
 	if (!is_t2) {
+		esp_timer_stop(think_timeout_timer);
+
 		printf("# heap free: %u\n", esp_get_free_heap_size());
 
 		vTaskGetRunTimeStats();
 	}
+#endif
 
 	return best_move;
+}
+
+void gpio_set_level(int a, int b)
+{
 }
 
 void main_task(void *)
@@ -826,6 +924,7 @@ void main_task(void *)
 	printf("TASK TERMINATED\n");
 }
 
+#ifdef ESP32
 extern "C" void app_main()
 {
 	esp_task_wdt_init(30, false);
@@ -853,3 +952,11 @@ extern "C" void app_main()
 		vTaskDelay(1000);
 	}
 }
+#else
+int main(int argc, char *argv[])
+{
+	main_task(nullptr);
+
+	return 0;
+}
+#endif
