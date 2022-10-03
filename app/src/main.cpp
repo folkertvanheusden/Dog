@@ -45,16 +45,17 @@ const esp_timer_create_args_t think_timeout_pars = {
 
 esp_timer_handle_t think_timeout_timer;
 
-libchess::Position position { libchess::constants::STARTPOS_FEN };
+libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
+libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
-	position = libchess::Position { position_parameters.fen() };
+	positiont1 = libchess::Position { position_parameters.fen() };
 
 	if (!position_parameters.move_list())
 		return;
 
 	for (auto & move_str : position_parameters.move_list()->move_list())
-		position.make_move(*libchess::Move::from(move_str));
+		positiont1.make_move(*libchess::Move::from(move_str));
 };
 
 
@@ -395,7 +396,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Mov
 		printf("# heap free: %u\n", esp_get_free_heap_size());
 		vTaskGetRunTimeStats();
 
-		printf("%d\n", qsdepth);
+		printf("# depth: %d\n", qsdepth);
 	}
 
 	int  best_score = -32767;
@@ -669,13 +670,13 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 	return best_score;
 }
 
-libchess::Move search_it(libchess::Position & pos, const int search_time)
+libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2)
 {
 	esp_timer_start_once(think_timeout_timer, search_time * 1000);
 
 	uint64_t t_offset = esp_timer_get_time();
 
-	libchess::Move best_move { *pos.legal_move_list().begin() };
+	libchess::Move best_move { *pos->legal_move_list().begin() };
 
 	int alpha     = -32767;
 	int beta      = 32767;
@@ -683,11 +684,11 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 	int add_alpha = 75;
 	int add_beta  = 75;
 
-	int max_depth = 1;
+	int max_depth = 1 + is_t2;
 
 	for(;;) {
 		libchess::Move cur_move;
-		int score = search(pos, max_depth, alpha, beta, false, max_depth, &cur_move);
+		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move);
 
 		if (stop)
 			break;
@@ -719,7 +720,8 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-			printf("info depth %d score cp %d nodes %u time %llu nps %llu pv %s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, best_move.to_str().c_str());
+			if (!is_t2)
+				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv %s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, best_move.to_str().c_str());
 
 			if (thought_ms > search_time / 2)
 				break;
@@ -733,9 +735,11 @@ libchess::Move search_it(libchess::Position & pos, const int search_time)
 
 	esp_timer_stop(think_timeout_timer);
 
-	printf("# heap free: %u\n", esp_get_free_heap_size());
+	if (!is_t2) {
+		printf("# heap free: %u\n", esp_get_free_heap_size());
 
-	vTaskGetRunTimeStats();
+		vTaskGetRunTimeStats();
+	}
 
 	return best_move;
 }
@@ -752,7 +756,7 @@ void main_task(void *)
 
 		gpio_set_level(LED, 1);
 
-		int moves_to_go = 40 - position.fullmoves();
+		int moves_to_go = 40 - positiont1.fullmoves();
 
 		auto movetime = go_parameters.movetime();
 
@@ -775,9 +779,9 @@ void main_task(void *)
 		else {
 			int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
 
-			int time_inc    = position.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
+			int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
 
-			int ms          = position.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+			int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
 
 			think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 
@@ -786,7 +790,15 @@ void main_task(void *)
 				think_time = limit_duration_min;
 		}
 
-		auto best_move = search_it(position, think_time);
+		positiont2 = positiont1;
+
+		std::thread t2(search_it, &positiont2, think_time, true);
+
+		auto best_move = search_it(&positiont1, think_time, false);
+
+		printf("# Waiting for thread 2 to terminate...\n");
+
+		t2.join();
 
 		gpio_set_level(LED, 0);
 
