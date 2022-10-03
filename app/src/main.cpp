@@ -345,10 +345,146 @@ int eval(libchess::Position & pos)
 	return score;
 }
 
+libchess::MoveList gen_qs_moves(libchess::Position & pos)
+{
+	libchess::Color side = pos.side_to_move();
+
+	if (pos.checkers_to(side))
+		return pos.pseudo_legal_move_list();
+
+	libchess::MoveList ml;
+	pos.generate_promotions(ml, side);
+	pos.generate_capture_moves(ml, side);
+
+	return ml;
+}
+
+int md = 0;
+
+int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, libchess::Move *m)
+{
+	auto gs = pos.game_state();
+
+	if (gs != libchess::Position::GameState::IN_PROGRESS) {
+		if (gs == libchess::Position::GameState::CHECKMATE)
+			return -9999 + qsdepth;
+
+		if (gs == libchess::Position::GameState::STALEMATE)
+			return 0;
+
+		if (gs == libchess::Position::GameState::FIFTY_MOVES)
+			return 0;
+
+		if (gs == libchess::Position::GameState::THREEFOLD_REPETITION)
+			return 0;
+
+		return 0;
+	}
+
+	nodes++;
+
+	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
+		return 0;
+
+	if (qsdepth > md) {
+		md = qsdepth;
+
+		printf("# heap free: %u\n", esp_get_free_heap_size());
+		vTaskGetRunTimeStats();
+
+		printf("%d\n", qsdepth);
+	}
+
+	int  best_score = -32767;
+
+	bool in_check   = pos.in_check();
+
+	if (!in_check) {
+		best_score = eval(pos);
+
+		if (best_score > alpha && best_score >= beta)
+			return best_score;
+
+		int BIG_DELTA = 975;
+
+		if (pos.is_promotion_move(*pos.previous_move()))
+			BIG_DELTA += 775;
+
+		if (best_score < alpha - BIG_DELTA)
+			return alpha;
+
+		if (alpha < best_score)
+			alpha = best_score;
+	}
+
+	int  n_played    = 0;
+
+	auto move_list   = gen_qs_moves(pos);
+
+	sort_movelist_compare smc(&pos);
+
+	sort_movelist(pos, move_list, smc);
+
+	for(auto move : move_list) {
+		if (pos.is_legal_generated_move(move) == false)
+			continue;
+
+		if (!in_check && pos.is_capture_move(move)) {
+			auto piece_to    = pos.piece_on(move.to_square());
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? 100 : eval_piece(piece_to->type());
+
+			auto piece_from  = pos.piece_on(move.from_square());
+			int  eval_killer = eval_piece(piece_from->type());
+
+			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
+				continue;
+		}
+
+		pos.make_move(move);
+
+		if (pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move())) {
+			pos.unmake_move();
+			continue;
+		}
+
+		n_played++;
+
+		libchess::Move curm { 0 };
+		int score = -qs(pos, -beta, -alpha, qsdepth + 1, &curm);
+
+		pos.unmake_move();
+
+		if (score > best_score) {
+			best_score = score;
+
+			*m = move;
+
+			if (score > alpha) {
+				alpha = score;
+
+				if (score >= beta)
+					break;
+			}
+		}
+	}
+
+	if (n_played == 0) {
+		if (in_check)
+			best_score = -10000 + qsdepth;
+		else if (best_score == -32767)
+			best_score = eval(pos);
+	}
+
+	return best_score;
+}
+
 int search(libchess::Position & pos, int depth, int alpha, int beta, const bool is_null_move, const int max_depth, libchess::Move *const m)
 {
 	if (stop)
 		return 0;
+
+	if (depth == 0)
+		return qs(pos, alpha, beta, max_depth, m);
 
 	auto gs = pos.game_state();
 
@@ -372,9 +508,6 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	if (pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
-
-	if (depth == 0)
-		return eval(pos);
 
 	bool is_root_position = max_depth == depth;
 
@@ -629,7 +762,7 @@ extern "C" void app_main()
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	TaskHandle_t main_task_handle;
-	xTaskCreate(main_task, "chess", 8192, NULL, 10, &main_task_handle);
+	xTaskCreate(main_task, "chess", 4096, NULL, 10, &main_task_handle);
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
