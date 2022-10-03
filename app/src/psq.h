@@ -1,3 +1,3 @@
 #include "libchess/Position.h"
 
-int psq(libchess::Square sq, libchess::Color c, libchess::PieceType t, int phase);
+int psq(const libchess::Square sq, const libchess::Color c, const libchess::PieceType t, const int phase);

@@ -4,7 +4,7 @@
 #include "libchess/Position.h"
 
 // taken from dorpsgek
-int PawnPSTMG[64] = {
+constexpr int PawnPSTMG[64] = {
 //A1                                    H1
       0,   0,   0,   0,   0,   0,   0,   0,
      -1,  -7, -11, -35, -13,   5,   3,  -5,
@@ -17,7 +17,7 @@ int PawnPSTMG[64] = {
 //A8                                    H8
 };
 
-int PawnPSTEG[64] = {
+constexpr int PawnPSTEG[64] = {
       0,   0,   0,   0,   0,   0,   0,   0,
     -17, -17, -17, -17, -17, -17, -17, -17,
     -11, -11, -11, -11, -11, -11, -11, -11,
@@ -28,7 +28,7 @@ int PawnPSTEG[64] = {
       0,   0,   0,   0,   0,   0,   0,   0
 };
 
-int KnightPSTMG[64] = {
+constexpr int KnightPSTMG[64] = {
     -99, -30, -66, -64, -29, -19, -61, -81,
     -56, -31, -28,  -1,  -7, -20, -42, -11,
     -38, -16,   0,  14,   8,   3,   3, -42,
@@ -39,7 +39,7 @@ int KnightPSTMG[64] = {
     -60,   0,   0,   0,   0,   0,   0,   0
 };
 
-int KnightPSTEG[64] = {
+constexpr int KnightPSTEG[64] = {
     -99, -99, -94, -88, -88, -94, -99, -99,
     -81, -62, -49, -43, -43, -49, -62, -81,
     -46, -27, -15,  -9,  -9, -15, -27, -46,
@@ -50,7 +50,7 @@ int KnightPSTEG[64] = {
     -21,  -3,  10,  16,  16,  10,  -3, -21
 };
 
-int BishopPSTMG[64] = {
+constexpr int BishopPSTMG[64] = {
      -7,  12,  -8, -37, -31,  -8, -45, -67,
      15,   5,  13, -10,   1,   2,   0,  15,
       5,  12,  14,  13,  10,  -1,   3,   4,
@@ -61,7 +61,7 @@ int BishopPSTMG[64] = {
       0,   0,   0,   0,   0,   0,   0,   0
 };
 
-int BishopPSTEG[64] = {
+constexpr int BishopPSTEG[64] = {
     -27, -21, -17, -15, -15, -17, -21, -27,
     -10,  -4,   0,   2,   2,   0,  -4, -10,
       2,   8,  12,  14,  14,  12,   8,   2,
@@ -72,7 +72,7 @@ int BishopPSTEG[64] = {
      -2,   4,   8,  10,  10,   8,   4,  -2
 };
 
-int RookPSTMG[64] = {
+constexpr int RookPSTMG[64] = {
      -2,  -1,   3,   1,   2,   1,   4,  -8,
     -26,  -6,   2,  -2,   2, -10,  -1, -29,
     -16,   0,   3,  -3,   8,  -1,  12,   3,
@@ -83,7 +83,7 @@ int RookPSTMG[64] = {
      84,   0,   0,  37, 124,   0,   0, 153
 };
 
-int RookPSTEG[64] = {
+constexpr int RookPSTEG[64] = {
     -32, -31, -30, -29, -29, -30, -31, -32,
     -27, -25, -24, -24, -24, -24, -25, -27,
     -15, -13, -12, -12, -12, -12, -13, -15,
@@ -94,7 +94,7 @@ int RookPSTEG[64] = {
      16,  17,  18,  19,  19,  18,  17,  16
 };
 
-int QueenPSTMG[64] = {
+constexpr int QueenPSTMG[64] = {
       1, -10, -11,   3, -15, -51, -83, -13,
      -7,   3,   2,   5,  -1, -10,  -7,  -2,
     -11,   0,  12,   2,   8,  11,   7,  -6,
@@ -105,7 +105,7 @@ int QueenPSTMG[64] = {
     -13,   6, -42,   0,  29,   0,   0, 102
 };
 
-int QueenPSTEG[64] = {
+constexpr int QueenPSTEG[64] = {
     -61, -55, -52, -50, -50, -52, -55, -61,
     -31, -26, -22, -21, -21, -22, -26, -31,
      -8,  -3,   1,   3,   3,   1,  -3,  -8,
@@ -116,7 +116,7 @@ int QueenPSTEG[64] = {
      12,  17,  21,  23,  23,  21,  17,  12
 };
 
-int KingPSTMG[64] = {
+constexpr int KingPSTMG[64] = {
       0,   0,   0,  -9,   0,  -9,  25,   0,
      -9,  -9,  -9,  -9,  -9,  -9,  -9,  -9,
      -9,  -9,  -9,  -9,  -9,  -9,  -9,  -9,
@@ -127,7 +127,7 @@ int KingPSTMG[64] = {
      -9,  -9,  -9,  -9,  -9,  -9,  -9,  -9
 };
 
-int KingPSTEG[64] = {
+constexpr int KingPSTEG[64] = {
     -34, -30, -28, -27, -27, -28, -30, -34,
     -17, -13, -11, -10, -10, -11, -13, -17,
      -2,   2,   4,   5,   5,   4,   2,  -2,
@@ -138,12 +138,12 @@ int KingPSTEG[64] = {
      42,  46,  48,  50,  50,  48,  46,  42
 };
 
-int *const idx[2][8] = {
+const int *const idx[2][8] = {
 	{ PawnPSTMG, KnightPSTMG, BishopPSTMG, RookPSTMG, QueenPSTMG, KingPSTMG},
 	{ PawnPSTEG, KnightPSTEG, BishopPSTEG, RookPSTEG, QueenPSTEG, KingPSTEG}
 };
 
-int psq(libchess::Square sq, libchess::Color c, libchess::PieceType t, int phase)
+int psq(const libchess::Square sq, const libchess::Color c, const libchess::PieceType t, const int phase)
 {
 	const int pos = sq;
 	const int index = c == libchess::constants::WHITE ? pos : (pos ^ 56);
