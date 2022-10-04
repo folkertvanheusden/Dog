@@ -23,6 +23,7 @@
 #include <esp_timer.h>
 
 #include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 #endif
 
@@ -37,7 +38,11 @@
 
 std::atomic_bool stop  { false };
 
-#ifndef linux
+#ifdef linux
+std::thread                *ponder_thread_handle { nullptr };
+#else
+SemaphoreHandle_t           mutex { xSemaphoreCreateMutex() };
+
 std::optional<TaskHandle_t> ponder_thread_handle { };
 #endif
 
@@ -751,32 +756,56 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
+	// TODO: there's a tiny period where the (this) thread is
+	// running and the semaphore is not taken; if is possible
+	// (in theory) that the ponder_thread is stopped before
+	// it is really started
+	xSemaphoreTake(mutex, portMAX_DELAY);
+
+	printf("# pondering started\n");
+
 	search_it(&positiont2, 2147483647, true);
 
-#ifndef linux
-	for(;!stop;)
-		vTaskDelay(1);
-#endif
+	printf("# pondering stopping\n");
+
+	xSemaphoreGive(mutex);
+
+	vTaskDelete(nullptr);
 }
 
 void start_ponder()
 {
-#ifndef linux
+	stop                      = false;
+
+#ifdef linux
+	ponder_thread_handle      = new std::thread(ponder_thread, nullptr);
+#else
 	TaskHandle_t temp;
 
-	xTaskCreatePinnedToCore(ponder_thread, "PT", 16384, NULL, 0, &temp, 1);
+	xTaskCreatePinnedToCore(ponder_thread, "PT", 16384, NULL, 0, &temp, 0);
 
-	ponder_thread_handle = temp;
+	ponder_thread_handle      = temp;
 #endif
 }
 
 void stop_ponder()
 {
-#ifndef linux
-	if (ponder_thread_handle.has_value()) {
-		vTaskDelete(ponder_thread_handle.value());
+#ifdef linux
+	if (ponder_thread_handle) {
+		stop = true;
 
+		ponder_thread_handle->join();
+		delete ponder_thread_handle;
+	}
+#else
+	if (ponder_thread_handle.has_value()) {
+		stop = true;
+
+		xSemaphoreTake(mutex, portMAX_DELAY);
 		ponder_thread_handle.reset();
+		xSemaphoreGive(mutex);
+
+		printf("# pondering stopped\n");
 	}
 #endif
 }
