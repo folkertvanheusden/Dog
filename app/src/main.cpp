@@ -29,6 +29,8 @@
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
+#include "eval.h"
+#include "eval_par.h"
 #include "psq.h"
 #include "tt.h"
 
@@ -192,14 +194,6 @@ void vTaskGetRunTimeStats()
 }
 #endif
 
-int eval_piece(const libchess::PieceType & piece)
-{
-	// constexpr int values[] = { 100, 325, 325, 500, 950, 10000 };
-	constexpr int values[] = { 108, 433, 436, 697, 1390, 10000 };
-
-	return values[piece];
-}
-
 class sort_movelist_compare
 {
 private:
@@ -231,7 +225,7 @@ public:
                 int score       = 0;
 
                 if (p->is_promotion_move(move))
-                        score += eval_piece(*move.promotion_piece_type()) << 18;
+                        score += eval_piece(*move.promotion_piece_type(), default_parameters) << 18;
 
                 if (p->is_capture_move(move)) {
                         auto piece_to = p->piece_on(move.to_square());
@@ -239,10 +233,10 @@ public:
 				return -1;
 
                         // victim
-                        score += (move.type() == libchess::Move::Type::ENPASSANT ? 100 : eval_piece(piece_to->type())) << 18;
+                        score += (move.type() == libchess::Move::Type::ENPASSANT ? default_parameters.tune_pawn.value() : eval_piece(piece_to->type(), default_parameters)) << 18;
 
                         if (piece_from->type() != libchess::constants::KING)
-                                score += (950 - eval_piece(piece_from->type())) << 8;
+                                score += (950 - eval_piece(piece_from->type(), default_parameters)) << 8;
 
 //                      if (move.to_square() == previous_move_target)
 //                              score += 100 << 8;
@@ -286,149 +280,6 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 	return true;
 }
 
-int game_phase(const int counts[2][6])
-{
-        const int num_knights = counts[libchess::constants::WHITE][libchess::constants::KNIGHT] + counts[libchess::constants::BLACK][libchess::constants::KNIGHT];
-        const int num_bishops = counts[libchess::constants::WHITE][libchess::constants::BISHOP] + counts[libchess::constants::BLACK][libchess::constants::BISHOP];
-        const int num_rooks   = counts[libchess::constants::WHITE][libchess::constants::ROOK]   + counts[libchess::constants::BLACK][libchess::constants::ROOK];
-        const int num_queens  = counts[libchess::constants::WHITE][libchess::constants::QUEEN]  + counts[libchess::constants::BLACK][libchess::constants::QUEEN];
-
-        // from https://www.chessprogramming.org/Tapered_Eval
-        constexpr int knight_phase = 1;
-        constexpr int bishop_phase = 1;
-        constexpr int rook_phase   = 2;
-        constexpr int queen_phase  = 4;
-
-        constexpr int total_phase = knight_phase * 4 + bishop_phase * 4 + rook_phase * 4 + queen_phase * 2;
-
-        int phase = total_phase;
-
-        phase -= knight_phase * num_knights;
-        phase -= bishop_phase * num_bishops;
-        phase -= rook_phase   * num_rooks;
-        phase -= queen_phase  * num_queens;
-
-        return (phase * 256 + (total_phase / 2)) / total_phase;
-}
-
-int eval(libchess::Position & pos)
-{
-	int counts[2][6] = { 0 };
-
-	for(libchess::Color color : libchess::constants::COLORS) {
-		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-
-			counts[color][type] += piece_bb.popcount();
-		}
-	}
-
-	int score = 0;
-
-	int phase = game_phase(counts);
-
-	for(libchess::Color color : libchess::constants::COLORS) {
-		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-
-			int                mul      = color == libchess::constants::WHITE ? 1 : -1;
-
-			// material
-			score += eval_piece(type) * piece_bb.popcount() * mul;
-
-			// psq
-			while (piece_bb) {
-				libchess::Square sq = piece_bb.forward_bitscan();
-				piece_bb.forward_popbit();
-
-				score += psq(sq, color, type, phase) * mul * 402 / 546;
-			}
-		}
-	}
-
-	if (phase >= 224) { // endgame?
-		int scores[] = { 20, 10, 5, 0, 0, 5, 10, 20 };  
-
-		libchess::Square kw = pos.king_square(libchess::constants::WHITE);
-		libchess::Square kb = pos.king_square(libchess::constants::BLACK);
-
-		score += scores[kb.rank()];
-		score += scores[kb.file()];
-
-		score -= scores[kw.rank()];
-		score -= scores[kw.file()];
-	}
-
-	// number of bishops
-	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * 41;
-
-	// 8 pawns: not good
-	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 8) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 8)) * 13;
-
-	// 0 pawns: also not good
-	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * -2;
-
-	const auto bb_pawns_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
-	const auto bb_pawns_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
-
-	int n_pawns_w[8] { 0 }, n_pawns_b[8] { 0 };
-
-	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
-		n_pawns_w[x] = (bb_pawns_w & libchess::lookups::file_mask(x)).popcount();
-
-		n_pawns_b[x] = (bb_pawns_b & libchess::lookups::file_mask(x)).popcount();
-	}
-
-	const auto bb_rooks_w = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE);
-	const auto bb_rooks_b = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK);
-
-	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
-		// double pawns
-		if (n_pawns_w[x] >= 2)
-			score -= (n_pawns_w[x] - 1) * 15;
-		if (n_pawns_b[x] >= 2)
-			score += (n_pawns_b[x] - 1) * 15;
-
-		// rooks on open files
-		int n_rooks_w = (bb_rooks_w & libchess::lookups::file_mask(x)).popcount();
-		int n_rooks_b = (bb_rooks_b & libchess::lookups::file_mask(x)).popcount();
-
-		score += ((n_pawns_w[x] == 0 && n_rooks_w > 0) - (n_pawns_b[x] == 0 && n_rooks_b > 0)) * 30;
-
-		// isolated pawns
-		int wleft = x > 0 ? n_pawns_w[x - 1] : 0;
-		int wright = x < 7 ? n_pawns_w[x + 1] : 0;
-		score += (wleft == 0 && wright == 0) * -18;
-
-		int bleft = x > 0 ? n_pawns_b[x - 1] : 0;
-		int bright = x < 7 ? n_pawns_b[x + 1] : 0;
-		score -= (bleft == 0 && bright == 0) * -18;
-	}
-
-	/*
-	if (pos.side_to_move() == libchess::constants::WHITE) {
-		score += pos.legal_move_list().size();
-
-		pos.make_null_move();
-		score -= pos.legal_move_list().size();
-		pos.unmake_move();
-
-	}
-	else {
-		score -= pos.legal_move_list().size();
-
-		pos.make_null_move();
-		score += pos.legal_move_list().size();
-		pos.unmake_move();
-	}
-	*/
-
-	if (pos.side_to_move() != libchess::constants::WHITE)
-		return -score;
-
-	return score;
-}
-
 libchess::MoveList gen_qs_moves(libchess::Position & pos)
 {
 	libchess::Color side = pos.side_to_move();
@@ -449,24 +300,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 {
 	if (stop)
 		return 0;
-
-	auto gs = pos.game_state();
-
-	if (gs != libchess::Position::GameState::IN_PROGRESS) {
-		if (gs == libchess::Position::GameState::CHECKMATE)
-			return -9999 + qsdepth;
-
-		if (gs == libchess::Position::GameState::STALEMATE)
-			return 0;
-
-		if (gs == libchess::Position::GameState::FIFTY_MOVES)
-			return 0;
-
-		if (gs == libchess::Position::GameState::THREEFOLD_REPETITION)
-			return 0;
-
-		return 0;
-	}
 
 	nodes++;
 
@@ -489,7 +322,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 	bool in_check   = pos.in_check();
 
 	if (!in_check) {
-		best_score = eval(pos);
+		best_score = eval(pos, default_parameters);
 
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
@@ -520,10 +353,10 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 
 		if (!in_check && pos.is_capture_move(move)) {
 			auto piece_to    = pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? 100 : eval_piece(piece_to->type());
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? default_parameters.tune_pawn.value() : eval_piece(piece_to->type(), default_parameters);
 
 			auto piece_from  = pos.piece_on(move.from_square());
-			int  eval_killer = eval_piece(piece_from->type());
+			int  eval_killer = eval_piece(piece_from->type(), default_parameters);
 
 			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
 				continue;
@@ -558,7 +391,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
-			best_score = eval(pos);
+			best_score = eval(pos, default_parameters);
 	}
 
 	return best_score;
@@ -580,24 +413,6 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	if (depth == 0)
 		return qs(pos, alpha, beta, max_depth);
-
-	auto gs = pos.game_state();
-
-	if (gs != libchess::Position::GameState::IN_PROGRESS) {
-		if (gs == libchess::Position::GameState::CHECKMATE)
-			return -9999 + depth;
-
-		if (gs == libchess::Position::GameState::STALEMATE)
-			return 0;
-
-		if (gs == libchess::Position::GameState::FIFTY_MOVES)
-			return 0;
-
-		if (gs == libchess::Position::GameState::THREEFOLD_REPETITION)
-			return 0;
-
-		return 0;
-	}
 
 	nodes++;
 
@@ -641,13 +456,30 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 				use = true;
 
 			if (use && (!is_root_position || tt_move.has_value())) {
-				*m = tt_move.value();
+				if (tt_move.has_value())
+					*m = tt_move.value();
+				else
+					*m = libchess::Move(0);
 
 				return work_score;
 			}
 		}
 	}
 	////////
+
+	if (!is_root_position && depth <= 3 && beta <= 9800) {
+		int staticeval = eval(pos, default_parameters);
+
+		// static null pruning (reverse futility pruning)
+		if (depth == 1 && staticeval - default_parameters.tune_knight.value() > beta)
+			return beta;
+
+		if (depth == 2 && staticeval - default_parameters.tune_rook.value() > beta)
+			return beta;
+
+		if (depth == 3 && staticeval - default_parameters.tune_queen.value() > beta)
+			depth--;
+	}
 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
@@ -735,6 +567,13 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 					break;
 			}
 		}
+	}
+
+	if (n_played == 0) {
+		if (in_check)
+			best_score = -10000 + (max_depth - depth);
+		else
+			best_score = 0;
 	}
 
 	if (stop == false) {
