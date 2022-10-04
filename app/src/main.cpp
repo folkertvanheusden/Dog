@@ -792,7 +792,7 @@ void start_ponder()
 #else
 	TaskHandle_t temp;
 
-	xTaskCreatePinnedToCore(ponder_thread, "PT", 16384, NULL, 0, &temp, 0);
+	xTaskCreatePinnedToCore(ponder_thread, "PT", 24576, NULL, 0, &temp, 0);
 
 	ponder_thread_handle      = temp;
 #endif
