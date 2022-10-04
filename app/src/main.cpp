@@ -168,6 +168,15 @@ tt tti(65536);
 auto stop_handler = []() { stop = true; };
 
 #ifndef linux
+extern "C" {
+void vApplicationMallocFailedHook()
+{
+	printf("# *** OUT OF MEMORY (heap) ***\n");
+
+	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
+}
+}
+
 void vTaskGetRunTimeStats()
 {
 	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
@@ -184,16 +193,14 @@ void vTaskGetRunTimeStats()
 			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
 
 			if (ulStatsAsPercentage > 0UL) {
-				printf("# %s\t%u\t%u%%\t%u\n",
+				printf("# %s\t%u%%\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
-						pxTaskStatusArray[x].ulRunTimeCounter,
 						ulStatsAsPercentage,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
 			else {
-				printf("# %s\t%u\t%u\n",
+				printf("# %s\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
-						pxTaskStatusArray[x].ulRunTimeCounter,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
 		}
@@ -319,7 +326,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 	if (ponder_thread_handle.has_value() == false && qsdepth > md) {
 		md = qsdepth;
 
-		printf("# heap free: %u\n", esp_get_free_heap_size());
+		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 		vTaskGetRunTimeStats();
 
 		printf("# depth: %d\n", qsdepth);
@@ -756,21 +763,24 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
+#ifndef linux
 	// TODO: there's a tiny period where the (this) thread is
 	// running and the semaphore is not taken; if is possible
 	// (in theory) that the ponder_thread is stopped before
 	// it is really started
 	xSemaphoreTake(mutex, portMAX_DELAY);
-
+#endif
 	printf("# pondering started\n");
 
 	search_it(&positiont2, 2147483647, true);
 
 	printf("# pondering stopping\n");
 
+#ifndef linux
 	xSemaphoreGive(mutex);
 
 	vTaskDelete(nullptr);
+#endif
 }
 
 void start_ponder()
@@ -895,6 +905,8 @@ void main_task()
 			break;
 		}
 	}
+
+	stop_ponder();
 
 	printf("TASK TERMINATED\n");
 }
