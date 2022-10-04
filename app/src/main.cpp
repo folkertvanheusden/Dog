@@ -500,8 +500,6 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 	}
 	///////////////
 
-	*m = libchess::Move(0);
-
 	int     best_score = -32767;
 
 	if (move_list.has_value() == false)
@@ -517,11 +515,11 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
+	libchess::Move new_move { 0 };
+
 	for(auto move : move_list.value()) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
-
-		libchess::Move new_move { 0 };
 
 		bool is_lmr    = false;
 		int  new_depth = depth - 1;
