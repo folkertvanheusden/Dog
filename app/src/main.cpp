@@ -148,7 +148,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.2", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.3", "Folkert van Heusden", std::cout, is};
 
 #ifdef ESP32
 tt tti(65536);
