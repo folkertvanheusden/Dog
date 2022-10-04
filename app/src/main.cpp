@@ -37,6 +37,10 @@
 
 std::atomic_bool stop  { false };
 
+#ifndef linux
+std::optional<TaskHandle_t> ponder_thread_handle { };
+#endif
+
 uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
@@ -307,7 +311,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 		return 0;
 
 #ifndef linux
-	if (qsdepth > md) {
+	if (ponder_thread_handle.has_value() == false && qsdepth > md) {
 		md = qsdepth;
 
 		printf("# heap free: %u\n", esp_get_free_heap_size());
@@ -745,12 +749,47 @@ void gpio_set_level(int a, int b)
 }
 #endif
 
-void main_task(void *)
+void ponder_thread(void *p)
+{
+	search_it(&positiont2, 2147483647, true);
+
+#ifndef linux
+	for(;!stop;)
+		vTaskDelay(1);
+#endif
+}
+
+void start_ponder()
+{
+#ifndef linux
+	TaskHandle_t temp;
+
+	xTaskCreatePinnedToCore(ponder_thread, "PT", 16384, NULL, 0, &temp, 1);
+
+	ponder_thread_handle = temp;
+#endif
+}
+
+void stop_ponder()
+{
+#ifndef linux
+	if (ponder_thread_handle.has_value()) {
+		vTaskDelete(ponder_thread_handle.value());
+
+		ponder_thread_handle.reset();
+	}
+#endif
+}
+
+void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
 	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
+		stop  = true;
+		stop_ponder();
+
 		stop  = false;
 
 		nodes = 0;
@@ -804,6 +843,14 @@ void main_task(void *)
 		gpio_set_level(LED, 0);
 
 		libchess::UCIService::bestmove(best_move.to_str());
+
+		// ponder
+		positiont2 = positiont1;
+		positiont2.make_move(best_move);
+
+		stop  = false;
+
+		start_ponder();
 	};
 
 	uci_service.register_position_handler(position_handler);
@@ -842,19 +889,16 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
-	TaskHandle_t main_task_handle;
-	xTaskCreate(main_task, "chess", 4096, NULL, 10, &main_task_handle);
+	start_ponder();
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
-	for(;;) {
-		vTaskDelay(1000);
-	}
+	main_task();
 }
 #else
 int main(int argc, char *argv[])
 {
-	main_task(nullptr);
+	main_task();
 
 	return 0;
 }
