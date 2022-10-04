@@ -148,7 +148,11 @@ inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v0.2", "Folkert van Heusden", std::cout, is};
 
+#ifdef ESP32
 tt tti(65536);
+#else
+tt tti(256 * 1024 * 1024);
+#endif
 
 auto stop_handler = []() { stop = true; };
 
@@ -469,16 +473,16 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
 
+#ifdef ESP32
 	if (qsdepth > md) {
 		md = qsdepth;
 
-#ifdef ESP32
 		printf("# heap free: %u\n", esp_get_free_heap_size());
 		vTaskGetRunTimeStats();
 
 		printf("# depth: %d\n", qsdepth);
-#endif
 	}
+#endif
 
 	int  best_score = -32767;
 
@@ -619,7 +623,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 		move_list = pos.pseudo_legal_move_list();
 
-		if (tt_move.has_value() && (!is_move_in_movelist(move_list.value(), tt_move.value()) || pos.is_legal_generated_move(tt_move.value()) == false)) {
+		if (tt_move.has_value() && (!is_move_in_movelist(move_list.value(), tt_move.value()) || pos.is_legal_move(tt_move.value()) == false)) {
 			tt_move.reset();
 		}
 		else if (te.value().data_._data.depth >= depth) {
@@ -733,7 +737,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		}
 	}
 
-	if (stop == false && *m != libchess::Move(0)) {
+	if (stop == false) {
 		tt_entry_flag flag = EXACT;
 
 		if (best_score <= start_alpha)
