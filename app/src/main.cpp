@@ -148,7 +148,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.3", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.4", "Folkert van Heusden", std::cout, is};
 
 #ifdef linux
 tt tti(256 * 1024 * 1024);
@@ -604,6 +604,36 @@ uint64_t esp_timer_get_time()
 }
 #endif
 
+std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
+{
+	auto work = pos_in;
+
+	std::vector<libchess::Move> out = { start_move };
+
+	work.make_move(start_move);
+
+	for(int i=0; i<500; i++) {
+		std::optional<tt_entry> te = tti.lookup(work.hash());
+		if (!te.has_value())
+			break;
+
+		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
+
+		libchess::MoveList cur_moves = work.legal_move_list();
+		if (!is_move_in_movelist(cur_moves, cur_move))
+			break;
+
+		out.push_back(cur_move);
+
+		work.make_move(cur_move);
+
+		if (work.is_repeat(3))
+			break;
+	}
+
+	return out;
+}
+
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2)
 {
 #ifndef linux
@@ -662,7 +692,14 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				if (thought_ms == 0)
 					thought_ms = 1;
 
-				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv %s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, best_move.to_str().c_str());
+				std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
+
+				std::string pv_str;
+
+				for(auto & move : pv)
+					pv_str += " " + move.to_str();
+
+				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
 			}
 
 			if (thought_ms > search_time / 2)
