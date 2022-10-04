@@ -508,8 +508,12 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		move_list  = pos.pseudo_legal_move_list();
 
 	sort_movelist_compare smc(&pos);
+
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
+
+	if (m->value())
+		smc.add_first_move(*m);
 
 	sort_movelist(pos, move_list.value(), smc);
 
@@ -621,8 +625,9 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 	int max_depth = 1 + is_t2;
 
+	libchess::Move cur_move { 0 };
+
 	for(;;) {
-		libchess::Move cur_move { 0 };
 		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move);
 
 		if (stop)
@@ -666,7 +671,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				break;
 
 			add_alpha = 75;
-			add_beta = 75;
+			add_beta  = 75;
 
 			max_depth++;
 		}
