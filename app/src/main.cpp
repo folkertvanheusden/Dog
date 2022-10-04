@@ -499,6 +499,17 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
                 }
 	}
 	///////////////
+	
+	int     extension  = 0;
+
+	// IID //
+	libchess::Move iid_move { 0 };
+
+	if (!is_null_move && tt_move.has_value() == false && depth >= 2) {
+		if (abs(search(pos, depth - 2, alpha, beta, is_null_move, max_depth, &iid_move)) > 9800)
+			extension |= 1;
+	}
+	/////////
 
 	int     best_score = -32767;
 
@@ -512,6 +523,9 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 
 	if (m->value())
 		smc.add_first_move(*m);
+
+	if (iid_move.value())
+		smc.add_first_move(iid_move);
 
 	sort_movelist(pos, move_list.value(), smc);
 
@@ -546,11 +560,11 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		if (check_after_move)
 			goto skip_lmr;
 
-		score = -search(pos, new_depth, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+		score = -search(pos, new_depth + extension, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
-			score = -search(pos, depth - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+			score = -search(pos, depth + extension - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
 		}
 
 		pos.unmake_move();
