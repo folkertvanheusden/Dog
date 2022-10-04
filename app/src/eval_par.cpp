@@ -1,7 +1,11 @@
 #include <cmath>
 #include <functional>
 #include <numeric>
+#ifdef linux
 #include "libchess/Tuner.h"
+#else
+#include "tuner.h"
+#endif
 #include "eval_par.h"
 
 eval_par::eval_par()

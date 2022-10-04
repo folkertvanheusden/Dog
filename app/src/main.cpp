@@ -43,7 +43,9 @@ void think_timeout(void *arg) {
 	stop = true;
 }
 
-#ifdef ESP32
+#ifdef linux
+#define LED 0
+#else
 #define LED (GPIO_NUM_2)
 
 const esp_timer_create_args_t think_timeout_pars = {
@@ -53,8 +55,6 @@ const esp_timer_create_args_t think_timeout_pars = {
 };
 
 esp_timer_handle_t think_timeout_timer;
-#else
-#define LED 0
 #endif
 
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
@@ -127,7 +127,7 @@ class inbuf : public std::streambuf {
 		if (c >= 0)
 			break;
 
-#ifdef ESP32
+#ifndef linux
 		vTaskDelay(1);
 #endif
 	}
@@ -150,15 +150,15 @@ inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v0.3", "Folkert van Heusden", std::cout, is};
 
-#ifdef ESP32
-tt tti(65536);
-#else
+#ifdef linux
 tt tti(256 * 1024 * 1024);
+#else
+tt tti(65536);
 #endif
 
 auto stop_handler = []() { stop = true; };
 
-#ifdef ESP32
+#ifndef linux
 void vTaskGetRunTimeStats()
 {
 	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
@@ -306,7 +306,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
 
-#ifdef ESP32
+#ifndef linux
 	if (qsdepth > md) {
 		md = qsdepth;
 
@@ -604,7 +604,7 @@ uint64_t esp_timer_get_time()
 
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2)
 {
-#ifdef ESP32
+#ifndef linux
 	if (is_t2 == false)
 		esp_timer_start_once(think_timeout_timer, search_time * 1000);
 #endif
@@ -672,7 +672,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		}
 	}
 
-#ifdef ESP32
+#ifndef linux
 	if (!is_t2) {
 		esp_timer_stop(think_timeout_timer);
 
@@ -685,9 +685,11 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	return best_move;
 }
 
+#ifdef linux
 void gpio_set_level(int a, int b)
 {
 }
+#endif
 
 void main_task(void *)
 {
@@ -767,7 +769,7 @@ void main_task(void *)
 	printf("TASK TERMINATED\n");
 }
 
-#ifdef ESP32
+#ifndef linux
 extern "C" void app_main()
 {
 	esp_task_wdt_init(30, false);

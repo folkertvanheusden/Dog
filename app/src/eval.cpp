@@ -38,6 +38,7 @@ int game_phase(int counts[2][6], const eval_par & parameters)
         return (phase * 256 + (total_phase / 2)) / total_phase;
 }
 
+#if 0
 int count_mobility(libchess::Position & pos)
 {
 	int scores[2] = { 0, 0 };
@@ -84,6 +85,7 @@ int find_forks(libchess::Position & pos)
 
 	return score;
 }
+#endif
 
 int count_king_attacks(libchess::Position & pos, libchess::Color side)
 {
@@ -175,6 +177,7 @@ int king_shield(libchess::Position & pos, libchess::Color side)
 	return cnt;
 }
 
+#if 0
 int development(libchess::Position & pos)
 {
 	int score = 0;
@@ -202,6 +205,7 @@ int development(libchess::Position & pos)
 
 	return score;
 }
+#endif
 
 int eval(libchess::Position & pos, const eval_par & parameters)
 {
