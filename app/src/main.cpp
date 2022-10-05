@@ -6,7 +6,10 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <mutex>
+#include <signal.h>
 #include <streambuf>
+#include <string>
 
 #ifdef linux
 #include <limits.h>
@@ -36,20 +39,19 @@
 #include "tt.h"
 
 
-std::atomic_bool stop  { false };
+std::atomic_bool stop1 { false };
+std::atomic_bool stop2 { false };
 
 #ifdef linux
-std::thread                *ponder_thread_handle { nullptr };
+std::thread *ponder_thread_handle { nullptr };
 #else
-SemaphoreHandle_t           mutex { xSemaphoreCreateMutex() };
-
-std::optional<TaskHandle_t> ponder_thread_handle { };
+TaskHandle_t ponder_thread_handle;
 #endif
 
 uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
-	stop = true;
+	stop1 = true;
 }
 
 #ifdef linux
@@ -68,6 +70,9 @@ esp_timer_handle_t think_timeout_timer;
 
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
+
+std::mutex  search_fen_lock;
+std::string search_fen;
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
@@ -159,13 +164,9 @@ inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v0.4", "Folkert van Heusden", std::cout, is};
 
-#ifdef linux
-tt tti(256 * 1024 * 1024);
-#else
-tt tti(65536);
-#endif
+tt tti;
 
-auto stop_handler = []() { stop = true; };
+auto stop_handler = []() { stop1 = true; };
 
 #ifndef linux
 extern "C" {
@@ -207,6 +208,29 @@ void vTaskGetRunTimeStats()
 	}
 
 	vPortFree(pxTaskStatusArray);
+}
+
+typedef struct
+{
+	std::atomic_bool *stop_flag;
+} search_pars_t;
+
+bool checkMinStackSize(const int nr, search_pars_t *const sp)
+{
+	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
+
+	if (level < 1024) {
+		*sp->stop_flag = true;
+
+		printf("# stack protector %d engaged (%d)\n", nr, level);
+
+		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		vTaskGetRunTimeStats();
+
+		return true;
+	}
+
+	return false;
 }
 #endif
 
@@ -310,28 +334,22 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int md = 0;
+int md = 1;
 
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
+int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp)
 {
-	if (stop)
+	if (*sp->stop_flag)
 		return 0;
+
+#ifndef linux
+	if (checkMinStackSize(1, sp))
+		return 0;
+#endif
 
 	nodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
-
-#ifndef linux
-	if (ponder_thread_handle.has_value() == false && qsdepth > md) {
-		md = qsdepth;
-
-		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		vTaskGetRunTimeStats();
-
-		printf("# depth: %d\n", qsdepth);
-	}
-#endif
 
 	int  best_score = -32767;
 
@@ -387,7 +405,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth)
 
 		n_played++;
 
-		int score = -qs(pos, -beta, -alpha, qsdepth + 1);
+		int score = -qs(pos, -beta, -alpha, qsdepth + 1, sp);
 
 		pos.unmake_move();
 
@@ -422,13 +440,18 @@ bool is_move_in_movelist(libchess::MoveList & move_list, libchess::Move & m)
 			});
 }
 
-int search(libchess::Position & pos, int depth, int alpha, int beta, const bool is_null_move, const int max_depth, libchess::Move *const m)
+int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const bool is_null_move, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
 {
-	if (stop)
+	if (*sp->stop_flag)
 		return 0;
 
+#ifndef linux
+	if (checkMinStackSize(0, sp))
+		return 0;
+#endif
+
 	if (depth == 0)
-		return qs(pos, alpha, beta, max_depth);
+		return qs(pos, alpha, beta, max_depth, sp);
 
 	nodes++;
 
@@ -503,12 +526,12 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		pos.make_null_move();
 
 		libchess::Move ignore;
-		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, true, max_depth, &ignore);
+		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, true, max_depth, &ignore, sp);
 
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
-			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, false, max_depth, &ignore);
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, false, max_depth, &ignore, sp);
 
 			if (verification >= beta)
 				return beta;
@@ -522,7 +545,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 	libchess::Move iid_move { 0 };
 
 	if (!is_null_move && tt_move.has_value() == false && depth >= 2) {
-		if (abs(search(pos, depth - 2, alpha, beta, is_null_move, max_depth, &iid_move)) > 9800)
+		if (abs(search(pos, depth - 2, alpha, beta, is_null_move, max_depth, &iid_move, sp)) > 9800)
 			extension |= 1;
 	}
 	/////////
@@ -576,11 +599,11 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 		if (check_after_move)
 			goto skip_lmr;
 
-		score = -search(pos, new_depth + extension, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+		score = -search(pos, new_depth + extension, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
-			score = -search(pos, depth + extension - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move);
+			score = -search(pos, depth + extension - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
 		}
 
 		pos.unmake_move();
@@ -608,7 +631,7 @@ int search(libchess::Position & pos, int depth, int alpha, int beta, const bool 
 			best_score = 0;
 	}
 
-	if (stop == false) {
+	if (*sp->stop_flag == false) {
 		tt_entry_flag flag = EXACT;
 
 		if (best_score <= start_alpha)
@@ -642,7 +665,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 	work.make_move(start_move);
 
-	for(int i=0; i<500; i++) {
+	for(int i=0; i<64; i++) {
 		std::optional<tt_entry> te = tti.lookup(work.hash());
 		if (!te.has_value())
 			break;
@@ -664,7 +687,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 	return out;
 }
 
-libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2)
+libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
 {
 #ifndef linux
 	if (is_t2 == false)
@@ -675,20 +698,20 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 	libchess::Move best_move { *pos->legal_move_list().begin() };
 
-	int alpha     = -32767;
-	int beta      =  32767;
+	int16_t alpha     = -32767;
+	int16_t beta      =  32767;
 
-	int add_alpha = 75;
-	int add_beta  = 75;
+	int16_t add_alpha = 75;
+	int16_t add_beta  = 75;
 
-	int max_depth = 1 + is_t2;
+	int8_t  max_depth = 1 + is_t2;
 
 	libchess::Move cur_move { 0 };
 
 	for(;;) {
-		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move);
+		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move, sp);
 
-		if (stop)
+		if (*sp->stop_flag)
 			break;
 
 		if (score <= alpha) {
@@ -746,7 +769,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	if (!is_t2) {
 		esp_timer_stop(think_timeout_timer);
 
-		printf("# heap free: %u\n", esp_get_free_heap_size());
+		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 
 		vTaskGetRunTimeStats();
 	}
@@ -763,38 +786,43 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
-#ifndef linux
-	// TODO: there's a tiny period where the (this) thread is
-	// running and the semaphore is not taken; if is possible
-	// (in theory) that the ponder_thread is stopped before
-	// it is really started
-	xSemaphoreTake(mutex, portMAX_DELAY);
-#endif
 	printf("# pondering started\n");
 
-	search_it(&positiont2, 2147483647, true);
+	search_pars_t sp { &stop2 };
+
+	for(;;) {
+		search_fen_lock.lock();
+		stop2 = false;
+		positiont2 = libchess::Position(search_fen);
+		search_fen_lock.unlock();
+
+		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS) {
+			printf("# new ponder position\n");
+
+			search_it(&positiont2, 2147483647, true, &sp);
+		}
+		else {
+			vTaskDelay(10);  // TODO divide
+		}
+	}
 
 	printf("# pondering stopping\n");
 
-#ifndef linux
-	xSemaphoreGive(mutex);
-
 	vTaskDelete(nullptr);
-#endif
 }
 
 void start_ponder()
 {
-	stop                      = false;
+	stop2                = false;
 
 #ifdef linux
-	ponder_thread_handle      = new std::thread(ponder_thread, nullptr);
+	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
 #else
 	TaskHandle_t temp;
 
 	xTaskCreatePinnedToCore(ponder_thread, "PT", 24576, NULL, 0, &temp, 0);
 
-	ponder_thread_handle      = temp;
+	ponder_thread_handle = temp;
 #endif
 }
 
@@ -802,20 +830,10 @@ void stop_ponder()
 {
 #ifdef linux
 	if (ponder_thread_handle) {
-		stop = true;
+		stop2 = true;
 
 		ponder_thread_handle->join();
 		delete ponder_thread_handle;
-	}
-#else
-	if (ponder_thread_handle.has_value()) {
-		stop = true;
-
-		xSemaphoreTake(mutex, portMAX_DELAY);
-		ponder_thread_handle.reset();
-		xSemaphoreGive(mutex);
-
-		printf("# pondering stopped\n");
 	}
 #endif
 }
@@ -825,71 +843,66 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
-		stop  = true;
-		stop_ponder();
+	search_pars_t sp { &stop1 };
 
-		stop  = false;
+	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
+		try {
+			stop1 = false;
 
-		nodes = 0;
+			nodes = 0;
 
-		gpio_set_level(LED, 1);
+			md    = 1;
 
-		int moves_to_go = 40 - positiont1.fullmoves();
+			gpio_set_level(LED, 1);
 
-		auto movetime = go_parameters.movetime();
+			int moves_to_go = 40 - positiont1.fullmoves();
 
-		auto a_w_time = go_parameters.wtime();
-		auto a_b_time = go_parameters.btime();
+			auto movetime = go_parameters.movetime();
 
-		int w_time = a_w_time.has_value() ? a_w_time.value() : 0;
-		int b_time = a_b_time.has_value() ? a_b_time.value() : 0;
+			auto a_w_time = go_parameters.wtime();
+			auto a_b_time = go_parameters.btime();
 
-		auto a_w_inc = go_parameters.winc();
-		auto a_b_inc = go_parameters.binc();
+			int w_time = a_w_time.has_value() ? a_w_time.value() : 0;
+			int b_time = a_b_time.has_value() ? a_b_time.value() : 0;
 
-		int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
-		int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
+			auto a_w_inc = go_parameters.winc();
+			auto a_b_inc = go_parameters.binc();
 
-		int think_time = 0;
+			int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
+			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
-		if (movetime.has_value())
-			think_time = movetime.value();
-		else {
-			int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
+			int think_time = 0;
 
-			int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
+			if (movetime.has_value())
+				think_time = movetime.value();
+			else {
+				int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
 
-			int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
 
-			think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
 
-			int limit_duration_min = ms / 15;
-			if (think_time > limit_duration_min)
-				think_time = limit_duration_min;
+				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+
+				int limit_duration_min = ms / 15;
+				if (think_time > limit_duration_min)
+					think_time = limit_duration_min;
+			}
+
+			search_fen_lock.lock();
+			search_fen = positiont1.fen();
+			stop2      = true;
+			search_fen_lock.unlock();
+
+			auto best_move = search_it(&positiont1, think_time, false, &sp);
+
+			libchess::UCIService::bestmove(best_move.to_str());
+
+			gpio_set_level(LED, 0);
 		}
-
-		positiont2 = positiont1;
-
-		std::thread t2(search_it, &positiont2, think_time, true);
-
-		auto best_move = search_it(&positiont1, think_time, false);
-
-		printf("# Waiting for thread 2 to terminate...\n");
-
-		t2.join();
-
-		gpio_set_level(LED, 0);
-
-		libchess::UCIService::bestmove(best_move.to_str());
-
-		// ponder
-		positiont2 = positiont1;
-		positiont2.make_move(best_move);
-
-		stop  = false;
-
-		start_ponder();
+		catch(const std::exception& e) {
+			printf("# EXCEPTION in main: %s\n", e.what());
+		}
 	};
 
 	uci_service.register_position_handler(position_handler);
@@ -939,6 +952,8 @@ extern "C" void app_main()
 #else
 int main(int argc, char *argv[])
 {
+	signal(SIGPIPE, SIG_IGN);
+
 	main_task();
 
 	return 0;
