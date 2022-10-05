@@ -28,21 +28,24 @@ typedef struct __PRAGMA_PACKED__
         tt_entry entries[N_TE_PER_HASH_GROUP];
 } tt_hash_group;
 
+#ifdef linux
+constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
+#else
+constexpr uint64_t n_entries { 65536 / sizeof(tt_hash_group) };
+#endif
+
 class tt
 {
 private:
-	tt_hash_group *entries;
-	uint64_t n_entries;
+	tt_hash_group entries[n_entries];
 
 	int age;
 
 public:
-	tt(size_t size_in_bytes);
+	tt();
 	~tt();
 
 	void inc_age();
-
-	void resize(size_t size_in_bytes);
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
 	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m);

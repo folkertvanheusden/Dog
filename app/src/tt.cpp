@@ -4,29 +4,12 @@
 #include "libchess/Position.h"
 #include "tt.h"
 
-tt::tt(size_t size_in_bytes) : entries(nullptr)
+tt::tt()
 {
-	resize(size_in_bytes);
 }
 
 tt::~tt()
 {
-	delete [] entries;
-}
-
-void tt::resize(size_t size_in_bytes)
-{
-	if (entries)
-		delete [] entries;
-
-	n_entries = size_in_bytes / sizeof(tt_hash_group);
-
-	printf("# TT: %llu buckets\n", n_entries);
-
-	entries   = new tt_hash_group[n_entries];
-	memset(entries, 0x00, sizeof(tt_hash_group) * n_entries);
-
-	age = 0;
 }
 
 void tt::inc_age()
