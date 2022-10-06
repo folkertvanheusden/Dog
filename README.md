@@ -1,0 +1,27 @@
+Dog was written by Folkert van Heusden.
+It is (strongly) based on the chess program Micah.
+Licensed under the MIT license.
+
+
+Create a virtual env:
+
+	virtualenv --python="/usr/bin/python3.7" test
+
+When you want to change options (first create the virtual env):
+	cd app
+
+	. test/bin/activate
+
+	PATH=~/.platformio/packages/toolchain-xtensa-esp32/bin:$PATH ~/.platformio/packages/framework-espidf/tools/idf.py menuconfig
+
+	cp sdkconfig sdkconfig.esp32
+
+To juist build the program and upload it to a wemos32 mini:
+
+	pio run -t upload
+
+To build it for Linux:
+
+	./build.sh
+
+...which produces an a.out that you can run.
