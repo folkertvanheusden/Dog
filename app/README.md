@@ -1,3 +1,8 @@
+Dog was written by Folkert van Heusden.
+It is (strongly) based on the chess program Micah.
+Licensed under the MIT license.
+
+
 Create a virtual env:
 
 	virtualenv --python="/usr/bin/python3.7" test
