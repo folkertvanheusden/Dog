@@ -168,6 +168,11 @@ tt tti;
 
 auto stop_handler = []() { stop1 = true; };
 
+typedef struct
+{
+	std::atomic_bool *stop_flag;
+} search_pars_t;
+
 #ifndef linux
 extern "C" {
 void vApplicationMallocFailedHook()
@@ -209,11 +214,6 @@ void vTaskGetRunTimeStats()
 
 	vPortFree(pxTaskStatusArray);
 }
-
-typedef struct
-{
-	std::atomic_bool *stop_flag;
-} search_pars_t;
 
 bool checkMinStackSize(const int nr, search_pars_t *const sp)
 {
@@ -802,13 +802,20 @@ void ponder_thread(void *p)
 			search_it(&positiont2, 2147483647, true, &sp);
 		}
 		else {
+			// TODO replace this by condition variables
+#ifdef linux
+			usleep(10000);
+#else
 			vTaskDelay(10);  // TODO divide
+#endif
 		}
 	}
 
 	printf("# pondering stopping\n");
 
+#ifndef linux
 	vTaskDelete(nullptr);
+#endif
 }
 
 void start_ponder()
