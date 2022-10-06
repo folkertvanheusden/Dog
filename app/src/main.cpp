@@ -162,7 +162,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.4", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.4b", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -603,7 +603,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
-			score = -search(pos, depth + extension - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
+			score = -search(pos, depth - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
 		}
 
 		pos.unmake_move();
