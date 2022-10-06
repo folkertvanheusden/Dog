@@ -22,6 +22,16 @@ To juist build the program and upload it to a wemos32 mini:
 
 To build it for Linux:
 
-	./build.sh
+	cd app/src/linux-windows
+	mkdir build
+	cd build
+	cmake ..
+	make
 
-...which produces an a.out that you can run.
+To build it for windows:
+
+	cd app/src/linux-windows
+	mkdir buildwindows
+	cd buildwindows
+	cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
+	make

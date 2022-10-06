@@ -3,7 +3,7 @@
 #include <cmath>
 #include <functional>
 #include <numeric>
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 #include "libchess/Tuner.h"
 #else
 #include "tuner.h"

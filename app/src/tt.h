@@ -28,7 +28,7 @@ typedef struct __PRAGMA_PACKED__
         tt_entry entries[N_TE_PER_HASH_GROUP];
 } tt_hash_group;
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
 #else
 constexpr uint64_t n_entries { 65536 / sizeof(tt_hash_group) };

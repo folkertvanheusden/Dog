@@ -11,9 +11,11 @@
 #include <streambuf>
 #include <string>
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
+#include <chrono>
 #include <limits.h>
 #include <pthread.h>
+#include <thread>
 #include <sys/time.h>
 #else
 #include <driver/uart.h>
@@ -42,7 +44,7 @@
 std::atomic_bool stop1 { false };
 std::atomic_bool stop2 { false };
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 std::thread *ponder_thread_handle { nullptr };
 #else
 TaskHandle_t ponder_thread_handle;
@@ -54,7 +56,7 @@ void think_timeout(void *arg) {
 	stop1 = true;
 }
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 #define LED 0
 #else
 #define LED (GPIO_NUM_2)
@@ -141,7 +143,7 @@ class inbuf : public std::streambuf {
 		if (c >= 0)
 			break;
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 		vTaskDelay(1);
 #endif
 	}
@@ -173,7 +175,7 @@ typedef struct
 	std::atomic_bool *stop_flag;
 } search_pars_t;
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 extern "C" {
 void vApplicationMallocFailedHook()
 {
@@ -253,7 +255,7 @@ public:
         }
 
         int move_evaluater(const libchess::Move move) const {
-                for(int i=0; i<first_moves.size(); i++) {
+                for(size_t i=0; i<first_moves.size(); i++) {
                         if (move == first_moves.at(i))
                                 return INT_MAX - i;
                 }
@@ -341,7 +343,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	if (*sp->stop_flag)
 		return 0;
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 	if (checkMinStackSize(1, sp))
 		return 0;
 #endif
@@ -445,7 +447,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (*sp->stop_flag)
 		return 0;
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 	if (checkMinStackSize(0, sp))
 		return 0;
 #endif
@@ -646,7 +648,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	return best_score;
 }
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 uint64_t esp_timer_get_time()
 {
 	struct timeval tv;
@@ -689,7 +691,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
 {
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 	if (is_t2 == false)
 		esp_timer_start_once(think_timeout_timer, search_time * 1000);
 #endif
@@ -765,7 +767,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		}
 	}
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 	if (!is_t2) {
 		esp_timer_stop(think_timeout_timer);
 
@@ -778,7 +780,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	return best_move;
 }
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 void gpio_set_level(int a, int b)
 {
 }
@@ -803,8 +805,8 @@ void ponder_thread(void *p)
 		}
 		else {
 			// TODO replace this by condition variables
-#ifdef linux
-			usleep(10000);
+#if defined(linux) || defined(_WIN32)
+			std::this_thread::sleep_for(std::chrono::microseconds(10000));
 #else
 			vTaskDelay(10);  // TODO divide
 #endif
@@ -813,7 +815,7 @@ void ponder_thread(void *p)
 
 	printf("# pondering stopping\n");
 
-#ifndef linux
+#if !defined(linux) && !defined(_WIN32)
 	vTaskDelete(nullptr);
 #endif
 }
@@ -822,7 +824,7 @@ void start_ponder()
 {
 	stop2                = false;
 
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
 #else
 	TaskHandle_t temp;
@@ -835,7 +837,7 @@ void start_ponder()
 
 void stop_ponder()
 {
-#ifdef linux
+#if defined(linux) || defined(_WIN32)
 	if (ponder_thread_handle) {
 		stop2 = true;
 
@@ -931,7 +933,18 @@ void main_task()
 	printf("TASK TERMINATED\n");
 }
 
-#ifndef linux
+#if defined(linux) || defined(_WIN32)
+int main(int argc, char *argv[])
+{
+#if !defined(_WIN32)
+	signal(SIGPIPE, SIG_IGN);
+#endif
+
+	main_task();
+
+	return 0;
+}
+#else
 extern "C" void app_main()
 {
 	esp_task_wdt_init(30, false);
@@ -955,14 +968,5 @@ extern "C" void app_main()
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
 	main_task();
-}
-#else
-int main(int argc, char *argv[])
-{
-	signal(SIGPIPE, SIG_IGN);
-
-	main_task();
-
-	return 0;
 }
 #endif
