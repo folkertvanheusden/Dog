@@ -1,13 +1,22 @@
-virtualenv --python="/usr/bin/python3.7" test
+Create a virtual env:
 
------
+	virtualenv --python="/usr/bin/python3.7" test
 
-cd /home/folkert/Projects/esp32chesstest/app
+When you want to change options (first create the virtual env):
+	cd app
 
-. test/bin/activate
+	. test/bin/activate
 
-PATH=/home/folkert/.platformio/packages/toolchain-xtensa-esp32/bin:$PATH /home/folkert/.platformio/packages/framework-espidf/tools/idf.py menuconfig
+	PATH=~/.platformio/packages/toolchain-xtensa-esp32/bin:$PATH ~/.platformio/packages/framework-espidf/tools/idf.py menuconfig
 
-cp sdkconfig sdkconfig.esp32
+	cp sdkconfig sdkconfig.esp32
 
-pio run -t upload
+To juist build the program and upload it to a wemos32 mini:
+
+	pio run -t upload
+
+To build it for Linux:
+
+	./build.sh
+
+...which produces an a.out that you can run.
