@@ -862,6 +862,8 @@ void main_task()
 
 			md    = 1;
 
+			tti.inc_age();
+
 			gpio_set_level(LED, 1);
 
 			int moves_to_go = 40 - positiont1.fullmoves();
