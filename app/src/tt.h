@@ -21,7 +21,11 @@ typedef struct __PRAGMA_PACKED__
         } data_;
 } tt_entry;
 
+#if defined(linux) || defined(_WIN32)
+#define N_TE_PER_HASH_GROUP 8
+#else
 #define N_TE_PER_HASH_GROUP 2
+#endif
 
 typedef struct __PRAGMA_PACKED__
 {

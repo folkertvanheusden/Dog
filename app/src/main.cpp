@@ -164,7 +164,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.4b", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.5", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -280,8 +280,8 @@ public:
                         if (piece_from->type() != libchess::constants::KING)
                                 score += (950 - eval_piece(piece_from->type(), default_parameters)) << 8;
 
-//                      if (move.to_square() == previous_move_target)
-//                              score += 100 << 8;
+                        if (move.to_square() == previous_move_target)
+                                score += 1;
                 }
                 else {
 //                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
