@@ -43,6 +43,7 @@
 
 std::atomic_bool stop1 { false };
 std::atomic_bool stop2 { false };
+std::atomic_bool ponder_quit { false };
 
 #if defined(linux) || defined(_WIN32)
 std::thread *ponder_thread_handle { nullptr };
@@ -806,7 +807,7 @@ void ponder_thread(void *p)
 
 	search_pars_t sp { &stop2 };
 
-	for(;;) {
+	for(;!ponder_quit;) {
 		search_fen_lock.lock();
 		stop2      = false;
 		positiont2 = libchess::Position(search_fen);
@@ -853,11 +854,13 @@ void stop_ponder()
 {
 #if defined(linux) || defined(_WIN32)
 	if (ponder_thread_handle) {
-		stop2 = true;
+		ponder_quit = stop2 = true;
 
 		ponder_thread_handle->join();
 		delete ponder_thread_handle;
 	}
+#else
+	stop2 = ponder_quit = true;
 #endif
 }
 
@@ -914,6 +917,13 @@ void main_task()
 					think_time = limit_duration_min;
 			}
 
+			// let the ponder thread run as a lazy-smp thread
+			search_fen_lock.lock();
+			search_fen = positiont1.fen();
+			stop2      = true;  // restart ponder/lazy-smp thread
+			search_fen_lock.unlock();
+
+			// main search
 			auto best_move = search_it(&positiont1, think_time, false, &sp);
 
 			// no longer thinking
@@ -962,6 +972,10 @@ int main(int argc, char *argv[])
 #if !defined(_WIN32)
 	signal(SIGPIPE, SIG_IGN);
 #endif
+
+	start_ponder();
+
+	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
 	main_task();
 
