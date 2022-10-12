@@ -53,7 +53,9 @@ TaskHandle_t ponder_thread_handle;
 uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
-	stop1 = true;
+	std::atomic_bool *stop = reinterpret_cast<std::atomic_bool *>(arg);
+
+	*stop = true;
 }
 
 #if defined(linux) || defined(_WIN32)
@@ -63,7 +65,7 @@ void think_timeout(void *arg) {
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
-            .arg = nullptr,
+            .arg = stop1,
             .name = "searchto"
 };
 
@@ -279,9 +281,6 @@ public:
 
                         if (piece_from->type() != libchess::constants::KING)
                                 score += (950 - eval_piece(piece_from->type(), default_parameters)) << 8;
-
-                        if (move.to_square() == previous_move_target)
-                                score += 1;
                 }
                 else {
 //                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
@@ -691,12 +690,22 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
 {
-#if !defined(linux) && !defined(_WIN32)
-	if (is_t2 == false)
+	uint64_t t_offset = esp_timer_get_time();
+
+	std::thread *think_timeout_timer { nullptr };
+
+	if (is_t2 == false) {
+#if defined(linux) || defined(_WIN32)
+		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
+				while(esp_timer_get_time() < t_offset + search_time * 1000)
+					usleep(100000); /* replace by cond.var. */
+
+				*sp->stop_flag = true;
+			});
+#else
 		esp_timer_start_once(think_timeout_timer, search_time * 1000);
 #endif
-
-	uint64_t t_offset = esp_timer_get_time();
+	}
 
 	libchess::Move best_move { *pos->legal_move_list().begin() };
 
@@ -767,15 +776,20 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		}
 	}
 
-#if !defined(linux) && !defined(_WIN32)
 	if (!is_t2) {
+#if defined(linux) || defined(_WIN32)
+		stop1 = true;
+
+		think_timeout_timer->join();
+		delete think_timeout_timer;
+#else
 		esp_timer_stop(think_timeout_timer);
 
 		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 
 		vTaskGetRunTimeStats();
-	}
 #endif
+	}
 
 	return best_move;
 }
@@ -794,7 +808,7 @@ void ponder_thread(void *p)
 
 	for(;;) {
 		search_fen_lock.lock();
-		stop2 = false;
+		stop2      = false;
 		positiont2 = libchess::Position(search_fen);
 		search_fen_lock.unlock();
 
