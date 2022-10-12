@@ -914,16 +914,23 @@ void main_task()
 					think_time = limit_duration_min;
 			}
 
+			auto best_move = search_it(&positiont1, think_time, false, &sp);
+
+			// no longer thinking
+			gpio_set_level(LED, 0);
+
+			// emit result
+			libchess::UCIService::bestmove(best_move.to_str());
+
+			// set ponder positition
+			positiont1.make_move(best_move);
+
 			search_fen_lock.lock();
 			search_fen = positiont1.fen();
 			stop2      = true;
 			search_fen_lock.unlock();
 
-			auto best_move = search_it(&positiont1, think_time, false, &sp);
-
-			libchess::UCIService::bestmove(best_move.to_str());
-
-			gpio_set_level(LED, 0);
+			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
 			printf("# EXCEPTION in main: %s\n", e.what());
