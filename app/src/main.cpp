@@ -66,7 +66,7 @@ void think_timeout(void *arg) {
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
-            .arg = stop1,
+            .arg = &stop1,
             .name = "searchto"
 };
 
@@ -693,7 +693,9 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 {
 	uint64_t t_offset = esp_timer_get_time();
 
+#if defined(linux) || defined(_WIN32)
 	std::thread *think_timeout_timer { nullptr };
+#endif
 
 	if (is_t2 == false) {
 #if defined(linux) || defined(_WIN32)
