@@ -492,7 +492,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		move_list = pos.pseudo_legal_move_list();
 
-		if (tt_move.has_value() && (!is_move_in_movelist(move_list.value(), tt_move.value()) || pos.is_legal_move(tt_move.value()) == false)) {
+		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
 			tt_move.reset();
 		}
 		else if (te.value().data_._data.depth >= depth) {
@@ -509,13 +509,18 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			else if (te.value().data_._data.flags == UPPERBOUND && work_score <= alpha)
 				use = true;
 
-			if (use && (!is_root_position || tt_move.has_value())) {
-				if (tt_move.has_value())
+			if (use) {
+				if (tt_move.has_value()) {
 					*m = tt_move.value();
-				else
+
+					return work_score;
+				}
+
+				if (!is_root_position) {
 					*m = libchess::Move(0);
 
-				return work_score;
+					return work_score;
+				}
 			}
 		}
 	}
