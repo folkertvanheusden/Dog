@@ -167,7 +167,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.5", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.6", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -220,6 +220,9 @@ void vTaskGetRunTimeStats()
 	vPortFree(pxTaskStatusArray);
 }
 
+int     md       = 1;
+int64_t start_ts = 0;
+
 bool checkMinStackSize(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
@@ -234,6 +237,8 @@ bool checkMinStackSize(const int nr, search_pars_t *const sp)
 
 		return true;
 	}
+
+	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, md, nodes, level);
 
 	return false;
 }
@@ -336,16 +341,18 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int md = 1;
-
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp)
 {
 	if (*sp->stop_flag)
 		return 0;
 
 #if !defined(linux) && !defined(_WIN32)
-	if (checkMinStackSize(1, sp))
-		return 0;
+	if (qsdepth > md) {
+		if (checkMinStackSize(1, sp))
+			return 0;
+
+		md = qsdepth;
+	}
 #endif
 
 	nodes++;
@@ -448,8 +455,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 
 #if !defined(linux) && !defined(_WIN32)
-	if (checkMinStackSize(0, sp))
-		return 0;
+	int d = max_depth - depth;
+
+	if (d > md) {
+		if (checkMinStackSize(1, sp))
+			return 0;
+
+		md = d;
+	}
 #endif
 
 	if (depth == 0)
@@ -876,6 +889,8 @@ void main_task()
 	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
 		try {
 			stop1 = false;
+
+			start_ts = esp_timer_get_time();
 
 			nodes = 0;
 
