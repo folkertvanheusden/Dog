@@ -18,6 +18,7 @@ When you want to change options (first create the virtual env):
 
 To juist build the program and upload it to a wemos32 mini:
 
+	cd app
 	pio run -t upload
 
 To build it for Linux:
