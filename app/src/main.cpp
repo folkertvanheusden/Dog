@@ -723,72 +723,76 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 #endif
 	}
 
-	libchess::Move best_move { *pos->legal_move_list().begin() };
+	auto move_list = pos->legal_move_list();
 
-	int16_t alpha     = -32767;
-	int16_t beta      =  32767;
+	libchess::Move best_move { *move_list.begin() };
 
-	int16_t add_alpha = 75;
-	int16_t add_beta  = 75;
+	if (move_list.size() > 1) {
+		int16_t alpha     = -32767;
+		int16_t beta      =  32767;
 
-	int8_t  max_depth = 1 + is_t2;
+		int16_t add_alpha = 75;
+		int16_t add_beta  = 75;
 
-	libchess::Move cur_move { 0 };
+		int8_t  max_depth = 1 + is_t2;
 
-	for(;;) {
-		int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
+		libchess::Move cur_move { 0 };
 
-		if (*sp->stop_flag)
-			break;
+		for(;;) {
+			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
-		if (score <= alpha) {
-			beta = (alpha + beta) / 2;
-			alpha = score - add_alpha;
-			if (alpha < -10000)
-				alpha = -10000;
-			add_alpha += add_alpha / 15 + 1;
-		}
-		else if (score >= beta) {
-			alpha = (alpha + beta) / 2;
-			beta = score + add_beta;
-			if (beta > 10000)
-				beta = 10000;
-			add_beta += add_beta / 15 + 1;
-		}
-		else {
-			alpha = score - add_alpha;
-			if (alpha < -10000)
-				alpha = -10000;
-
-			beta = score + add_beta;
-			if (beta > 10000)
-				beta = 10000;
-
-			best_move = cur_move;
-
-			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
-
-			if (!is_t2) {
-				if (thought_ms == 0)
-					thought_ms = 1;
-
-				std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
-
-				std::string pv_str;
-
-				for(auto & move : pv)
-					pv_str += " " + move.to_str();
-
-				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
-			}
-
-			if (thought_ms > search_time / 2)
+			if (*sp->stop_flag)
 				break;
 
-			add_alpha = 75;
-			add_beta  = 75;
+			if (score <= alpha) {
+				beta = (alpha + beta) / 2;
+				alpha = score - add_alpha;
+				if (alpha < -10000)
+					alpha = -10000;
+				add_alpha += add_alpha / 15 + 1;
+			}
+			else if (score >= beta) {
+				alpha = (alpha + beta) / 2;
+				beta = score + add_beta;
+				if (beta > 10000)
+					beta = 10000;
+				add_beta += add_beta / 15 + 1;
+			}
+			else {
+				alpha = score - add_alpha;
+				if (alpha < -10000)
+					alpha = -10000;
 
-			max_depth++;
+				beta = score + add_beta;
+				if (beta > 10000)
+					beta = 10000;
+
+				best_move = cur_move;
+
+				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+
+				if (!is_t2) {
+					if (thought_ms == 0)
+						thought_ms = 1;
+
+					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
+
+					std::string pv_str;
+
+					for(auto & move : pv)
+						pv_str += " " + move.to_str();
+
+					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
+				}
+
+				if (thought_ms > search_time / 2)
+					break;
+
+				add_alpha = 75;
+				add_beta  = 75;
+
+				max_depth++;
+			}
 		}
 	}
 
