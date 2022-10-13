@@ -449,7 +449,7 @@ bool is_move_in_movelist(libchess::MoveList & move_list, libchess::Move & m)
 			});
 }
 
-int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const bool is_null_move, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
+int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
 {
 	if (*sp->stop_flag)
 		return 0;
@@ -538,16 +538,16 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= nm_reduce_depth && !in_check && !is_root_position && !is_null_move) {
+	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
 		pos.make_null_move();
 
 		libchess::Move ignore;
-		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, true, max_depth, &ignore, sp);
+		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
 
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
-			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, false, max_depth, &ignore, sp);
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore, sp);
 
 			if (verification >= beta)
 				return beta;
@@ -560,8 +560,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	// IID //
 	libchess::Move iid_move { 0 };
 
-	if (!is_null_move && tt_move.has_value() == false && depth >= 2) {
-		if (abs(search(pos, depth - 2, alpha, beta, is_null_move, max_depth, &iid_move, sp)) > 9800)
+	if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2) {
+		if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp)) > 9800)
 			extension |= 1;
 	}
 	/////////
@@ -614,11 +614,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (check_after_move)
 			goto skip_lmr;
 
-		score = -search(pos, new_depth + extension, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
+		score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
-			score = -search(pos, depth - 1, -beta, -alpha, is_null_move /* TODO dit hier? */, max_depth, &new_move, sp);
+			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
 		}
 
 		pos.unmake_move();
@@ -736,7 +736,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	libchess::Move cur_move { 0 };
 
 	for(;;) {
-		int score = search(*pos, max_depth, alpha, beta, false, max_depth, &cur_move, sp);
+		int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
 		if (*sp->stop_flag)
 			break;
