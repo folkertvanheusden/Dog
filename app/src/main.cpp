@@ -167,7 +167,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.6", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.7", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -714,7 +714,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 #if defined(linux) || defined(_WIN32)
 		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
 				while(esp_timer_get_time() < t_offset + search_time * 1000)
-					usleep(100000); /* replace by cond.var. */
+					std::this_thread::sleep_for(std::chrono::microseconds(100000)); /* replace by cond.var. */
 
 				*sp->stop_flag = true;
 			});
@@ -890,11 +890,12 @@ void main_task()
 		try {
 			stop1 = false;
 
+#if !defined(linux) && !defined(_WIN32)
 			start_ts = esp_timer_get_time();
 
-			nodes = 0;
-
 			md    = 1;
+#endif
+			nodes = 0;
 
 			tti.inc_age();
 
