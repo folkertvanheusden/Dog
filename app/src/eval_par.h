@@ -46,7 +46,7 @@ public:
 		 { "tune_pp_scores_eg_6", -53 },
 		 { "tune_pp_scores_eg_7", 0 } } };
 //	libchess::TunableParameter tune_find_forks{"tune_find_forks", 0};
-	libchess::TunableParameter tune_king_shield{"tune_king_shield", 0};
+	libchess::TunableParameter tune_king_shield{"tune_king_shield", 5};
 //	libchess::TunableParameter tune_development{"tune_development", 0};
 	libchess::TunableParameter tune_psq_mul{"tune_psq_mul", 402};
 	libchess::TunableParameter tune_psq_div{"tune_psq_div", 546};
