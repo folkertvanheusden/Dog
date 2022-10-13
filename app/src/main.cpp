@@ -477,8 +477,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	bool in_check         = pos.in_check();
 
-	std::optional<libchess::MoveList> move_list { };
-
 	int start_alpha       = alpha;
 
 	// TT //
@@ -489,8 +487,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
         if (te.has_value()) {
 		if (te.value().data_._data.m)
 			tt_move = libchess::Move(te.value().data_._data.m);
-
-		move_list = pos.pseudo_legal_move_list();
 
 		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
 			tt_move.reset();
@@ -572,8 +568,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	int     best_score = -32767;
 
-	if (move_list.has_value() == false)
-		move_list  = pos.pseudo_legal_move_list();
+	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
 	sort_movelist_compare smc(&pos);
 
@@ -586,7 +581,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (iid_move.value())
 		smc.add_first_move(iid_move);
 
-	sort_movelist(pos, move_list.value(), smc);
+	sort_movelist(pos, move_list, smc);
 
 	int     n_played   = 0;
 
@@ -594,7 +589,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::Move new_move { 0 };
 
-	for(auto move : move_list.value()) {
+	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
