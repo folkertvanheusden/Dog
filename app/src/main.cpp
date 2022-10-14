@@ -1084,8 +1084,6 @@ int main(int argc, char *argv[])
 #else
 extern "C" void app_main()
 {
-	esp_task_wdt_init(30, false);
-
 	gpio_config_t io_conf { };
 	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
 	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
@@ -1096,10 +1094,12 @@ extern "C" void app_main()
 	if (error != ESP_OK)
 		printf("error configuring outputs\n");
 
-	gpio_set_level(LED_INTERNAL, 0);
+	gpio_set_level(LED_INTERNAL, 1);
 	gpio_set_level(LED_GREEN,    0);
 	gpio_set_level(LED_BLUE,     0);
 	gpio_set_level(LED_RED,      0);
+
+	esp_task_wdt_init(30, false);
 
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
 	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
@@ -1110,6 +1110,8 @@ extern "C" void app_main()
 	start_ponder();
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
+
+	gpio_set_level(LED_INTERNAL, 0);
 
 	main_task();
 
