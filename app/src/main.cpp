@@ -60,9 +60,15 @@ void think_timeout(void *arg) {
 }
 
 #if defined(linux) || defined(_WIN32)
-#define LED 0
+#define LED_INTERNAL 0
+#define LED_GREEN    0
+#define LED_BLUE     0
+#define LED_RED      0
 #else
-#define LED (GPIO_NUM_2)
+#define LED_INTERNAL (GPIO_NUM_2 )
+#define LED_GREEN    (GPIO_NUM_27)
+#define LED_BLUE     (GPIO_NUM_25)
+#define LED_RED      (GPIO_NUM_22)
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
@@ -70,7 +76,59 @@ const esp_timer_create_args_t think_timeout_pars = {
             .name = "searchto"
 };
 
+typedef struct {
+	gpio_num_t pin_nr;
+	bool       state;
+} led_t;
+
+void blink_led(void *arg) {
+	led_t *l = reinterpret_cast<led_t *>(arg);
+
+	gpio_set_level(l->pin_nr, l->state);
+
+	l->state = !l->state;
+}
+
+void start_blink(esp_timer_handle_t handle)
+{
+	esp_timer_start_periodic(handle, 100000);  // 10 times per second
+}
+
+void stop_blink(esp_timer_handle_t handle, led_t *l)
+{
+	esp_timer_stop(handle);
+
+	gpio_set_level(l->pin_nr, false);
+}
+
+led_t led_green { LED_GREEN, false };
+
+const esp_timer_create_args_t led_green_timer_pars = {
+            .callback = &blink_led,
+            .arg = &led_green,
+            .name = "greenled"
+};
+
+led_t led_blue { LED_BLUE, false };
+
+const esp_timer_create_args_t led_blue_timer_pars = {
+            .callback = &blink_led,
+            .arg = &led_blue,
+            .name = "blueled"
+};
+
+led_t led_red { LED_RED, false };
+
+const esp_timer_create_args_t led_red_timer_pars = {
+            .callback = &blink_led,
+            .arg = &led_red,
+            .name = "redled"
+};
+
 esp_timer_handle_t think_timeout_timer;
+esp_timer_handle_t led_green_timer;
+esp_timer_handle_t led_blue_timer;
+esp_timer_handle_t led_red_timer;
 #endif
 
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
@@ -115,11 +173,9 @@ class inbuf : public std::streambuf {
   protected:
     // insert new characters into the buffer
     virtual int_type underflow () {
-
         // is read position before end of buffer?
-        if (gptr() < egptr()) {
+        if (gptr() < egptr())
             return traits_type::to_int_type(*gptr());
-        }
 
         /* process size of putback area
          * - use number of characters read
@@ -144,7 +200,7 @@ class inbuf : public std::streambuf {
 		c = fgetc(stdin);
 
 		if (c >= 0)
-			break;
+		    break;
 
 #if !defined(linux) && !defined(_WIN32)
 		vTaskDelay(1);
@@ -185,6 +241,10 @@ void vApplicationMallocFailedHook()
 	printf("# *** OUT OF MEMORY (heap) ***\n");
 
 	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
+
+#if !defined(linux) && !defined(_WIN32)
+	start_blink(led_red_timer);
+#endif
 }
 }
 
@@ -229,6 +289,10 @@ bool checkMinStackSize(const int nr, search_pars_t *const sp)
 
 	if (level < 1024) {
 		*sp->stop_flag = true;
+
+#if !defined(linux) && !defined(_WIN32)
+		start_blink(led_red_timer);
+#endif
 
 		printf("# stack protector %d engaged (%d)\n", nr, level);
 
@@ -835,7 +899,13 @@ void ponder_thread(void *p)
 		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 			printf("# new ponder position\n");
 
+			start_blink(led_blue_timer);
+
 			search_it(&positiont2, 2147483647, true, &sp);
+
+#if !defined(linux) && !defined(_WIN32)
+			stop_blink(led_blue_timer, &led_blue);
+#endif
 		}
 		else {
 			// TODO replace this by condition variables
@@ -903,7 +973,13 @@ void main_task()
 
 			tti.inc_age();
 
-			gpio_set_level(LED, 1);
+#if !defined(linux) && !defined(_WIN32)
+			stop_blink(led_red_timer, &led_red);
+#endif
+
+#if !defined(linux) && !defined(_WIN32)
+			start_blink(led_green_timer);
+#endif
 
 			int moves_to_go = 40 - positiont1.fullmoves();
 
@@ -949,7 +1025,9 @@ void main_task()
 			auto best_move = search_it(&positiont1, think_time, false, &sp);
 
 			// no longer thinking
-			gpio_set_level(LED, 0);
+#if !defined(linux) && !defined(_WIN32)
+			stop_blink(led_green_timer, &led_green);
+#endif
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -1011,14 +1089,21 @@ extern "C" void app_main()
 	gpio_config_t io_conf { };
 	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
 	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
-	io_conf.pin_bit_mask = (1ULL<<LED);//bit mask of the pins that you want to set,e.g.GPIO18
+	io_conf.pin_bit_mask = (1ULL<<LED_INTERNAL) | (1ULL << LED_GREEN) | (1ULL << LED_BLUE) | (1ULL << LED_RED);//bit mask of the pins that you want to set,e.g.GPIO18
 	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;//disable pull-down mode
 	io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;//disable pull-up mode
 	esp_err_t error      = gpio_config(&io_conf);//configure GPIO with the given settings
-	if (error!=ESP_OK)
+	if (error != ESP_OK)
 		printf("error configuring outputs\n");
 
-	gpio_set_level(LED, 0);
+	gpio_set_level(LED_INTERNAL, 0);
+	gpio_set_level(LED_GREEN,    0);
+	gpio_set_level(LED_BLUE,     0);
+	gpio_set_level(LED_RED,      0);
+
+	esp_timer_create(&led_green_timer_pars, &led_green_timer);
+	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
+	esp_timer_create(&led_red_timer_pars,   &led_red_timer  );
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
@@ -1027,5 +1112,9 @@ extern "C" void app_main()
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
 	main_task();
+
+#if !defined(linux) && !defined(_WIN32)
+	start_blink(led_red_timer);
+#endif
 }
 #endif
