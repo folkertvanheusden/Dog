@@ -36,3 +36,9 @@ To build it for windows:
 	cd buildwindows
 	cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
 	make
+
+
+The device can have (optional) LEDs connected:
+* a green led on pin 27 - blinks while thinking
+* a blue led on pin 25  - blinks while pondering
+* a red led on pin 22   - blinks in an error situation
