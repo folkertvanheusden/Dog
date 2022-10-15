@@ -899,7 +899,9 @@ void ponder_thread(void *p)
 		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 			printf("# new ponder position\n");
 
+#if !defined(linux) && !defined(_WIN32)
 			start_blink(led_blue_timer);
+#endif
 
 			search_it(&positiont2, 2147483647, true, &sp);
 
@@ -1007,8 +1009,12 @@ void main_task()
 				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
 
 				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+				int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
 
 				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+
+				if (ms_opponent < ms)
+					think_time += (ms - ms_opponent) / 2;
 
 				int limit_duration_min = ms / 15;
 				if (think_time > limit_duration_min)
