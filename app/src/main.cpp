@@ -899,7 +899,9 @@ void ponder_thread(void *p)
 		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 			printf("# new ponder position\n");
 
+#if !defined(linux) && !defined(_WIN32)
 			start_blink(led_blue_timer);
+#endif
 
 			search_it(&positiont2, 2147483647, true, &sp);
 
