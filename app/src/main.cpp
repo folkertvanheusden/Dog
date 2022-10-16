@@ -43,7 +43,8 @@
 
 std::atomic_bool stop1 { false };
 std::atomic_bool stop2 { false };
-std::atomic_bool ponder_quit { false };
+std::atomic_bool ponder_quit    { false };
+bool             run_2nd_thread { false };
 
 #if defined(linux) || defined(_WIN32)
 std::thread *ponder_thread_handle { nullptr };
@@ -228,6 +229,10 @@ libchess::UCIService uci_service{"Dog v0.7", "Folkert van Heusden", std::cout, i
 tt tti;
 
 auto stop_handler = []() { stop1 = true; };
+
+int  thread_count = 2;
+
+auto thread_count_handler = [](const int value) { thread_count = value; };
 
 typedef struct
 {
@@ -896,7 +901,7 @@ void ponder_thread(void *p)
 		positiont2 = libchess::Position(search_fen);
 		search_fen_lock.unlock();
 
-		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS) {
+		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS && run_2nd_thread) {
 			printf("# new ponder position\n");
 
 #if !defined(linux) && !defined(_WIN32)
@@ -1019,8 +1024,9 @@ void main_task()
 
 			// let the ponder thread run as a lazy-smp thread
 			search_fen_lock.lock();
-			search_fen = positiont1.fen();
-			stop2      = true;  // restart ponder/lazy-smp thread
+			run_2nd_thread = thread_count == 2;
+			search_fen     = positiont1.fen();
+			stop2          = true;  // restart ponder/lazy-smp thread
 			search_fen_lock.unlock();
 
 			// main search
@@ -1038,8 +1044,9 @@ void main_task()
 			positiont1.make_move(best_move);
 
 			search_fen_lock.lock();
-			search_fen = positiont1.fen();
-			stop2      = true;
+			run_2nd_thread = true;
+			search_fen     = positiont1.fen();
+			stop2          = true;
 			search_fen_lock.unlock();
 
 			positiont1.unmake_move();
@@ -1049,8 +1056,14 @@ void main_task()
 		}
 	};
 
+	libchess::UCISpinOption thread_count_option("Threads", 2, 1, 2, thread_count_handler);
+
+	uci_service.register_option(thread_count_option);
+
 	uci_service.register_position_handler(position_handler);
+
 	uci_service.register_go_handler(go_handler);
+
 	uci_service.register_stop_handler(stop_handler);
 
 	while (true) {
