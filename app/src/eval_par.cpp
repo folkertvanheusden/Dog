@@ -44,6 +44,8 @@ std::vector<libchess::TunableParameter> eval_par::get_tunable_parameters() const
 	list.push_back(tune_edge_black_file);
 	list.push_back(tune_edge_white_rank);
 	list.push_back(tune_edge_white_file);
+	list.push_back(tune_big_delta_promotion);
+	list.push_back(tune_big_delta);
 
 	for(int i=0; i<2; i++) {
 		for(int y=1; y<7; y++)
@@ -91,6 +93,10 @@ void eval_par::set_eval(const std::string & name, int value)
 		tune_edge_white_rank.set_value(value);
 	else if (name == tune_edge_white_file.name())
 		tune_edge_white_file.set_value(value);
+	else if (name == tune_big_delta_promotion.name())
+		tune_big_delta_promotion.set_value(value);
+	else if (name == tune_big_delta.name())
+		tune_big_delta.set_value(value);
 	else if (name == tune_psq_div.name()) {
 		if (value == 0)
 			value = 1;

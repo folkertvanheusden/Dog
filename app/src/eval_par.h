@@ -26,6 +26,8 @@ public:
 	libchess::TunableParameter tune_bishop{"tune_bishop", 436};
 	libchess::TunableParameter tune_rook{"tune_rook", 697};
 	libchess::TunableParameter tune_queen{"tune_queen", 1390};
+	libchess::TunableParameter tune_big_delta{"tune_big_delta", 975};
+	libchess::TunableParameter tune_big_delta_promotion{"tune_big_delta_promotion", 775};
 //	libchess::TunableParameter tune_king{"tune_king", 10000};
 	libchess::TunableParameter tune_pp_scores[2][8]
 		{ { { "tune_pp_scores_mg_0", 0 },

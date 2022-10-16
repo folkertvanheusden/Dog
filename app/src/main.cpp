@@ -237,6 +237,7 @@ auto thread_count_handler = [](const int value) { thread_count = value; };
 typedef struct
 {
 	std::atomic_bool *stop_flag;
+	eval_par *parameters;
 } search_pars_t;
 
 #if !defined(linux) && !defined(_WIN32)
@@ -317,11 +318,12 @@ class sort_movelist_compare
 {
 private:
         libchess::Position       *const p;
+	eval_par                 *const ep;
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p) : p(p) {
+        sort_movelist_compare(libchess::Position *const p, eval_par *const ep) : p(p), ep(ep) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
@@ -344,7 +346,7 @@ public:
                 int score       = 0;
 
                 if (p->is_promotion_move(move))
-                        score += eval_piece(*move.promotion_piece_type(), default_parameters) << 18;
+                        score += eval_piece(*move.promotion_piece_type(), *ep) << 18;
 
                 if (p->is_capture_move(move)) {
                         auto piece_to = p->piece_on(move.to_square());
@@ -352,10 +354,10 @@ public:
 				return -1;
 
                         // victim
-                        score += (move.type() == libchess::Move::Type::ENPASSANT ? default_parameters.tune_pawn.value() : eval_piece(piece_to->type(), default_parameters)) << 18;
+                        score += (move.type() == libchess::Move::Type::ENPASSANT ? ep->tune_pawn.value() : eval_piece(piece_to->type(), *ep)) << 18;
 
                         if (piece_from->type() != libchess::constants::KING)
-                                score += (950 - eval_piece(piece_from->type(), default_parameters)) << 8;
+                                score += (950 - eval_piece(piece_from->type(), *ep)) << 8;
                 }
                 else {
 //                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
@@ -434,15 +436,15 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	bool in_check   = pos.in_check();
 
 	if (!in_check) {
-		best_score = eval(pos, default_parameters);
+		best_score = eval(pos, *sp->parameters);
 
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
 
-		int BIG_DELTA = 975;
+		int BIG_DELTA = sp->parameters->tune_big_delta.value();
 
 		if (pos.is_promotion_move(*pos.previous_move()))
-			BIG_DELTA += 775;
+			BIG_DELTA += sp->parameters->tune_big_delta_promotion.value();
 
 		if (best_score < alpha - BIG_DELTA)
 			return alpha;
@@ -455,7 +457,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 
-	sort_movelist_compare smc(&pos);
+	sort_movelist_compare smc(&pos, sp->parameters);
 
 	sort_movelist(pos, move_list, smc);
 
@@ -465,10 +467,10 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 		if (!in_check && pos.is_capture_move(move)) {
 			auto piece_to    = pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? default_parameters.tune_pawn.value() : eval_piece(piece_to->type(), default_parameters);
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp->parameters->tune_pawn.value() : eval_piece(piece_to->type(), *sp->parameters);
 
 			auto piece_from  = pos.piece_on(move.from_square());
-			int  eval_killer = eval_piece(piece_from->type(), default_parameters);
+			int  eval_killer = eval_piece(piece_from->type(), *sp->parameters);
 
 			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
 				continue;
@@ -503,7 +505,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
-			best_score = eval(pos, default_parameters);
+			best_score = eval(pos, *sp->parameters);
 	}
 
 	return best_score;
@@ -592,16 +594,16 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	////////
 
 	if (!is_root_position && depth <= 3 && beta <= 9800) {
-		int staticeval = eval(pos, default_parameters);
+		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (depth == 1 && staticeval - default_parameters.tune_knight.value() > beta)
+		if (depth == 1 && staticeval - sp->parameters->tune_knight.value() > beta)
 			return beta;
 
-		if (depth == 2 && staticeval - default_parameters.tune_rook.value() > beta)
+		if (depth == 2 && staticeval - sp->parameters->tune_rook.value() > beta)
 			return beta;
 
-		if (depth == 3 && staticeval - default_parameters.tune_queen.value() > beta)
+		if (depth == 3 && staticeval - sp->parameters->tune_queen.value() > beta)
 			depth--;
 	}
 
@@ -639,7 +641,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
-	sort_movelist_compare smc(&pos);
+	sort_movelist_compare smc(&pos, sp->parameters);
 
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
@@ -893,7 +895,7 @@ void ponder_thread(void *p)
 {
 	printf("# pondering started\n");
 
-	search_pars_t sp { &stop2 };
+	search_pars_t sp { &stop2, &default_parameters };
 
 	for(;!ponder_quit;) {
 		search_fen_lock.lock();
@@ -965,7 +967,7 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	search_pars_t sp { &stop1 };
+	search_pars_t sp { &stop1, &default_parameters };
 
 	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
 		try {
@@ -1082,6 +1084,56 @@ void main_task()
 }
 
 #if defined(linux) || defined(_WIN32)
+void tune(std::string file)
+{
+	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });
+
+	printf("%zu EPDs loaded\n", normalized_results.size());
+
+	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
+	printf("%zu parameters\n", tunable_parameters.size());
+
+	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
+		[](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
+			eval_par cur;
+
+			for(auto & e : params)
+				cur.set_eval(e.name(), e.value());
+
+			std::atomic_bool ef(false);
+			search_pars_t sp { &ef, &cur };
+
+			int score = qs(pos, -32767, 32767, 0, &sp);
+
+			if (pos.side_to_move() != libchess::constants::WHITE)
+				score = -score;
+
+			return score;
+		}};
+
+
+	uint64_t start_ts = esp_timer_get_time() / 1000;
+	double start_error = tuner.error();
+	tuner.tune();
+	double end_error = tuner.error();
+	uint64_t end_ts = esp_timer_get_time() / 1000;
+
+	time_t start = start_ts / 1000;
+	char *str = ctime(&start), *lf = strchr(str, '\n');
+
+	if (lf)
+		*lf = 0x00;
+
+	printf("# error: %.18f (%f%%), took: %fs, %s\n", end_error, sqrt(end_error) * 100.0, (end_ts - start_ts) / 1000.0, str);
+
+	auto parameters = tuner.tunable_parameters();
+	for(auto parameter : parameters)
+		printf("%s=%d\n", parameter.name().c_str(), parameter.value());
+	printf("#---\n");
+}
+#endif
+
+#if defined(linux) || defined(_WIN32)
 int main(int argc, char *argv[])
 {
 #if !defined(_WIN32)
@@ -1092,7 +1144,10 @@ int main(int argc, char *argv[])
 
 	printf("\n\n\n# HELLO, THIS IS DOG\n");
 
-	main_task();
+	if (argc == 2)
+		tune(argv[1]);
+	else
+		main_task();
 
 	return 0;
 }
