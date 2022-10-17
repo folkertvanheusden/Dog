@@ -788,8 +788,10 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	if (is_t2 == false) {
 #if defined(linux) || defined(_WIN32)
 		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
-				while(esp_timer_get_time() < t_offset + search_time * 1000)
+				while(esp_timer_get_time() < t_offset + search_time * 1000ll)
 					std::this_thread::sleep_for(std::chrono::microseconds(100000)); /* replace by cond.var. */
+
+				printf("# set stop flag\n");
 
 				*sp->stop_flag = true;
 			});
@@ -816,8 +818,10 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		for(;;) {
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
-			if (*sp->stop_flag)
+			if (*sp->stop_flag) {
+				printf("# stop flag set\n");
 				break;
+			}
 
 			if (score <= alpha) {
 				beta = (alpha + beta) / 2;
@@ -860,8 +864,10 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
 				}
 
-				if (thought_ms > search_time / 2)
+				if (thought_ms > search_time / 2) {
+					printf("# time %lu is up %lu\n", search_time, thought_ms);
 					break;
+				}
 
 				add_alpha = 75;
 				add_beta  = 75;
@@ -869,6 +875,9 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				max_depth++;
 			}
 		}
+	}
+	else {
+		printf("# only 1 move possible\n");
 	}
 
 	if (!is_t2) {
