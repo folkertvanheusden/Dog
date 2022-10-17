@@ -1,12 +1,16 @@
+#include <assert.h>
 #include <cmath>
 #include <functional>
 #include <numeric>
+
 #if defined(linux) || defined(_WIN32)
 #include "libchess/Tuner.h"
 #else
 #include "tuner.h"
 #endif
+
 #include "eval_par.h"
+
 
 eval_par::eval_par()
 {
@@ -103,15 +107,20 @@ void eval_par::set_eval(const std::string & name, int value)
 		tune_psq_div.set_value(value);
 	}
 	else {
+		bool found = false;
+
 		for(int i=0; i<2; i++) {
 			for(int y=1; y<7; y++) {
 				if (tune_pp_scores[i][y].name() == name) {
 					tune_pp_scores[i][y].set_value(value);
 					i = 2;
+					found = true;
 					break;
 				}
 			}
 		}
+
+		assert(found);
 	}
 }
 
