@@ -20,9 +20,9 @@ public:
 	libchess::TunableParameter tune_zero_pawns{"tune_zero_pawns", TUNE_ZERO_PAWNS };
 	libchess::TunableParameter tune_isolated_pawns{"tune_isolated_pawns", TUNE_ISOLATED_PAWNS };
 	libchess::TunableParameter tune_rook_on_open_file{"tune_rook_on_open_file", TUNE_ROOK_ON_OPEN_FILE };
-	libchess::TunableParameter tune_mobility{"tune_mobility", TUNE_MOBILITY };
+//	libchess::TunableParameter tune_mobility{"tune_mobility", TUNE_MOBILITY };
 	libchess::TunableParameter tune_double_pawns{"tune_double_pawns", TUNE_DOUBLE_PAWNS };
-	libchess::TunableParameter tune_king_attacks{"tune_king_attacks", TUNE_KING_ATTACKS };
+//	libchess::TunableParameter tune_king_attacks{"tune_king_attacks", TUNE_KING_ATTACKS };
 	libchess::TunableParameter tune_bishop_open_diagonal{"tune_bishop_open_diagonal", TUNE_BISHOP_OPEN_DIAGONAL };
 	libchess::TunableParameter tune_pawn{"tune_pawn", TUNE_PAWN };
 	libchess::TunableParameter tune_knight{"tune_knight", TUNE_KNIGHT };
@@ -49,9 +49,9 @@ public:
 		 { "tune_pp_scores_eg_5", TUNE_PP_SCORES_EG_5 },
 		 { "tune_pp_scores_eg_6", TUNE_PP_SCORES_EG_6 },
 		 { "tune_pp_scores_eg_7", TUNE_PP_SCORES_EG_7 } } };
-	libchess::TunableParameter tune_find_forks{"tune_find_forks", TUNE_FIND_FORKS };
+//	libchess::TunableParameter tune_find_forks{"tune_find_forks", TUNE_FIND_FORKS };
 	libchess::TunableParameter tune_king_shield{"tune_king_shield", TUNE_KING_SHIELD };
-	libchess::TunableParameter tune_development{"tune_development", TUNE_DEVELOPMENT };
+//	libchess::TunableParameter tune_development{"tune_development", TUNE_DEVELOPMENT };
 	libchess::TunableParameter tune_psq_mul{"tune_psq_mul", TUNE_PSQ_MUL };
 	libchess::TunableParameter tune_psq_div{"tune_psq_div", TUNE_PSQ_DIV };
 	libchess::TunableParameter tune_edge_black_rank{"tune_edge_black_rank", TUNE_EDGE_BLACK_RANK };
