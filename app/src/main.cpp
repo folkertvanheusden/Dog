@@ -46,6 +46,8 @@ std::atomic_bool stop2 { false };
 std::atomic_bool ponder_quit    { false };
 bool             run_2nd_thread { false };
 
+auto stop_handler = []() { stop1 = true; };
+
 #if defined(linux) || defined(_WIN32)
 std::thread *ponder_thread_handle { nullptr };
 #else
@@ -228,11 +230,13 @@ libchess::UCIService uci_service{"Dog v0.7", "Folkert van Heusden", std::cout, i
 
 tt tti;
 
-auto stop_handler = []() { stop1 = true; };
-
 int  thread_count = 2;
 
-auto thread_count_handler = [](const int value) { thread_count = value; };
+auto thread_count_handler = [](const int value)  { thread_count = value; };
+
+bool allow_ponder = true;
+
+auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 
 typedef struct
 {
@@ -1046,7 +1050,7 @@ void main_task()
 			positiont1.make_move(best_move);
 
 			search_fen_lock.lock();
-			run_2nd_thread = true;
+			run_2nd_thread = allow_ponder;
 			search_fen     = positiont1.fen();
 			stop2          = true;
 			search_fen_lock.unlock();
@@ -1061,6 +1065,10 @@ void main_task()
 	libchess::UCISpinOption thread_count_option("Threads", 2, 1, 2, thread_count_handler);
 
 	uci_service.register_option(thread_count_option);
+
+	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
+
+	uci_service.register_option(allow_ponder_option);
 
 	uci_service.register_position_handler(position_handler);
 
