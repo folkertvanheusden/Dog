@@ -796,7 +796,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				*sp->stop_flag = true;
 			});
 #else
-		esp_timer_start_once(think_timeout_timer, search_time * 1000);
+		esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
 #endif
 	}
 
