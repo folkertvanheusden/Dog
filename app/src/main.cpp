@@ -226,7 +226,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.7", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v0.8", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -865,7 +865,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				}
 
 				if (thought_ms > search_time / 2) {
-					printf("# time %lu is up %lu\n", search_time, thought_ms);
+					printf("# time %u is up %llu\n", search_time, thought_ms);
 					break;
 				}
 
@@ -1154,6 +1154,11 @@ void tune(std::string file)
 }
 #endif
 
+void hello() {
+	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+}
+
 #if defined(linux) || defined(_WIN32)
 int main(int argc, char *argv[])
 {
@@ -1161,9 +1166,9 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-	start_ponder();
+	hello();
 
-	printf("\n\n\n# HELLO, THIS IS DOG\n");
+	start_ponder();
 
 	if (argc == 2)
 		tune(argv[1]);
@@ -1198,9 +1203,9 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
-	start_ponder();
+	hello();
 
-	printf("\n\n\n# HELLO, THIS IS DOG\n");
+	start_ponder();
 
 	gpio_set_level(LED_INTERNAL, 0);
 
