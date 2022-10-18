@@ -4,7 +4,9 @@
 #include <functional>
 #include <numeric>
 
-#if defined(linux) || defined(_WIN32)
+#ifdef __ANDROID__
+#include "libchess/Tuner.h"
+#elif defined(linux) || defined(_WIN32)
 #include "libchess/Tuner.h"
 #else
 #include "tuner.h"
