@@ -3,7 +3,7 @@
 #include <functional>
 #include <numeric>
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #include "libchess/Tuner.h"
 #else
 #include "tuner.h"

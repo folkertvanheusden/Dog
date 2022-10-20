@@ -11,7 +11,7 @@
 #include <streambuf>
 #include <string>
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #include <chrono>
 #include <limits.h>
 #include <pthread.h>
@@ -48,7 +48,7 @@ bool             run_2nd_thread { false };
 
 auto stop_handler = []() { stop1 = true; };
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::thread *ponder_thread_handle { nullptr };
 #else
 TaskHandle_t ponder_thread_handle;
@@ -62,7 +62,7 @@ void think_timeout(void *arg) {
 	*stop = true;
 }
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #define LED_INTERNAL 0
 #define LED_GREEN    0
 #define LED_BLUE     0
@@ -205,7 +205,7 @@ class inbuf : public std::streambuf {
 		if (c >= 0)
 		    break;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		vTaskDelay(1);
 #endif
 	}
@@ -244,7 +244,7 @@ typedef struct
 	eval_par *parameters;
 } search_pars_t;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 extern "C" {
 void vApplicationMallocFailedHook()
 {
@@ -252,7 +252,7 @@ void vApplicationMallocFailedHook()
 
 	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	start_blink(led_red_timer);
 #endif
 }
@@ -300,7 +300,7 @@ bool checkMinStackSize(const int nr, search_pars_t *const sp)
 	if (level < 1024) {
 		*sp->stop_flag = true;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		start_blink(led_red_timer);
 #endif
 
@@ -421,7 +421,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	if (*sp->stop_flag)
 		return 0;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	if (qsdepth > md) {
 		if (checkMinStackSize(1, sp))
 			return 0;
@@ -529,7 +529,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (*sp->stop_flag)
 		return 0;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
 
 	if (d > md) {
@@ -736,7 +736,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	return best_score;
 }
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 uint64_t esp_timer_get_time()
 {
 	struct timeval tv;
@@ -781,12 +781,12 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 {
 	uint64_t t_offset = esp_timer_get_time();
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
 	if (is_t2 == false) {
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
 				while(esp_timer_get_time() < t_offset + search_time * 1000ll)
 					std::this_thread::sleep_for(std::chrono::microseconds(100000)); /* replace by cond.var. */
@@ -881,7 +881,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	}
 
 	if (!is_t2) {
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		stop1 = true;
 
 		think_timeout_timer->join();
@@ -898,7 +898,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	return best_move;
 }
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void gpio_set_level(int a, int b)
 {
 }
@@ -919,19 +919,19 @@ void ponder_thread(void *p)
 		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS && run_2nd_thread) {
 			printf("# new ponder position\n");
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_blink(led_blue_timer);
 #endif
 
 			search_it(&positiont2, 2147483647, true, &sp);
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 		}
 		else {
 			// TODO replace this by condition variables
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			std::this_thread::sleep_for(std::chrono::microseconds(10000));
 #else
 			vTaskDelay(10);  // TODO divide
@@ -941,7 +941,7 @@ void ponder_thread(void *p)
 
 	printf("# pondering stopping\n");
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	vTaskDelete(nullptr);
 #endif
 }
@@ -950,7 +950,7 @@ void start_ponder()
 {
 	stop2                = false;
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
 #else
 	TaskHandle_t temp;
@@ -963,7 +963,7 @@ void start_ponder()
 
 void stop_ponder()
 {
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (ponder_thread_handle) {
 		ponder_quit = stop2 = true;
 
@@ -986,7 +986,7 @@ void main_task()
 		try {
 			stop1 = false;
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_ts = esp_timer_get_time();
 
 			md    = 1;
@@ -995,11 +995,11 @@ void main_task()
 
 			tti.inc_age();
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_red_timer, &led_red);
 #endif
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_blink(led_green_timer);
 #endif
 
@@ -1052,7 +1052,7 @@ void main_task()
 			auto best_move = search_it(&positiont1, think_time, false, &sp);
 
 			// no longer thinking
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_green_timer, &led_green);
 #endif
 
@@ -1159,7 +1159,7 @@ void hello() {
 	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
 }
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 int main(int argc, char *argv[])
 {
 #if !defined(_WIN32)
@@ -1170,9 +1170,11 @@ int main(int argc, char *argv[])
 
 	start_ponder();
 
+#if !defined(__ANDROID__)
 	if (argc == 2)
 		tune(argv[1]);
 	else
+#endif
 		main_task();
 
 	return 0;
@@ -1211,7 +1213,7 @@ extern "C" void app_main()
 
 	main_task();
 
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	start_blink(led_red_timer);
 #endif
 }

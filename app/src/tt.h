@@ -21,7 +21,7 @@ typedef struct __PRAGMA_PACKED__
         } data_;
 } tt_entry;
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #define N_TE_PER_HASH_GROUP 8
 #else
 #define N_TE_PER_HASH_GROUP 2
@@ -32,7 +32,9 @@ typedef struct __PRAGMA_PACKED__
         tt_entry entries[N_TE_PER_HASH_GROUP];
 } tt_hash_group;
 
-#if defined(linux) || defined(_WIN32)
+#if defined(__ANDROID__)
+constexpr uint64_t n_entries { 16 * 1024 * 1024 / sizeof(tt_hash_group) };
+#elif defined(linux) || defined(_WIN32)
 constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
 #else
 constexpr uint64_t n_entries { 65536 / sizeof(tt_hash_group) };
