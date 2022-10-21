@@ -3,7 +3,7 @@
 
     <engine
         name="Dog"
-        filename="libdog-android.so"
+        filename="libDog.so"
         target="armeabi|armeabi-v7a|x86" />
 
 </enginelist>

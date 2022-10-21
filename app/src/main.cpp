@@ -138,7 +138,7 @@ libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
 std::mutex  search_fen_lock;
-std::string search_fen;
+std::string search_fen      = libchess::constants::STARTPOS_FEN;
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
@@ -983,96 +983,91 @@ void main_task()
 	search_pars_t sp { &stop1, &default_parameters };
 
 	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
-		try {
-			stop1 = false;
+		stop1 = false;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_ts = esp_timer_get_time();
+		start_ts = esp_timer_get_time();
 
-			md    = 1;
+		md    = 1;
 #endif
-			nodes = 0;
+		nodes = 0;
 
-			tti.inc_age();
+		tti.inc_age();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			stop_blink(led_red_timer, &led_red);
+		stop_blink(led_red_timer, &led_red);
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_blink(led_green_timer);
+		start_blink(led_green_timer);
 #endif
 
-			int moves_to_go = 40 - positiont1.fullmoves();
+		int moves_to_go = 40 - positiont1.fullmoves();
 
-			auto movetime = go_parameters.movetime();
+		auto movetime = go_parameters.movetime();
 
-			auto a_w_time = go_parameters.wtime();
-			auto a_b_time = go_parameters.btime();
+		auto a_w_time = go_parameters.wtime();
+		auto a_b_time = go_parameters.btime();
 
-			int w_time = a_w_time.has_value() ? a_w_time.value() : 0;
-			int b_time = a_b_time.has_value() ? a_b_time.value() : 0;
+		int w_time = a_w_time.has_value() ? a_w_time.value() : 0;
+		int b_time = a_b_time.has_value() ? a_b_time.value() : 0;
 
-			auto a_w_inc = go_parameters.winc();
-			auto a_b_inc = go_parameters.binc();
+		auto a_w_inc = go_parameters.winc();
+		auto a_b_inc = go_parameters.binc();
 
-			int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
-			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
+		int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
+		int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
-			int think_time = 0;
+		int think_time = 0;
 
-			if (movetime.has_value())
-				think_time = movetime.value();
-			else {
-				int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
+		if (movetime.has_value())
+			think_time = movetime.value();
+		else {
+			int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
 
-				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
+			int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
 
-				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
-				int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
+			int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+			int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
 
-				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+			think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 
-				if (ms_opponent < ms)
-					think_time += (ms - ms_opponent) / 2;
+			if (ms_opponent < ms)
+				think_time += (ms - ms_opponent) / 2;
 
-				int limit_duration_min = ms / 15;
-				if (think_time > limit_duration_min)
-					think_time = limit_duration_min;
-			}
-
-			// let the ponder thread run as a lazy-smp thread
-			search_fen_lock.lock();
-			run_2nd_thread = thread_count == 2;
-			search_fen     = positiont1.fen();
-			stop2          = true;  // restart ponder/lazy-smp thread
-			search_fen_lock.unlock();
-
-			// main search
-			auto best_move = search_it(&positiont1, think_time, false, &sp);
-
-			// no longer thinking
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			stop_blink(led_green_timer, &led_green);
-#endif
-
-			// emit result
-			libchess::UCIService::bestmove(best_move.to_str());
-
-			// set ponder positition
-			positiont1.make_move(best_move);
-
-			search_fen_lock.lock();
-			run_2nd_thread = allow_ponder;
-			search_fen     = positiont1.fen();
-			stop2          = true;
-			search_fen_lock.unlock();
-
-			positiont1.unmake_move();
+			int limit_duration_min = ms / 15;
+			if (think_time > limit_duration_min)
+				think_time = limit_duration_min;
 		}
-		catch(const std::exception& e) {
-			printf("# EXCEPTION in main: %s\n", e.what());
-		}
+
+		// let the ponder thread run as a lazy-smp thread
+		search_fen_lock.lock();
+		run_2nd_thread = thread_count == 2;
+		search_fen     = positiont1.fen();
+		stop2          = true;  // restart ponder/lazy-smp thread
+		search_fen_lock.unlock();
+
+		// main search
+		auto best_move = search_it(&positiont1, think_time, false, &sp);
+
+		// no longer thinking
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+		stop_blink(led_green_timer, &led_green);
+#endif
+
+		// emit result
+		libchess::UCIService::bestmove(best_move.to_str());
+
+		// set ponder positition
+		positiont1.make_move(best_move);
+
+		search_fen_lock.lock();
+		run_2nd_thread = allow_ponder;
+		search_fen     = positiont1.fen();
+		stop2          = true;
+		search_fen_lock.unlock();
+
+		positiont1.unmake_move();
 	};
 
 	libchess::UCISpinOption thread_count_option("Threads", 2, 1, 2, thread_count_handler);

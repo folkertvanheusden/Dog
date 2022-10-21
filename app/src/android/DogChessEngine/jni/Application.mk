@@ -1,4 +1,5 @@
+APP_OPTIM := debug
 APP_ABI := all
-NDK_TOOLCHAIN_VERSION := 4.9
+APP_PLATFORM     := 21
 APP_STL := c++_static
-APP_CPPFLAGS += -std=c++17
+APP_CPPFLAGS += -std=c++17 -frtti -fexceptions -pthread

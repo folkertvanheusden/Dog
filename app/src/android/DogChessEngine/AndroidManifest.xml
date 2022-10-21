@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.kalab.chess.dog"
+    package="com.vanheusden.dog"
     android:versionCode="1"
     android:versionName="4" >
 
     <uses-sdk
-        android:minSdkVersion="7"
-        android:targetSdkVersion="18" />
+        android:minSdkVersion="21"
+        android:targetSdkVersion="30" />
 
     <application
         android:allowBackup="true"
@@ -14,7 +14,7 @@
         android:label="Dog chess program"
         android:theme="@android:style/Theme.Translucent.NoTitleBar" >
         <activity
-            android:name="com.kalab.chess.dog.MainActivity"
+            android:name="com.vanheusden.dog.MainActivity"
             android:label="Dog chess program" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,12 +27,12 @@
 
             <meta-data
                 android:name="chess.provider.engine.authority"
-                android:value="com.kalab.chess.dog.DogEngineProvider" />
+                android:value="com.vanheusden.dog.DogEngineProvider" />
         </activity>
 
         <provider
-            android:name="com.kalab.chess.dog.DogEngineProvider"
-            android:authorities="com.kalab.chess.dog.DogEngineProvider"
+            android:name="com.vanheusden.dog.DogEngineProvider"
+            android:authorities="com.vanheusden.dog.DogEngineProvider"
             android:exported="true" />
     </application>
 
