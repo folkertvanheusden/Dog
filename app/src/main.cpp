@@ -1057,13 +1057,13 @@ void main_task()
 			// main search
 			auto best_move = search_it(&positiont1, think_time, false, &sp);
 
+			// emit result
+			libchess::UCIService::bestmove(best_move.to_str());
+
 			// no longer thinking
 #if !defined(linux) && !defined(_WIN32)
 			stop_blink(led_green_timer, &led_green);
 #endif
-
-			// emit result
-			libchess::UCIService::bestmove(best_move.to_str());
 
 			// set ponder positition
 			positiont1.make_move(best_move);
