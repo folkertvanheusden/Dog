@@ -1,4 +1,4 @@
-APP_OPTIM := debug
+#APP_OPTIM := debug
 APP_ABI := all
 APP_PLATFORM     := 21
 APP_STL := c++_static
