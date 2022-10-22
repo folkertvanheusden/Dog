@@ -46,7 +46,10 @@ std::atomic_bool stop2 { false };
 std::atomic_bool ponder_quit    { false };
 bool             run_2nd_thread { false };
 
-auto stop_handler = []() { stop1 = true; };
+auto stop_handler = []() {
+	printf("# stop_handler invoked\n");
+	stop1 = true;
+};
 
 #if defined(linux) || defined(_WIN32)
 std::thread *ponder_thread_handle { nullptr };
@@ -877,7 +880,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		}
 	}
 	else {
-		printf("# only 1 move possible\n");
+		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos->fen().c_str());
 	}
 
 	if (!is_t2) {
@@ -913,10 +916,11 @@ void ponder_thread(void *p)
 	for(;!ponder_quit;) {
 		search_fen_lock.lock();
 		stop2      = false;
-		positiont2 = libchess::Position(search_fen);
+		if (search_fen.empty() == false)
+			positiont2 = libchess::Position(search_fen);
 		search_fen_lock.unlock();
 
-		if (positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS && run_2nd_thread) {
+		if (search_fen.empty() == false && positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS && run_2nd_thread) {
 			printf("# new ponder position\n");
 
 #if !defined(linux) && !defined(_WIN32)
@@ -936,6 +940,8 @@ void ponder_thread(void *p)
 #else
 			vTaskDelay(10);  // TODO divide
 #endif
+
+			search_fen.clear();
 		}
 	}
 
