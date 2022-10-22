@@ -940,9 +940,9 @@ void ponder_thread(void *p)
 #else
 			vTaskDelay(10);  // TODO divide
 #endif
-
-			search_fen.clear();
 		}
+
+		search_fen.clear();
 	}
 
 	printf("# pondering stopping\n");
