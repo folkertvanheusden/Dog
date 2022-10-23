@@ -317,7 +317,7 @@ bool checkMinStackSize(const int nr, search_pars_t *const sp)
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
 	if (level < 1024) {
-		set_stop(sp->stop);
+		set_flag(sp->stop);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		start_blink(led_red_timer);
