@@ -988,6 +988,25 @@ void main_task()
 
 	search_pars_t sp { &stop1, &default_parameters };
 
+	auto play_handler = [&sp](std::istringstream&) {
+		try {
+			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
+				stop1 = false;
+
+				tti.inc_age();
+
+				auto best_move = search_it(&positiont1, 750, false, &sp);
+
+				printf("# %s %s\n", positiont1.fen().c_str(), best_move.to_str().c_str());
+
+				positiont1.make_move(best_move);
+			}
+		}
+		catch(const std::exception& e) {
+			printf("# EXCEPTION in main: %s\n", e.what());
+		}
+	};
+
 	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
 		try {
 			stop1 = false;
@@ -1094,6 +1113,8 @@ void main_task()
 	uci_service.register_go_handler(go_handler);
 
 	uci_service.register_stop_handler(stop_handler);
+
+	uci_service.register_handler("play", play_handler);
 
 	while (true) {
 		std::string line;
