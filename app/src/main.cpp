@@ -891,11 +891,8 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		*sp->stop_flag = true;
 
-		uint64_t ts = esp_timer_get_time();
-		printf("# hier001\n");
 		think_timeout_timer->join();
 		delete think_timeout_timer;
-		printf("# hier002 %ld\n", esp_timer_get_time() - ts);
 #else
 		esp_timer_stop(think_timeout_timer);
 
