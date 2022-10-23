@@ -995,7 +995,13 @@ void main_task()
 
 				tti.inc_age();
 
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+				start_blink(led_green_timer);
+#endif
 				auto best_move = search_it(&positiont1, 750, false, &sp);
+#if !defined(linux) && !defined(_WIN32)
+				stop_blink(led_green_timer, &led_green);
+#endif
 
 				printf("# %s %s\n", positiont1.fen().c_str(), best_move.to_str().c_str());
 
