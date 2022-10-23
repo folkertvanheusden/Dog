@@ -534,15 +534,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	return best_score;
 }
 
-bool is_move_in_movelist(libchess::MoveList & move_list, libchess::Move & m)
-{
-	return std::any_of(move_list.begin(), move_list.end(), [m](const libchess::Move & move) {
-			return move.from_square() == m.from_square() &&
-			move.to_square() == m.to_square() &&
-			move.promotion_piece_type() == m.promotion_piece_type();
-			});
-}
-
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
 {
 	if (sp->stop->flag)
@@ -668,12 +659,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
+	else if (iid_move.value())
+		smc.add_first_move(iid_move);
 
 	if (m->value())
 		smc.add_first_move(*m);
-
-	if (iid_move.value())
-		smc.add_first_move(iid_move);
 
 	sort_movelist(pos, move_list, smc);
 
@@ -781,8 +771,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
 
-		libchess::MoveList cur_moves = work.legal_move_list();
-		if (!is_move_in_movelist(cur_moves, cur_move))
+		if (!work.is_legal_move(cur_move))
 			break;
 
 		out.push_back(cur_move);
