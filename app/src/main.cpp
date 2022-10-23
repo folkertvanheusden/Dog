@@ -3,6 +3,8 @@
 // Some parts are not mine (e.g. the inbuf class): see the url
 // above it for details.
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
@@ -41,14 +43,27 @@
 #include "tt.h"
 
 
-std::atomic_bool stop1 { false };
-std::atomic_bool stop2 { false };
+typedef struct {
+	std::atomic_bool        flag;
+	std::condition_variable cv;
+	std::mutex              m;  // not used
+} end_t;
+
+end_t            stop1          { false };  // main thread
+end_t            stop2          { false };  // ponder thread
 std::atomic_bool ponder_quit    { false };
 bool             run_2nd_thread { false };
 
+void set_flag(end_t *const stop)
+{
+	stop->flag = true;
+	stop->cv.notify_all();
+}
+
 auto stop_handler = []() {
+	set_flag(&stop1);
+
 	printf("# stop_handler invoked\n");
-	stop1 = true;
 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -60,9 +75,9 @@ TaskHandle_t ponder_thread_handle;
 uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
-	std::atomic_bool *stop = reinterpret_cast<std::atomic_bool *>(arg);
+	end_t *stop = reinterpret_cast<end_t *>(arg);
 
-	*stop = true;
+	set_flag(stop);
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -78,8 +93,8 @@ void think_timeout(void *arg) {
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
-            .arg = &stop1,
-            .name = "searchto"
+            .arg      = &stop1,
+            .name     = "searchto"
 };
 
 typedef struct {
@@ -244,8 +259,8 @@ auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 
 typedef struct
 {
-	std::atomic_bool *stop_flag;
-	eval_par         *parameters;
+	end_t    *stop;
+	eval_par *parameters;
 } search_pars_t;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -302,7 +317,7 @@ bool checkMinStackSize(const int nr, search_pars_t *const sp)
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
 	if (level < 1024) {
-		*sp->stop_flag = true;
+		set_stop(sp->stop);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		start_blink(led_red_timer);
@@ -422,7 +437,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp)
 {
-	if (*sp->stop_flag)
+	if (sp->stop->flag)
 		return 0;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -530,7 +545,7 @@ bool is_move_in_movelist(libchess::MoveList & move_list, libchess::Move & m)
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
 {
-	if (*sp->stop_flag)
+	if (sp->stop->flag)
 		return 0;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -725,7 +740,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			best_score = 0;
 	}
 
-	if (*sp->stop_flag == false) {
+	if (sp->stop->flag == false) {
 		tt_entry_flag flag = EXACT;
 
 		if (best_score <= start_alpha)
@@ -781,6 +796,25 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 	return out;
 }
 
+void timer(const int think_time, end_t *const ei)
+{
+	if (think_time > 0) {
+		auto end_time = std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time};
+
+		std::unique_lock<std::mutex> lk(ei->m);
+
+		for(;!ei->flag;) {
+			if (ei->cv.wait_until(lk, end_time) == std::cv_status::timeout)
+				break;
+		}
+	}
+
+	set_flag(ei);
+
+	printf("# time is up; set stop flag\n");
+}
+
+
 libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
 {
 	uint64_t t_offset = esp_timer_get_time();
@@ -791,15 +825,8 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 	if (is_t2 == false) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
-				uint64_t t_end = t_offset + search_time * 1000ll;
-
-				while(esp_timer_get_time() < t_end && *sp->stop_flag == false)
-					std::this_thread::sleep_for(std::chrono::microseconds(49000)); /* replace by cond.var. */
-
-				printf("# time is up; set stop flag\n");
-
-				*sp->stop_flag = true;
+		think_timeout_timer = new std::thread([search_time, sp] {
+				timer(search_time, sp->stop);
 			});
 #else
 		esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
@@ -824,7 +851,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		for(;;) {
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
-			if (*sp->stop_flag) {
+			if (sp->stop->flag) {
 				if (is_t2 == false)
 					printf("# stop flag set\n");
 				break;
@@ -889,7 +916,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 	if (!is_t2) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		*sp->stop_flag = true;
+		set_flag(sp->stop);
 
 		think_timeout_timer->join();
 		delete think_timeout_timer;
@@ -927,7 +954,7 @@ void ponder_thread(void *p)
 		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
 			printf("# new ponder position\n");
 
-			stop2      = false;
+			stop2.flag = false;
 
 			positiont2 = libchess::Position(search_fen);
 
@@ -969,7 +996,7 @@ void ponder_thread(void *p)
 
 void start_ponder()
 {
-	stop2                = false;
+	stop2.flag           = false;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
@@ -986,13 +1013,17 @@ void stop_ponder()
 {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (ponder_thread_handle) {
-		ponder_quit = stop2 = true;
+		ponder_quit = true;
+
+		set_flag(&stop2);
 
 		ponder_thread_handle->join();
 		delete ponder_thread_handle;
 	}
 #else
-	stop2 = ponder_quit = true;
+	ponder_quit = true;
+
+	set_flag(&stop2);
 #endif
 }
 
@@ -1006,7 +1037,7 @@ void main_task()
 	auto play_handler = [&sp](std::istringstream&) {
 		try {
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
-				stop1 = false;
+				stop1.flag = false;
 
 				tti.inc_age();
 
@@ -1018,11 +1049,12 @@ void main_task()
 				start_blink(led_green_timer);
 #endif
 
+				// restart ponder-thread
 				search_fen_lock.lock();
 				run_2nd_thread = allow_ponder;
 				search_fen     = positiont1.fen();
 				search_fen_version++;
-				stop2          = true;
+				set_flag(&stop2);
 				search_fen_lock.unlock();
 
 				auto best_move = search_it(&positiont1, 1000, false, &sp);
@@ -1042,7 +1074,7 @@ void main_task()
 
 	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
 		try {
-			stop1 = false;
+			stop1.flag = false;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_ts = esp_timer_get_time();
@@ -1104,7 +1136,7 @@ void main_task()
 			run_2nd_thread = thread_count == 2;
 			search_fen     = positiont1.fen();
 			search_fen_version++;
-			stop2          = true;  // restart ponder/lazy-smp thread
+			set_flag(&stop2);
 			search_fen_lock.unlock();
 
 			// main search
@@ -1125,7 +1157,7 @@ void main_task()
 			run_2nd_thread = allow_ponder;
 			search_fen     = positiont1.fen();
 			search_fen_version++;
-			stop2          = true;
+			set_flag(&stop2);
 			search_fen_lock.unlock();
 
 			positiont1.unmake_move();
@@ -1183,7 +1215,7 @@ void tune(std::string file)
 			for(auto & e : params)
 				cur.set_eval(e.name(), e.value());
 
-			std::atomic_bool ef(false);
+			end_t         ef { false     };
 			search_pars_t sp { &ef, &cur };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
