@@ -141,7 +141,8 @@ libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
 std::mutex  search_fen_lock;
-std::string search_fen      = libchess::constants::STARTPOS_FEN;
+std::string search_fen         { libchess::constants::STARTPOS_FEN };
+uint16_t    search_fen_version { 0 };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
@@ -244,7 +245,7 @@ auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 typedef struct
 {
 	std::atomic_bool *stop_flag;
-	eval_par *parameters;
+	eval_par         *parameters;
 } search_pars_t;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -791,10 +792,12 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 	if (is_t2 == false) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		think_timeout_timer = new std::thread([search_time, t_offset, sp] {
-				while(esp_timer_get_time() < t_offset + search_time * 1000ll)
-					std::this_thread::sleep_for(std::chrono::microseconds(100000)); /* replace by cond.var. */
+				uint64_t t_end = t_offset + search_time * 1000ll;
 
-				printf("# set stop flag\n");
+				while(esp_timer_get_time() < t_end && *sp->stop_flag == false)
+					std::this_thread::sleep_for(std::chrono::microseconds(49000)); /* replace by cond.var. */
+
+				printf("# time is up; set stop flag\n");
 
 				*sp->stop_flag = true;
 			});
@@ -822,7 +825,8 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
 			if (*sp->stop_flag) {
-				printf("# stop flag set\n");
+				if (is_t2 == false)
+					printf("# stop flag set\n");
 				break;
 			}
 
@@ -885,10 +889,13 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 
 	if (!is_t2) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		stop1 = true;
+		*sp->stop_flag = true;
 
+		uint64_t ts = esp_timer_get_time();
+		printf("# hier001\n");
 		think_timeout_timer->join();
 		delete think_timeout_timer;
+		printf("# hier002 %ld\n", esp_timer_get_time() - ts);
 #else
 		esp_timer_stop(think_timeout_timer);
 
@@ -913,15 +920,28 @@ void ponder_thread(void *p)
 
 	search_pars_t sp { &stop2, &default_parameters };
 
+	uint16_t prev_search_fen_version = uint16_t(-1);
+
 	for(;!ponder_quit;) {
+		bool valid = false;
+
 		search_fen_lock.lock();
-		stop2      = false;
-		if (search_fen.empty() == false)
+		// if other fen, then trigger search
+		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
+			printf("# new ponder position\n");
+
+			stop2      = false;
+
 			positiont2 = libchess::Position(search_fen);
+
+			valid      = positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS;
+
+			prev_search_fen_version = search_fen_version;
+		}
 		search_fen_lock.unlock();
 
-		if (search_fen.empty() == false && positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS && run_2nd_thread) {
-			printf("# new ponder position\n");
+		if (valid && run_2nd_thread) {
+			printf("# ponder search start\n");
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_blink(led_blue_timer);
@@ -941,8 +961,6 @@ void ponder_thread(void *p)
 			vTaskDelay(10);  // TODO divide
 #endif
 		}
-
-		search_fen.clear();
 	}
 
 	printf("# pondering stopping\n");
@@ -995,10 +1013,22 @@ void main_task()
 
 				tti.inc_age();
 
+				nodes = 0;
+
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+				md    = 1;
+
 				start_blink(led_green_timer);
 #endif
-				auto best_move = search_it(&positiont1, 750, false, &sp);
+
+				search_fen_lock.lock();
+				run_2nd_thread = allow_ponder;
+				search_fen     = positiont1.fen();
+				search_fen_version++;
+				stop2          = true;
+				search_fen_lock.unlock();
+
+				auto best_move = search_it(&positiont1, 1000, false, &sp);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1076,6 +1106,7 @@ void main_task()
 			search_fen_lock.lock();
 			run_2nd_thread = thread_count == 2;
 			search_fen     = positiont1.fen();
+			search_fen_version++;
 			stop2          = true;  // restart ponder/lazy-smp thread
 			search_fen_lock.unlock();
 
@@ -1096,6 +1127,7 @@ void main_task()
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
 			search_fen     = positiont1.fen();
+			search_fen_version++;
 			stop2          = true;
 			search_fen_lock.unlock();
 
