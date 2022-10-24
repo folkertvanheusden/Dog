@@ -363,30 +363,36 @@ public:
                 }
 
                 auto piece_from = p->piece_on(move.from_square());
-		if (piece_from.has_value() == false)  // should not happen but is possible due to psuedo_legal_moves
-			return -1;
+
+                auto from_type  = piece_from->type();
+                auto to_type    = from_type;
 
                 int score       = 0;
 
-                if (p->is_promotion_move(move))
-                        score += eval_piece(*move.promotion_piece_type(), *ep) << 18;
+                if (p->is_promotion_move(move)) {
+			to_type = *move.promotion_piece_type();
+
+                        score  += eval_piece(to_type, *ep) << 18;
+		}
 
                 if (p->is_capture_move(move)) {
-                        auto piece_to = p->piece_on(move.to_square());
-			if (piece_to.has_value() == false)  // cannot happen
-				return -1;
+			if (move.type() == libchess::Move::Type::ENPASSANT)
+				score += ep->tune_pawn.value() << 18;
+			else {
+				auto piece_to = p->piece_on(move.to_square());
 
-                        // victim
-                        score += (move.type() == libchess::Move::Type::ENPASSANT ? ep->tune_pawn.value() : eval_piece(piece_to->type(), *ep)) << 18;
+				// victim
+				score += eval_piece(piece_to->type(), *ep) << 18;
+			}
 
-                        if (piece_from->type() != libchess::constants::KING)
-                                score += (950 - eval_piece(piece_from->type(), *ep)) << 8;
+                        if (from_type != libchess::constants::KING)
+                                score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
                 }
                 else {
 //                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
                 }
 
-                score += -psq(move.from_square(), piece_from->color(), piece_from->type(), 0) + psq(move.to_square(), piece_from->color(), piece_from->type(), 0);
+                score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
 
                 return score;
         }
@@ -692,7 +698,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		pos.make_move(move);
 
-		int score = -10000;
+		int  score            = -10000;
 
 		bool check_after_move = pos.in_check();
 
