@@ -362,12 +362,12 @@ public:
                                 return INT_MAX - i;
                 }
 
+                int score       = 0;
+
                 auto piece_from = p->piece_on(move.from_square());
 
                 auto from_type  = piece_from->type();
                 auto to_type    = from_type;
-
-                int score       = 0;
 
                 if (p->is_promotion_move(move)) {
 			to_type = *move.promotion_piece_type();
