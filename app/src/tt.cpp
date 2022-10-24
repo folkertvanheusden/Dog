@@ -43,9 +43,9 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	tt_entry   *const e     = entries[index].entries;
 
-	int useSubIndex = -1;
-	int minDepth    = 999;
-	int mdi         = -1;
+	int use_sub_index       = -1;
+	int min_depth           = 999;
+	int min_depth_index     = -1;
 
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++)
 	{
@@ -55,36 +55,36 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 				e[i].hash = hash ^ e[i].data_.data;
 				return;
 			}
-			if (f!=EXACT && e[i].data_._data.depth==d) {
+			if (f != EXACT && e[i].data_._data.depth == d) {
 				e[i].data_._data.age = age;
 				e[i].hash = hash ^ e[i].data_.data;
 				return;
 			}
 
-			useSubIndex = i;
+			use_sub_index = i;
 
 			break;
 		}
 
 		if (e[i].data_._data.age != age)
-			useSubIndex = i;
-		else if (e[i].data_._data.depth < minDepth) {
-			minDepth = e[i].data_._data.depth;
-			mdi = i;
+			use_sub_index = i;
+		else if (e[i].data_._data.depth < min_depth) {
+			min_depth = e[i].data_._data.depth;
+			min_depth_index = i;
 		}
 	}
 
-	if (useSubIndex == -1)
-		useSubIndex = mdi;
+	if (use_sub_index == -1)
+		use_sub_index = min_depth_index;
 
-	tt_entry *const cur = &e[useSubIndex];
+	tt_entry *const cur = &e[use_sub_index];
 
 	tt_entry::u n;
-	n._data.score = int16_t(score);
-	n._data.depth = uint8_t(d);
-	n._data.flags = f;
-	n._data.age   = age;
-	n._data.m     = m.value();
+	n._data.score     = int16_t(score);
+	n._data.depth     = uint8_t(d);
+	n._data.flags     = f;
+	n._data.age       = age;
+	n._data.m         = m.value();
 
 	cur -> hash       = hash ^ n.data;
 	cur -> data_.data = n.data;
