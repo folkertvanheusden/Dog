@@ -398,7 +398,7 @@ public:
         }
 };
 
-void sort_movelist(libchess::Position & pos, libchess::MoveList & move_list, sort_movelist_compare & smc)
+void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
 {
 	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
@@ -488,7 +488,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	sort_movelist_compare smc(&pos, sp->parameters);
 
-	sort_movelist(pos, move_list, smc);
+	sort_movelist(move_list, smc);
 
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -672,7 +672,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (m->value())
 		smc.add_first_move(*m);
 
-	sort_movelist(pos, move_list, smc);
+	sort_movelist(move_list, smc);
 
 	int     n_played   = 0;
 
