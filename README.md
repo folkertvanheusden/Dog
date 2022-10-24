@@ -3,6 +3,9 @@ It is (strongly) based on the chess program Micah (altought slightly different e
 Licensed under the MIT license.
 
 
+Don't forget to clone with "--recursive"!
+
+
 Create a virtual env:
 
 	virtualenv --python="/usr/bin/python3.7" test
