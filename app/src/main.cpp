@@ -584,10 +584,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			tt_move.reset();
 		}
 		else if (te.value().data_._data.depth >= depth) {
-			bool use = false;
+			bool use       = false;
 
-			int csd = max_depth - depth;
-			int score = te.value().data_._data.score;
+			int csd        = max_depth - depth;
+			int score      = te.value().data_._data.score;
 			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
 
 			if (te.value().data_._data.flags == EXACT)

@@ -47,8 +47,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	int min_depth           = 999;
 	int min_depth_index     = -1;
 
-	for(int i=0; i<N_TE_PER_HASH_GROUP; i++)
-	{
+	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		if ((e[i].hash ^ e[i].data_.data) == hash) {
 			if (e[i].data_._data.depth > d) {
 				e[i].data_._data.age = age;
