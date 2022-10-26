@@ -812,7 +812,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-libchess::Move search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -829,6 +829,8 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 		esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
 #endif
 	}
+
+	int16_t best_score = 0;
 
 	auto move_list = pos->legal_move_list();
 
@@ -877,7 +879,8 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 				if (beta > 10000)
 					beta = 10000;
 
-				best_move = cur_move;
+				best_move  = cur_move;
+				best_score = score;
 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
@@ -926,7 +929,7 @@ libchess::Move search_it(libchess::Position *const pos, const int search_time, c
 #endif
 	}
 
-	return best_move;
+	return { best_move, best_score };
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -1059,9 +1062,9 @@ void main_task()
 				stop_blink(led_green_timer, &led_green);
 #endif
 
-				printf("# %s %s\n", positiont1.fen().c_str(), best_move.to_str().c_str());
+				printf("# %s %s [%d]\n", positiont1.fen().c_str(), best_move.first.to_str().c_str(), best_move.second);
 
-				positiont1.make_move(best_move);
+				positiont1.make_move(best_move.first);
 			}
 		}
 		catch(const std::exception& e) {
@@ -1140,7 +1143,7 @@ void main_task()
 			auto best_move = search_it(&positiont1, think_time, false, &sp);
 
 			// emit result
-			libchess::UCIService::bestmove(best_move.to_str());
+			libchess::UCIService::bestmove(best_move.first.to_str());
 
 			// no longer thinking
 #if !defined(linux) && !defined(_WIN32)
@@ -1148,7 +1151,7 @@ void main_task()
 #endif
 
 			// set ponder positition
-			positiont1.make_move(best_move);
+			positiont1.make_move(best_move.first);
 
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
