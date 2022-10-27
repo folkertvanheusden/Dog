@@ -738,7 +738,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			best_score = 0;
 	}
 
-	if (sp->stop->flag == false) {
+	if (sp->stop->flag == false && alpha > start_alpha) {
 		tt_entry_flag flag = EXACT;
 
 		if (best_score <= start_alpha)
