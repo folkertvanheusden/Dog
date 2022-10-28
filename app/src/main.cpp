@@ -948,13 +948,13 @@ void ponder_thread(void *p)
 		search_fen_lock.lock();
 		// if other fen, then trigger search
 		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
-			printf("# new ponder position\n");
-
 			stop2.flag = false;
 
 			positiont2 = libchess::Position(search_fen);
 
 			valid      = positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS;
+
+			printf("# new ponder position (%d/%d)\n", valid, run_2nd_thread);
 
 			prev_search_fen_version = search_fen_version;
 		}
@@ -1296,6 +1296,8 @@ extern "C" void app_main()
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	hello();
+
+	run_2nd_thread = true;
 
 	start_ponder();
 
