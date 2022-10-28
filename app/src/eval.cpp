@@ -67,12 +67,12 @@ int find_forks(libchess::Position & pos)
 
 	libchess::Bitboard occupancy = pos.occupancy_bb();
 	while (occupancy) {
-		auto sq = occupancy.forward_bitscan();
+		auto sq    = occupancy.forward_bitscan();
 		occupancy.forward_popbit();
 
 		auto piece = pos.piece_on(sq);
 		auto color = piece->color();
-		int mul = color == libchess::constants::WHITE ? 1 : -1;
+		int  mul   = color == libchess::constants::WHITE ? 1 : -1;
 
 		int n_attackers_w = pos.attackers_to(sq, libchess::constants::WHITE).popcount();
 		if (n_attackers_w > 1)
