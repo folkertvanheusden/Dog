@@ -603,9 +603,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 					return work_score;
 				}
-
-				// hier nog alpha/beta tweaken?
 			}
+
+			if (te.value().data_._data.flags == LOWERBOUND)
+				alpha = std::max(int(alpha), work_score);
+			else if (te.value().data_._data.flags == UPPERBOUND)
+				beta = std::min(int(beta), work_score);
 		}
 	}
 	////////
