@@ -18,9 +18,9 @@ for target in targets:
 
         fh_tune.write(f'#define {name.upper()} 0\n')
 
-    fh_get.write(f'\tlist.push_back({name});')
+        fh_set.write(f'\telse if (name == {name}.name())\n')
+        fh_set.write(f'\t\t{name}.set_value(value);\n')
 
-    fh_set.write(f'\telse if (name == {name}.name())\n')
-    fh_set.write(f'\t\t{name}.set_value(value);\n')
+        fh_get.write(f'\tlist.push_back({name});')
 
     fh_members.write('\n')
