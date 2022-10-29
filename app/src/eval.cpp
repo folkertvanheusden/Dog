@@ -243,10 +243,10 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 	int phase = game_phase(counts, parameters);
 
 	for(libchess::Color color : libchess::constants::COLORS) {
+		int mul = color == libchess::constants::WHITE ? 1 : -1;
+
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-
-			int mul = color == libchess::constants::WHITE ? 1 : -1;
 
 			// material
 			score += eval_piece(type, parameters) * piece_bb.popcount() * mul;
@@ -255,7 +255,9 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 			while (piece_bb) {
 				libchess::Square sq = piece_bb.forward_bitscan();
 				piece_bb.forward_popbit();
-				score += (psq(sq, color, type, phase) * mul * parameters.tune_psq_mul.value()) / parameters.tune_psq_div.value();
+
+				int psq_score = (psq(sq, color, type, phase) * mul * parameters.tune_psq_mul.value()) / parameters.tune_psq_div.value();
+				score += psq_score;
 
 				// passed pawns
 				if (type == libchess::constants::PAWN) {
