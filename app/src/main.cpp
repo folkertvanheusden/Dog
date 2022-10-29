@@ -553,7 +553,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int d = max_depth - depth;
 
 	if (d > md) {
-		if (check_min_stack_size(1, sp))
+		if (check_min_stack_size(0, sp))
 			return 0;
 
 		md = d;
