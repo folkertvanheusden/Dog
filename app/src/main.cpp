@@ -546,6 +546,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (sp->stop->flag)
 		return 0;
 
+	if (depth == 0)
+		return qs(pos, alpha, beta, max_depth, sp);
+
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
 
@@ -556,9 +559,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		md = d;
 	}
 #endif
-
-	if (depth == 0)
-		return qs(pos, alpha, beta, max_depth, sp);
 
 	nodes++;
 
