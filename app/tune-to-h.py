@@ -14,6 +14,8 @@ out.append('#define TUNE_PP_SCORES_EG_7 0')
 out.append('#define TUNE_PP_SCORES_MG_0 0')
 out.append('#define TUNE_PP_SCORES_MG_7 0')
 
+out.append('#include "tune_psq.h"')
+
 with open('src/tune.h', 'w') as fh:
     for line in out:
         fh.write(f'{line}\n')

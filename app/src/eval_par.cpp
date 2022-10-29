@@ -51,6 +51,8 @@ std::vector<libchess::TunableParameter> eval_par::get_tunable_parameters() const
 	list.push_back(tune_big_delta_promotion);
 	list.push_back(tune_big_delta);
 
+#include "eval_par_get.h"
+
 	for(int i=0; i<2; i++) {
 		for(int y=1; y<7; y++)
 			list.push_back(tune_pp_scores[i][y]);
@@ -101,6 +103,7 @@ void eval_par::set_eval(const std::string & name, int value)
 		tune_big_delta_promotion.set_value(value);
 	else if (name == tune_big_delta.name())
 		tune_big_delta.set_value(value);
+#include "eval_par_set.h"
 	else if (name == tune_psq_div.name()) {
 		if (value == 0)
 			value = 1;

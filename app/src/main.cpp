@@ -521,7 +521,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 					break;
 
 				alpha = score;
-
 			}
 		}
 	}
