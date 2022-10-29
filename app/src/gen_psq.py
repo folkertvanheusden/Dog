@@ -8,6 +8,8 @@ fh_set     = open('eval_par_set.h', 'w')
 
 fh_tune    = open('tune_psq.h', 'w')
 
+fh_psq     = open('psq_inc.h', 'w')
+
 targets = [ 'PawnPSTMG', 'KnightPSTMG', 'BishopPSTMG', 'RookPSTMG', 'QueenPSTMG', 'KingPSTMG', 'PawnPSTEG', 'KnightPSTEG', 'BishopPSTEG', 'RookPSTEG', 'QueenPSTEG', 'KingPSTEG' ]
 
 for target in targets:
@@ -21,6 +23,10 @@ for target in targets:
         fh_set.write(f'\telse if (name == {name}.name())\n')
         fh_set.write(f'\t\t{name}.set_value(value);\n')
 
-        fh_get.write(f'\tlist.push_back({name});')
+        fh_get.write(f'\tlist.push_back({name});\n')
+
+        fh_psq.write(f'\t{target}[{i}] = in.{name}.value();\n')
 
     fh_members.write('\n')
+
+    fh_psq.write('\n')

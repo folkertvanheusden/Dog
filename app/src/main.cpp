@@ -43,6 +43,8 @@
 #include "tt.h"
 
 
+PSQ psq(default_parameters);
+
 typedef struct {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
@@ -261,6 +263,7 @@ typedef struct
 {
 	end_t    *stop;
 	eval_par *parameters;
+	PSQ      *psq;
 } search_pars_t;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -342,11 +345,12 @@ class sort_movelist_compare
 private:
         libchess::Position       *const p;
 	eval_par                 *const ep;
+	PSQ                      *const psq_;
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, eval_par *const ep) : p(p), ep(ep) {
+        sort_movelist_compare(libchess::Position *const p, eval_par *const ep, PSQ *psq_) : p(p), ep(ep), psq_(psq_) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
@@ -392,7 +396,7 @@ public:
 //                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
                 }
 
-                score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
+                score += -psq_->psq(move.from_square(), piece_from->color(), from_type, 0) + psq_->psq(move.to_square(), piece_from->color(), to_type, 0);
 
                 return score;
         }
@@ -465,7 +469,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	bool in_check   = pos.in_check();
 
 	if (!in_check) {
-		best_score = eval(pos, *sp->parameters);
+		best_score = eval(pos, *sp->parameters, *sp->psq);
 
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
@@ -486,7 +490,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 
-	sort_movelist_compare smc(&pos, sp->parameters);
+	sort_movelist_compare smc(&pos, sp->parameters, sp->psq);
 
 	sort_movelist(move_list, smc);
 
@@ -529,7 +533,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
-			best_score = eval(pos, *sp->parameters);
+			best_score = eval(pos, *sp->parameters, *sp->psq);
 	}
 
 	return best_score;
@@ -603,7 +607,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	////////
 
 	if (!is_root_position && depth <= 3 && beta <= 9800) {
-		int staticeval = eval(pos, *sp->parameters);
+		int staticeval = eval(pos, *sp->parameters, *sp->psq);
 
 		// static null pruning (reverse futility pruning)
 		if (depth == 1 && staticeval - sp->parameters->tune_knight.value() > beta)
@@ -652,7 +656,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
-	sort_movelist_compare smc(&pos, sp->parameters);
+	sort_movelist_compare smc(&pos, sp->parameters, sp->psq);
 
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
@@ -932,7 +936,7 @@ void ponder_thread(void *p)
 {
 	printf("# pondering started\n");
 
-	search_pars_t sp { &stop2, &default_parameters };
+	search_pars_t sp { &stop2, &default_parameters, &psq };
 
 	uint16_t prev_search_fen_version = uint16_t(-1);
 
@@ -1022,10 +1026,10 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	search_pars_t sp { &stop1, &default_parameters };
+	search_pars_t sp { &stop1, &default_parameters, &psq };
 
 	auto eval_handler = [&sp](std::istringstream&) {
-		int score = eval(positiont1, *sp.parameters);
+		int score = eval(positiont1, *sp.parameters, *sp.psq);
 
 		printf("# eval: %d\n", score);
 	};
@@ -1219,8 +1223,10 @@ void tune(std::string file)
 			for(auto & e : params)
 				cur.set_eval(e.name(), e.value());
 
+			PSQ psq_(cur);
+
 			end_t         ef { false     };
-			search_pars_t sp { &ef, &cur };
+			search_pars_t sp { &ef, &cur, &psq_ };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 

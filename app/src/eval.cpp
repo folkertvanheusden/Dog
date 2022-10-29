@@ -207,7 +207,7 @@ int development(libchess::Position & pos)
 }
 #endif
 
-int eval(libchess::Position & pos, const eval_par & parameters)
+int eval(libchess::Position & pos, const eval_par & parameters, const PSQ & psq)
 {
 	int score = 0;
 
@@ -256,7 +256,7 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 				libchess::Square sq = piece_bb.forward_bitscan();
 				piece_bb.forward_popbit();
 
-				int psq_score = (psq(sq, color, type, phase) * mul * parameters.tune_psq_mul.value()) / parameters.tune_psq_div.value();
+				int psq_score = (psq.psq(sq, color, type, phase) * mul * parameters.tune_psq_mul.value()) / parameters.tune_psq_div.value();
 				score += psq_score;
 
 				// passed pawns
