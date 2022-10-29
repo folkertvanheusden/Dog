@@ -1032,8 +1032,6 @@ void main_task()
 	};
 
 	auto fen_handler = [&sp](std::istringstream&) {
-		int score = eval(positiont1, *sp.parameters);
-
 		printf("# fen: %s\n", positiont1.fen().c_str());
 	};
 
