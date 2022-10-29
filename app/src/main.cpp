@@ -505,14 +505,9 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 				continue;
 		}
 
-		pos.make_move(move);
-
-		if (pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move())) {
-			pos.unmake_move();
-			continue;
-		}
-
 		n_played++;
+
+		pos.make_move(move);
 
 		int score = -qs(pos, -beta, -alpha, qsdepth + 1, sp);
 
@@ -1030,6 +1025,18 @@ void main_task()
 
 	search_pars_t sp { &stop1, &default_parameters };
 
+	auto eval_handler = [&sp](std::istringstream&) {
+		int score = eval(positiont1, *sp.parameters);
+
+		printf("# eval: %d\n", score);
+	};
+
+	auto fen_handler = [&sp](std::istringstream&) {
+		int score = eval(positiont1, *sp.parameters);
+
+		printf("# fen: %s\n", positiont1.fen().c_str());
+	};
+
 	auto play_handler = [&sp](std::istringstream&) {
 		try {
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
@@ -1178,6 +1185,10 @@ void main_task()
 	uci_service.register_stop_handler(stop_handler);
 
 	uci_service.register_handler("play", play_handler);
+
+	uci_service.register_handler("eval", eval_handler);
+
+	uci_service.register_handler("fen", fen_handler);
 
 	while (true) {
 		std::string line;
