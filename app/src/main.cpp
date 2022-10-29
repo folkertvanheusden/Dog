@@ -312,7 +312,7 @@ void vTaskGetRunTimeStats()
 int     md       = 1;
 int64_t start_ts = 0;
 
-bool checkMinStackSize(const int nr, search_pars_t *const sp)
+bool check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
@@ -448,7 +448,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	if (qsdepth > md) {
-		if (checkMinStackSize(1, sp))
+		if (check_min_stack_size(1, sp))
 			return 0;
 
 		md = qsdepth;
@@ -550,7 +550,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int d = max_depth - depth;
 
 	if (d > md) {
-		if (checkMinStackSize(1, sp))
+		if (check_min_stack_size(1, sp))
 			return 0;
 
 		md = d;
