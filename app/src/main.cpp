@@ -803,7 +803,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp, const int ultimate_max_depth)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -812,13 +812,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #endif
 
 	if (is_t2 == false) {
+		if (search_time > 0 || ultimate_max_depth == -1) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		think_timeout_timer = new std::thread([search_time, sp] {
-				timer(search_time, sp->stop);
-			});
+			think_timeout_timer = new std::thread([search_time, sp] {
+					timer(search_time, sp->stop);
+				});
 #else
-		esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
+			esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
 #endif
+		}
 	}
 
 	int16_t best_score = 0;
@@ -838,7 +840,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 		libchess::Move cur_move { 0 };
 
-		for(;;) {
+		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
 			if (sp->stop->flag) {
@@ -889,7 +891,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
 				}
 
-				if (thought_ms > search_time / 2) {
+				if (thought_ms > search_time / 2 && search_time > 0) {
 					printf("# time %u is up %llu\n", search_time, thought_ms);
 					break;
 				}
@@ -909,8 +911,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		set_flag(sp->stop);
 
-		think_timeout_timer->join();
-		delete think_timeout_timer;
+		if (think_timeout_timer) {
+			think_timeout_timer->join();
+
+			delete think_timeout_timer;
+		}
 #else
 		esp_timer_stop(think_timeout_timer);
 
@@ -962,7 +967,7 @@ void ponder_thread(void *p)
 			start_blink(led_blue_timer);
 #endif
 
-			search_it(&positiont2, 2147483647, true, &sp);
+			search_it(&positiont2, 2147483647, true, &sp, -1);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
@@ -1058,7 +1063,7 @@ void main_task()
 				set_flag(&stop2);
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, false, &sp);
+				auto best_move = search_it(&positiont1, 1000, false, &sp, -1);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1095,6 +1100,8 @@ void main_task()
 #endif
 
 			int moves_to_go = 40 - positiont1.fullmoves();
+
+			auto depth     = go_parameters.depth();
 
 			auto movetime = go_parameters.movetime();
 
@@ -1141,7 +1148,7 @@ void main_task()
 			search_fen_lock.unlock();
 
 			// main search
-			auto best_move = search_it(&positiont1, think_time, false, &sp);
+			auto best_move = search_it(&positiont1, think_time, false, &sp, depth.has_value() ? depth.value() : -1);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.first.to_str());
