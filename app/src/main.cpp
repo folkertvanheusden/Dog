@@ -54,6 +54,25 @@ end_t            stop2          { false };  // ponder thread
 std::atomic_bool ponder_quit    { false };
 bool             run_2nd_thread { false };
 
+typedef struct
+{
+	end_t    *stop;
+	eval_par *parameters;
+	bool      is_t2;
+
+	uint32_t *const history;
+} search_pars_t;
+
+constexpr size_t history_size = 2 * 6 * 64;
+
+search_pars_t sp1 { &stop1, nullptr, false, reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * history_size)) };
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * history_size)) };
+#else
+search_pars_t sp2 { &stop2, nullptr, true,  nullptr };
+#endif
+
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
@@ -257,13 +276,6 @@ bool allow_ponder = true;
 
 auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 
-typedef struct
-{
-	end_t    *stop;
-	eval_par *parameters;
-	bool      is_t2;
-} search_pars_t;
-
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 extern "C" {
 void vApplicationMallocFailedHook()
@@ -343,11 +355,12 @@ class sort_movelist_compare
 private:
         libchess::Position       *const p;
 	eval_par                 *const ep;
+	search_pars_t            *const sp;
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, eval_par *const ep) : p(p), ep(ep) {
+        sort_movelist_compare(libchess::Position *const p, eval_par *const ep, search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
@@ -363,7 +376,7 @@ public:
                                 return INT_MAX - i;
                 }
 
-                int score       = 0;
+                int  score      = 0;
 
                 auto piece_from = p->piece_on(move.from_square());
 
@@ -389,8 +402,8 @@ public:
                         if (from_type != libchess::constants::KING)
                                 score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
                 }
-                else {
-//                        score += meta -> hbt[p->side_to_move()][move.from_square()][move.to_square()] << 8;
+                else if (sp->history) {
+                        score += sp->history[p->side_to_move() * 6 * 64 + from_type * 64 + move.to_square()] << 8;
                 }
 
                 score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
@@ -487,7 +500,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 
-	sort_movelist_compare smc(&pos, sp->parameters);
+	sort_movelist_compare smc(&pos, sp->parameters, sp);
 
 	sort_movelist(move_list, smc);
 
@@ -654,7 +667,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
-	sort_movelist_compare smc(&pos, sp->parameters);
+	sort_movelist_compare smc(&pos, sp->parameters, sp);
 
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
@@ -714,8 +727,15 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			*m = move;
 
 			if (score > alpha) {
-				if (score >= beta)
+				if (score >= beta) {
+					if (sp->history) {
+						auto piece_from = pos.piece_on(move.from_square());
+
+						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()]++;
+					}
+
 					break;
+				}
 
 				alpha = score;
 
@@ -939,7 +959,8 @@ void ponder_thread(void *p)
 {
 	printf("# pondering started\n");
 
-	search_pars_t sp { &stop2, &default_parameters, true };
+	sp2.parameters = &default_parameters;
+	sp2.is_t2 = true;
 
 	uint16_t prev_search_fen_version = uint16_t(-1);
 
@@ -955,6 +976,9 @@ void ponder_thread(void *p)
 
 			valid      = positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS;
 
+			if (sp2.history)
+				memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
+
 			printf("# new ponder position (%d/%d)\n", valid, run_2nd_thread);
 
 			prev_search_fen_version = search_fen_version;
@@ -968,7 +992,7 @@ void ponder_thread(void *p)
 			start_blink(led_blue_timer);
 #endif
 
-			search_it(&positiont2, 2147483647, &sp, -1);
+			search_it(&positiont2, 2147483647, &sp2, -1);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
@@ -1029,19 +1053,24 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	search_pars_t sp { &stop1, &default_parameters, false };
+	sp1.parameters = &default_parameters;
+	sp1.is_t2 = false;
 
-	auto eval_handler = [&sp](std::istringstream&) {
-		int score = eval(positiont1, *sp.parameters);
+	auto eval_handler = [&sp1](std::istringstream&) {
+		int score = eval(positiont1, *sp1.parameters);
 
 		printf("# eval: %d\n", score);
 	};
 
-	auto fen_handler = [&sp](std::istringstream&) {
+	auto fen_handler = [&sp1](std::istringstream&) {
 		printf("# fen: %s\n", positiont1.fen().c_str());
 	};
 
-	auto play_handler = [&sp](std::istringstream&) {
+	auto ucinewgame_handler = [&sp1](std::istringstream&) {
+		memset(sp1.history, 0x00, history_size * sizeof(uint32_t));
+	};
+
+	auto play_handler = [&sp1](std::istringstream&) {
 		try {
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				stop1.flag = false;
@@ -1064,7 +1093,7 @@ void main_task()
 				set_flag(&stop2);
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, &sp, -1);
+				auto best_move = search_it(&positiont1, 1000, &sp1, -1);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1079,7 +1108,7 @@ void main_task()
 		}
 	};
 
-	auto go_handler = [&sp](const libchess::UCIGoParameters & go_parameters) {
+	auto go_handler = [&sp1](const libchess::UCIGoParameters & go_parameters) {
 		try {
 			stop1.flag = false;
 
@@ -1149,7 +1178,7 @@ void main_task()
 			search_fen_lock.unlock();
 
 			// main search
-			auto best_move = search_it(&positiont1, think_time, &sp, depth.has_value() ? depth.value() : -1);
+			auto best_move = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.first.to_str());
@@ -1196,6 +1225,8 @@ void main_task()
 
 	uci_service.register_handler("fen", fen_handler);
 
+	uci_service.register_handler("ucinewgame", ucinewgame_handler);
+
 	while (true) {
 		std::string line;
 		std::getline(is, line);
@@ -1230,6 +1261,8 @@ void tune(std::string file)
 
 			end_t         ef { false     };
 			search_pars_t sp { &ef, &cur, false };
+
+			memset(sp.history, 0x00, history_size * sizeof(uint32_t));
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 
