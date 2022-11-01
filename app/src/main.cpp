@@ -261,6 +261,7 @@ typedef struct
 {
 	end_t    *stop;
 	eval_par *parameters;
+	bool      is_t2;
 } search_pars_t;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -803,7 +804,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_t2, search_pars_t *const sp, const int ultimate_max_depth)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -811,7 +812,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
-	if (is_t2 == false) {
+	if (sp->is_t2 == false) {
 		if (search_time > 0 || ultimate_max_depth == -1) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			think_timeout_timer = new std::thread([search_time, sp] {
@@ -836,7 +837,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
-		int8_t  max_depth = 1 + is_t2;
+		int8_t  max_depth = 1 + sp->is_t2;
 
 		libchess::Move cur_move { 0 };
 
@@ -844,7 +845,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
 			if (sp->stop->flag) {
-				if (is_t2 == false)
+				if (sp->is_t2 == false)
 					printf("# stop flag set\n");
 				break;
 			}
@@ -877,7 +878,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (!is_t2) {
+				if (!sp->is_t2) {
 					if (thought_ms == 0)
 						thought_ms = 1;
 
@@ -907,7 +908,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos->fen().c_str());
 	}
 
-	if (!is_t2) {
+	if (!sp->is_t2) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		set_flag(sp->stop);
 
@@ -938,7 +939,7 @@ void ponder_thread(void *p)
 {
 	printf("# pondering started\n");
 
-	search_pars_t sp { &stop2, &default_parameters };
+	search_pars_t sp { &stop2, &default_parameters, true };
 
 	uint16_t prev_search_fen_version = uint16_t(-1);
 
@@ -967,7 +968,7 @@ void ponder_thread(void *p)
 			start_blink(led_blue_timer);
 #endif
 
-			search_it(&positiont2, 2147483647, true, &sp, -1);
+			search_it(&positiont2, 2147483647, &sp, -1);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
@@ -1028,7 +1029,7 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
-	search_pars_t sp { &stop1, &default_parameters };
+	search_pars_t sp { &stop1, &default_parameters, false };
 
 	auto eval_handler = [&sp](std::istringstream&) {
 		int score = eval(positiont1, *sp.parameters);
@@ -1063,7 +1064,7 @@ void main_task()
 				set_flag(&stop2);
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, false, &sp, -1);
+				auto best_move = search_it(&positiont1, 1000, &sp, -1);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1148,7 +1149,7 @@ void main_task()
 			search_fen_lock.unlock();
 
 			// main search
-			auto best_move = search_it(&positiont1, think_time, false, &sp, depth.has_value() ? depth.value() : -1);
+			auto best_move = search_it(&positiont1, think_time, &sp, depth.has_value() ? depth.value() : -1);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.first.to_str());
@@ -1228,7 +1229,7 @@ void tune(std::string file)
 				cur.set_eval(e.name(), e.value());
 
 			end_t         ef { false     };
-			search_pars_t sp { &ef, &cur };
+			search_pars_t sp { &ef, &cur, false };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 
