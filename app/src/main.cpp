@@ -728,7 +728,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (sp->history) {
+					if (sp->history && !pos.is_capture_move(move)) {
 						auto piece_from = pos.piece_on(move.from_square());
 
 						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()] += depth * depth;
