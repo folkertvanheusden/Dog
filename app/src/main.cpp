@@ -70,7 +70,7 @@ search_pars_t sp1 { &stop1, nullptr, false, reinterpret_cast<uint32_t *>(malloc(
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * history_size)) };
 #else
-search_pars_t sp2 { &stop2, nullptr, true,  nullptr };
+search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(sizeof(uint32_t) * history_size, MALLOC_CAP_IRAM_8BIT)) };
 #endif
 
 void set_flag(end_t *const stop)
