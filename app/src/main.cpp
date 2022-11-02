@@ -264,7 +264,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v0.9", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v1.0", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
