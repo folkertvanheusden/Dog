@@ -615,6 +615,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 		}
 	}
+	else if (depth >= 4) {  // IIR
+		depth--;
+	}
 	////////
 
 	if (!is_root_position && depth <= 3 && beta <= 9800) {
