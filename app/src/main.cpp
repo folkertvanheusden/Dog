@@ -1059,21 +1059,21 @@ void main_task()
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
 
-	auto eval_handler = [&sp1](std::istringstream&) {
+	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
 
 		printf("# eval: %d\n", score);
 	};
 
-	auto fen_handler = [&sp1](std::istringstream&) {
+	auto fen_handler = [](std::istringstream&) {
 		printf("# fen: %s\n", positiont1.fen().c_str());
 	};
 
-	auto ucinewgame_handler = [&sp1](std::istringstream&) {
+	auto ucinewgame_handler = [](std::istringstream&) {
 		memset(sp1.history, 0x00, history_size * sizeof(uint32_t));
 	};
 
-	auto play_handler = [&sp1](std::istringstream&) {
+	auto play_handler = [](std::istringstream&) {
 		try {
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				stop1.flag = false;
@@ -1111,7 +1111,7 @@ void main_task()
 		}
 	};
 
-	auto go_handler = [&sp1](const libchess::UCIGoParameters & go_parameters) {
+	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
 		try {
 			stop1.flag = false;
 
