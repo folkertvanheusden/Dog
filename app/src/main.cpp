@@ -1263,14 +1263,14 @@ void tune(std::string file)
 				cur.set_eval(e.name(), e.value());
 
 			end_t         ef { false     };
-			search_pars_t sp { &ef, &cur, false };
-
-			memset(sp.history, 0x00, history_size * sizeof(uint32_t));
+			search_pars_t sp { &ef, &cur, false, reinterpret_cast<uint32_t *>(calloc(1, sizeof(uint32_t) * history_size)) };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 
 			if (pos.side_to_move() != libchess::constants::WHITE)
 				score = -score;
+
+			free(sp.history);
 
 			return score;
 		}};
