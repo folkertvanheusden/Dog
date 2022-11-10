@@ -24,13 +24,13 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	tt_entry *const e     = entries[index].entries;
 
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
-		tt_entry *const cur = &e[i];
+		tt_entry & cur = e[i];
 
-		if ((cur -> hash ^ cur -> data_.data) == hash) {
-			cur->data_._data.age = age;
-			cur->hash = hash ^ cur->data_.data;
+		if ((cur.hash ^ cur.data_.data) == hash) {
+			cur.data_._data.age = age;
+			cur.hash = hash ^ cur.data_.data;
 
-			return *cur;
+			return cur;
 		}
 	}
 
