@@ -60,6 +60,7 @@ public:
 	libchess::TunableParameter tune_edge_black_file{"tune_edge_black_file", TUNE_EDGE_BLACK_FILE };
 	libchess::TunableParameter tune_edge_white_rank{"tune_edge_white_rank", TUNE_EDGE_WHITE_RANK };
 	libchess::TunableParameter tune_edge_white_file{"tune_edge_white_file", TUNE_EDGE_WHITE_FILE };
+	libchess::TunableParameter tune_tempo_bonus{"tune_tempo_bonus", TUNE_TEMPO_BONUS };
 
 	eval_par();
 	~eval_par();
