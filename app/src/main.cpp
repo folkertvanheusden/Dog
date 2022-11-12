@@ -325,28 +325,34 @@ void vTaskGetRunTimeStats()
 int     md       = 1;
 int64_t start_ts = 0;
 
-bool check_min_stack_size(const int nr, search_pars_t *const sp)
+int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	if (level < 1024) {
+	if (level < 768) {
 		set_flag(sp->stop);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		start_blink(led_red_timer);
 #endif
 
-		printf("# stack protector %d engaged (%d)\n", nr, level);
+		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
 
 		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 		vTaskGetRunTimeStats();
 
-		return true;
+		return 2;
+	}
+
+	if (level < 1280) {
+		printf("# stack protector %d engaged (%d), stop QS\n", nr, level);
+
+		return 1;
 	}
 
 	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, md, nodes, level);
 
-	return false;
+	return 0;
 }
 #endif
 
