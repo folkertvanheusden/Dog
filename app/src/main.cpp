@@ -62,6 +62,8 @@ typedef struct
 
 	uint32_t *const history;
 
+	int       md;
+
 	uint32_t  nodes;
 } search_pars_t;
 
@@ -322,7 +324,6 @@ void vTaskGetRunTimeStats()
 	vPortFree(pxTaskStatusArray);
 }
 
-int     md       = 1;
 int64_t start_ts = 0;
 
 int check_min_stack_size(const int nr, search_pars_t *const sp)
@@ -353,7 +354,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 		return 1;
 	}
 
-	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, md, sp->nodes, level);
+	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, sp->md, sp->nodes, level);
 
 	return 0;
 }
@@ -470,11 +471,11 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		return 0;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-	if (qsdepth > md) {
+	if (qsdepth > sp->md) {
 		if (check_min_stack_size(1, sp))
 			return 0;
 
-		md = qsdepth;
+		sp->md = qsdepth;
 	}
 #endif
 
@@ -570,11 +571,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
 
-	if (d > md) {
+	if (d > sp->md) {
 		if (check_min_stack_size(0, sp))
 			return 0;
 
-		md = d;
+		sp->md = d;
 	}
 #endif
 
@@ -1095,7 +1096,8 @@ void main_task()
 				sp2.nodes  = 0;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-				md         = 1;
+				sp1.md     = 1;
+				sp2.md     = 1;
 
 				start_blink(led_green_timer);
 #endif
@@ -1130,7 +1132,8 @@ void main_task()
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_ts   = esp_timer_get_time();
 
-			md         = 1;
+			sp1.md     = 1;
+			sp2.md     = 1;
 #endif
 			sp1.nodes  = 0;
 			sp2.nodes  = 0;
