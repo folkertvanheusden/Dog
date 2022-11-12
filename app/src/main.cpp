@@ -46,7 +46,6 @@
 typedef struct {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
-	std::mutex              m;  // not used
 } end_t;
 
 end_t            stop1          { false };  // main thread
@@ -330,6 +329,8 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
+	printf("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+
 	if (level < 768) {
 		set_flag(sp->stop);
 
@@ -351,10 +352,10 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 	if (level < 1280) {
 		printf("# stack protector %d engaged (%d), stop QS\n", nr, level);
 
+		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
+
 		return 1;
 	}
-
-	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, sp->md, sp->nodes, level);
 
 	return 0;
 }
@@ -823,7 +824,9 @@ void timer(const int think_time, end_t *const ei)
 	if (think_time > 0) {
 		auto end_time = std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time};
 
-		std::unique_lock<std::mutex> lk(ei->m);
+		std::mutex m;  // not used
+
+		std::unique_lock<std::mutex> lk(m);
 
 		for(;!ei->flag;) {
 			if (ei->cv.wait_until(lk, end_time) == std::cv_status::timeout)
