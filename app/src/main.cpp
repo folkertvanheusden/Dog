@@ -61,6 +61,8 @@ typedef struct
 	bool      is_t2;
 
 	uint32_t *const history;
+
+	uint32_t  nodes;
 } search_pars_t;
 
 constexpr size_t history_size = 2 * 6 * 64;
@@ -90,8 +92,6 @@ std::thread *ponder_thread_handle { nullptr };
 #else
 TaskHandle_t ponder_thread_handle;
 #endif
-
-uint32_t         nodes { 0 };
 
 void think_timeout(void *arg) {
 	end_t *stop = reinterpret_cast<end_t *>(arg);
@@ -353,7 +353,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 		return 1;
 	}
 
-	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, md, nodes, level);
+	printf("# dts: %lld depth %d nodes %u lower_bound: %d\n", esp_timer_get_time() - start_ts, md, sp->nodes, level);
 
 	return 0;
 }
@@ -478,7 +478,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 #endif
 
-	nodes++;
+	sp->nodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
@@ -578,7 +578,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 #endif
 
-	nodes++;
+	sp->nodes++;
 
 	bool is_root_position = max_depth == depth;
 
@@ -921,6 +921,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
+					uint32_t nodes = sp1.nodes + sp2.nodes;
+
 					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
 				}
 
@@ -1089,10 +1091,11 @@ void main_task()
 
 				tti.inc_age();
 
-				nodes = 0;
+				sp1.nodes  = 0;
+				sp2.nodes  = 0;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-				md    = 1;
+				md         = 1;
 
 				start_blink(led_green_timer);
 #endif
@@ -1125,11 +1128,12 @@ void main_task()
 			stop1.flag = false;
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_ts = esp_timer_get_time();
+			start_ts   = esp_timer_get_time();
 
-			md    = 1;
+			md         = 1;
 #endif
-			nodes = 0;
+			sp1.nodes  = 0;
+			sp2.nodes  = 0;
 
 			tti.inc_age();
 
