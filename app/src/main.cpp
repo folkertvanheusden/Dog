@@ -339,6 +339,9 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
 
 		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+
+		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
+
 		vTaskGetRunTimeStats();
 
 		return 2;
