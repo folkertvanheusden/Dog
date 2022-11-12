@@ -62,7 +62,7 @@ typedef struct
 
 	uint32_t *const history;
 
-	int       md;
+	uint16_t  md;
 
 	uint32_t  nodes;
 } search_pars_t;
