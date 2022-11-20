@@ -587,7 +587,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
 		return 0;
 
-	bool zero_window      = beta == alpha + 1;
+	bool pv_node          = beta - alpha > 1;
 
 	int  start_alpha      = alpha;
 
@@ -728,13 +728,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			do_full = score > alpha;
 		}
 		else {
-			do_full = !zero_window || n_played > 0;
+			do_full = !pv_node || n_played > 0;
 		}
 
 		if (do_full)
 			score = -search(pos, depth - 1, -(alpha + 1), -alpha, null_move_depth, max_depth, &new_move, sp);
 
-		if (zero_window && ((score > alpha && score < beta) || n_played == 0))
+		if (pv_node && ((score > alpha && score < beta) || n_played == 0))
 			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
 
 		pos.unmake_move();
