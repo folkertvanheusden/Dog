@@ -705,6 +705,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
+		bool allow_lmr        = n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move);
+
 		pos.make_move(move);
 
 		int  score            = -10000;
@@ -713,7 +715,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		bool do_full          = false;
 
-		if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
+		if (allow_lmr && !check_after_move) {
 			int new_depth = 0;
 
 			if (n_played >= lmr_start + 2)
