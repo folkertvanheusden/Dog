@@ -705,36 +705,35 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
-		bool is_lmr    = false;
-		int  new_depth = depth - 1;
-
-		if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
-			is_lmr = true;
-
-			if (n_played >= lmr_start + 2)
-				new_depth = (depth - 1) * 2 / 3;
-			else
-				new_depth = depth - 2;
-		}
-
 		pos.make_move(move);
 
 		int  score            = -10000;
 
 		bool check_after_move = pos.in_check();
 
-		if (check_after_move)
-			goto skip_lmr;
+		bool do_full          = false;
 
-		score = -search(pos, new_depth + extension, -(alpha + 1), -alpha, null_move_depth, max_depth, &new_move, sp);
+		if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
+			int new_depth = 0;
 
-		if (score > alpha && score < beta)
-			goto skip_lmr;  // PVS step 2
+			if (n_played >= lmr_start + 2)
+				new_depth = (depth - 1) * 2 / 3;
+			else
+				new_depth = depth - 2;
 
-		if (is_lmr && score > alpha) {
-		skip_lmr:
-			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+			score   = -search(pos, new_depth + extension, -(alpha + 1), -alpha, null_move_depth, max_depth, &new_move, sp);
+
+			do_full = score > alpha;
 		}
+		else {
+			do_full = !zero_window || n_played > 0;
+		}
+
+		if (do_full)
+			score = -search(pos, depth - 1, -(alpha + 1), -alpha, null_move_depth, max_depth, &new_move, sp);
+
+		if (zero_window && ((score > alpha && score < beta) || n_played == 0))
+			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
 
 		pos.unmake_move();
 
@@ -757,7 +756,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				}
 
 				alpha = score;
-
 			}
 		}
 	}
