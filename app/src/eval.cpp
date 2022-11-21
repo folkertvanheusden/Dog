@@ -357,8 +357,6 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 
 	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.tune_king_shield.value();
 
-	score = score * (100 - pos.halfmoves()) / 100;
-
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		return -score;
 
