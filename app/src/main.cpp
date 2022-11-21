@@ -567,7 +567,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 
 	if (depth == 0)
-		return qs(pos, alpha, beta, max_depth, sp);
+		return qs(pos, alpha, beta, pos.halfmoves(), sp);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
@@ -695,9 +695,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	sort_movelist(move_list, smc);
 
-	int     n_played   = 0;
-
-	int     lmr_start  = !in_check && depth >= 2 ? 3 : 999;
+	int            n_played { 0 };
 
 	libchess::Move new_move { 0 };
 
@@ -705,7 +703,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
-		bool allow_lmr        = n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move);
+		bool allow_lmr        = !pos.is_capture_move(move) && !pos.is_promotion_move(move);
 
 		pos.make_move(move);
 
@@ -715,10 +713,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		bool do_full          = false;
 
-		if (allow_lmr && !check_after_move) {
+		if (allow_lmr && depth >= 2 && n_played >= 4 && !in_check && !check_after_move) {
 			int new_depth = 0;
 
-			if (n_played >= lmr_start + 2 * pv_node)
+			if (n_played >= 4 + 2)
 				new_depth = (depth - 1) * 2 / 3;
 			else
 				new_depth = depth - 2;
@@ -764,7 +762,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + (max_depth - depth);
+			best_score = -10000 + pos.halfmoves();
 		else
 			best_score = 0;
 	}

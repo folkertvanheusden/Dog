@@ -4,6 +4,6 @@
     <engine
         name="Dog"
         filename="libDog.so"
-        target="armeabi|armeabi-v7a|x86" />
+	target="armeabi-v7a|arm64-v8a|x86|x86_64" />
 
 </enginelist>
