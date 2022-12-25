@@ -456,8 +456,8 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 {
 	libchess::Color side = pos.side_to_move();
 
-	if (pos.in_check())
-		return pos.check_evasion_move_list();
+	if (pos.checkers_to(side))
+		return pos.pseudo_legal_move_list();
 
 	libchess::MoveList ml;
 	pos.generate_promotions(ml, side);
