@@ -6,7 +6,7 @@ add_definitions("-Wall")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(DOG_VERSION 1.0)
+set(DOG_VERSION 1.1)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -Ofast")
 
 #set(CMAKE_BUILD_TYPE Release)
