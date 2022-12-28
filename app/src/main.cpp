@@ -13,6 +13,11 @@
 #include <streambuf>
 #include <string>
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define APPNAME "Dog"
+#endif
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #include <chrono>
 #include <limits.h>
@@ -85,7 +90,9 @@ void set_flag(end_t *const stop)
 auto stop_handler = []() {
 	set_flag(&stop1);
 
+#if !defined(__ANDROID__)
 	printf("# stop_handler invoked\n");
+#endif
 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -265,7 +272,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v1.1", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v1.2", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -285,9 +292,7 @@ void vApplicationMallocFailedHook()
 
 	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	start_blink(led_red_timer);
-#endif
 }
 }
 
@@ -334,9 +339,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 	if (level < 768) {
 		set_flag(sp->stop);
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		start_blink(led_red_timer);
-#endif
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
 
@@ -836,7 +839,9 @@ void timer(const int think_time, end_t *const ei)
 
 	set_flag(ei);
 
+#if !defined(__ANDROID__)
 	printf("# time is up; set stop flag\n");
+#endif
 }
 
 
@@ -881,8 +886,10 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
 
 			if (sp->stop->flag) {
+#if !defined(__ANDROID__)
 				if (sp->is_t2 == false)
 					printf("# stop flag set\n");
+#endif
 				break;
 			}
 
@@ -931,7 +938,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
+#if !defined(__ANDROID__)
 					printf("# time %u is up %llu\n", search_time, thought_ms);
+#endif
 					break;
 				}
 
@@ -943,7 +952,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		}
 	}
 	else {
+#if !defined(__ANDROID__)
 		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos->fen().c_str());
+#endif
 	}
 
 	if (!sp->is_t2) {
@@ -975,7 +986,9 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
+#if !defined(__ANDROID__)
 	printf("# pondering started\n");
+#endif
 
 	sp2.parameters = &default_parameters;
 	sp2.is_t2 = true;
@@ -997,14 +1010,18 @@ void ponder_thread(void *p)
 			if (sp2.history)
 				memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
 
+#if !defined(__ANDROID__)
 			printf("# new ponder position (%d/%d)\n", valid, run_2nd_thread);
+#endif
 
 			prev_search_fen_version = search_fen_version;
 		}
 		search_fen_lock.unlock();
 
 		if (valid && run_2nd_thread) {
+#if !defined(__ANDROID__)
 			printf("# ponder search start\n");
+#endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_blink(led_blue_timer);
@@ -1026,7 +1043,9 @@ void ponder_thread(void *p)
 		}
 	}
 
+#if !defined(__ANDROID__)
 	printf("# pondering stopping\n");
+#endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	vTaskDelete(nullptr);
@@ -1124,7 +1143,11 @@ void main_task()
 			}
 		}
 		catch(const std::exception& e) {
+#if defined(__ANDROID__)
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what().c_str());
+#else
 			printf("# EXCEPTION in main: %s\n", e.what());
+#endif
 		}
 	};
 
@@ -1223,7 +1246,11 @@ void main_task()
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
+#if defined(__ANDROID__)
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what().c_str());
+#else
 			printf("# EXCEPTION in main: %s\n", e.what());
+#endif
 		}
 	};
 
@@ -1317,8 +1344,12 @@ void tune(std::string file)
 #endif
 
 void hello() {
+#if defined(__ANDROID__)
+	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
+#else
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
 	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+#endif
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
