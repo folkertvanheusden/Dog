@@ -1144,7 +1144,7 @@ void main_task()
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
-			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what().c_str());
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what());
 #else
 			printf("# EXCEPTION in main: %s\n", e.what());
 #endif
@@ -1247,7 +1247,7 @@ void main_task()
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
-			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what().c_str());
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what());
 #else
 			printf("# EXCEPTION in main: %s\n", e.what());
 #endif
