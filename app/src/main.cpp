@@ -71,14 +71,16 @@ typedef struct
 	uint32_t  nodes;
 } search_pars_t;
 
-constexpr size_t history_size = 2 * 6 * 64;
+constexpr const size_t history_size = 2 * 6 * 64;
 
-search_pars_t sp1 { &stop1, nullptr, false, reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * history_size)) };
+constexpr const size_t history_malloc_size = sizeof(uint32_t) * history_size;
+
+search_pars_t sp1 { &stop1, nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)) };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * history_size)) };
+search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)) };
 #else
-search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(sizeof(uint32_t) * history_size, MALLOC_CAP_IRAM_8BIT)) };
+search_pars_t sp2 { &stop2, nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(history_malloc_size, MALLOC_CAP_IRAM_8BIT)) };
 #endif
 
 void set_flag(end_t *const stop)
@@ -1093,6 +1095,8 @@ void main_task()
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
 
+	memset(sp1.history, 0x00, history_malloc_size);
+
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
 
@@ -1104,7 +1108,7 @@ void main_task()
 	};
 
 	auto ucinewgame_handler = [](std::istringstream&) {
-		memset(sp1.history, 0x00, history_size * sizeof(uint32_t));
+		memset(sp1.history, 0x00, history_malloc_size);
 	};
 
 	auto play_handler = [](std::istringstream&) {
