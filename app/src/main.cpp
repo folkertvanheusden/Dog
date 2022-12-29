@@ -1232,6 +1232,9 @@ void main_task()
 #if !defined(linux) && !defined(_WIN32)
 			stop_blink(led_green_timer, &led_green);
 #endif
+#if defined(__ANDROID__)
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "Performed move %s for position %s", best_move.first.to_str().c_str(), positiont1.fen().c_str());
+#endif
 
 			// set ponder positition
 			positiont1.make_move(best_move.first);
