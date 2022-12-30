@@ -884,8 +884,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 		libchess::Move cur_move { 0 };
 
-		bool alpha_repeat = false;
-		bool beta_repeat  = false;
+		int alpha_repeat = 0;
+		int beta_repeat  = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
@@ -899,7 +899,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			}
 
 			if (score <= alpha) {
-				if (alpha_repeat)
+				if (alpha_repeat >= 3)
 					alpha = -10000;
 				else {
 					beta = (alpha + beta) / 2;
@@ -908,11 +908,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 						alpha = -10000;
 					add_alpha += add_alpha / 15 + 1;
 
-					alpha_repeat = true;
+					alpha_repeat++;
 				}
 			}
 			else if (score >= beta) {
-				if (beta_repeat)
+				if (beta_repeat >= 3)
 					beta = 10000;
 				else {
 					alpha = (alpha + beta) / 2;
@@ -921,11 +921,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 						beta = 10000;
 					add_beta += add_beta / 15 + 1;
 
-					beta_repeat = true;
+					beta_repeat++;
 				}
 			}
 			else {
-				alpha_repeat = beta_repeat = false;
+				alpha_repeat = beta_repeat = 0;
 
 				alpha = score - add_alpha;
 				if (alpha < -10000)
