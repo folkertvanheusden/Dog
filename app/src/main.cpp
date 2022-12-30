@@ -888,7 +888,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		bool beta_repeat  = false;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
-			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
+			int score = search(*pos, max_depth, -32767, 32767, 0, max_depth, &cur_move, sp);
 
 			if (sp->stop->flag) {
 #if !defined(__ANDROID__)
@@ -898,76 +898,36 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				break;
 			}
 
-			if (score <= alpha) {
-				if (alpha_repeat)
-					alpha = -10000;
-				else {
-					beta = (alpha + beta) / 2;
-					alpha = score - add_alpha;
-					if (alpha < -10000)
-						alpha = -10000;
-					add_alpha += add_alpha / 15 + 1;
 
-					alpha_repeat = true;
-				}
+			best_move  = cur_move;
+			best_score = score;
+
+			uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+
+			if (!sp->is_t2) {
+				if (thought_ms == 0)
+					thought_ms = 1;
+
+				std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
+
+				std::string pv_str;
+
+				for(auto & move : pv)
+					pv_str += " " + move.to_str();
+
+				uint32_t nodes = sp1.nodes + sp2.nodes;
+
+				printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
 			}
-			else if (score >= beta) {
-				if (beta_repeat)
-					beta = 10000;
-				else {
-					alpha = (alpha + beta) / 2;
-					beta = score + add_beta;
-					if (beta > 10000)
-						beta = 10000;
-					add_beta += add_beta / 15 + 1;
 
-					beta_repeat = true;
-				}
-			}
-			else {
-				alpha_repeat = beta_repeat = false;
-
-				alpha = score - add_alpha;
-				if (alpha < -10000)
-					alpha = -10000;
-
-				beta = score + add_beta;
-				if (beta > 10000)
-					beta = 10000;
-
-				best_move  = cur_move;
-				best_score = score;
-
-				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
-
-				if (!sp->is_t2) {
-					if (thought_ms == 0)
-						thought_ms = 1;
-
-					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
-
-					std::string pv_str;
-
-					for(auto & move : pv)
-						pv_str += " " + move.to_str();
-
-					uint32_t nodes = sp1.nodes + sp2.nodes;
-
-					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, nodes * 1000 / thought_ms, pv_str.c_str());
-				}
-
-				if (thought_ms > search_time / 2 && search_time > 0) {
+			if (thought_ms > search_time / 2 && search_time > 0) {
 #if !defined(__ANDROID__)
-					printf("# time %u is up %llu\n", search_time, thought_ms);
+				printf("# time %u is up %llu\n", search_time, thought_ms);
 #endif
-					break;
-				}
-
-				add_alpha = 75;
-				add_beta  = 75;
-
-				max_depth++;
+				break;
 			}
+
+			max_depth++;
 		}
 	}
 	else {
