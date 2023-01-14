@@ -51,6 +51,8 @@ public:
 	tt();
 	~tt();
 
+	void reset();
+
 	void inc_age();
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
