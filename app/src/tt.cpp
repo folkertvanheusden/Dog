@@ -12,6 +12,11 @@ tt::~tt()
 {
 }
 
+void tt::reset()
+{
+	memset(entries, 0x00, sizeof(entries[0]) * n_entries);
+}
+
 void tt::inc_age()
 {
 	age++;
