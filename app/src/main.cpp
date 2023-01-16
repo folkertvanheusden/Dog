@@ -899,7 +899,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			}
 
 			if (score <= alpha) {
-				if (alpha_repeat >= 2)
+				if (alpha_repeat >= 3)
 					alpha = -10000;
 				else {
 					beta = (alpha + beta) / 2;
@@ -912,7 +912,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				}
 			}
 			else if (score >= beta) {
-				if (beta_repeat >= 2)
+				if (beta_repeat >= 3)
 					beta = 10000;
 				else {
 					alpha = (alpha + beta) / 2;
