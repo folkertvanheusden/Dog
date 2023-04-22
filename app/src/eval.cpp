@@ -8,7 +8,7 @@
 
 int eval_piece(libchess::PieceType piece, const eval_par & parameters)
 {
-	int values[] = { parameters.tune_pawn.value(), parameters.tune_knight.value(), parameters.tune_bishop.value(), parameters.tune_rook.value(), parameters.tune_queen.value(), 10000 };
+	int values[] = { parameters.pawn, parameters.knight, parameters.bishop, parameters.rook, parameters.queen, 10000 };
 
 	return values[piece];
 }
@@ -256,7 +256,7 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 				libchess::Square sq = piece_bb.forward_bitscan();
 				piece_bb.forward_popbit();
 
-				int psq_score = (psq(sq, color, type, phase) * mul * parameters.tune_psq_mul.value()) / parameters.tune_psq_div.value();
+				int psq_score = (psq(sq, color, type, phase) * mul * parameters.psq_mul) / parameters.psq_div;
 				score += psq_score;
 
 				// passed pawns
@@ -270,8 +270,8 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 						bool right = (x < 7 && (blackYmin[x + 1] <= y || blackYmin[x + 1] == 8)) || x == 7;
 
 						if (left && front && right)
-							score += parameters.tune_pp_scores[false][y].value();
-						//score += (parameters.tune_pp_scores[0][y].value() * (256 - phase) + parameters.tune_pp_scores[1][y].value() * phase) / 256;
+							score += *parameters.pp_scores[false][y];
+						//score += (parameters.pp_scores[0][y].value() * (256 - phase) + parameters.pp_scores[1][y].value() * phase) / 256;
 					}
 					else {
 						bool left = (x > 0 && (whiteYmax[x - 1] >= y || whiteYmax[x - 1] == -1)) || x == 0;
@@ -279,8 +279,8 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 						bool right = (x < 7 && (whiteYmax[x + 1] >= y || whiteYmax[x + 1] == -1)) || x == 7;
 
 						if (left && front && right)
-							score -= parameters.tune_pp_scores[false][7 - y].value();
-						// score -= (parameters.tune_pp_scores[0][7 - y].value() * (256 - phase) + parameters.tune_pp_scores[1][7 - y].value() * phase) / 256;
+							score -= *parameters.pp_scores[false][7 - y];
+						// score -= (parameters.pp_scores[0][7 - y].value() * (256 - phase) + parameters.pp_scores[1][7 - y].value() * phase) / 256;
 					}
 				}
 			}
@@ -293,26 +293,26 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 		libchess::Square kw = pos.king_square(libchess::constants::WHITE);
 		libchess::Square kb = pos.king_square(libchess::constants::BLACK);
 
-		score += scores[kb.rank()] * parameters.tune_edge_black_rank.value();
-		score += scores[kb.file()] * parameters.tune_edge_black_file.value();
+		score += scores[kb.rank()] * parameters.edge_black_rank;
+		score += scores[kb.file()] * parameters.edge_black_file;
 
-		score -= scores[kw.rank()] * parameters.tune_edge_white_rank.value();
-		score -= scores[kw.file()] * parameters.tune_edge_white_file.value();
+		score -= scores[kw.rank()] * parameters.edge_white_rank;
+		score -= scores[kw.file()] * parameters.edge_white_file;
 	}
 
-	// score += development(pos) * parameters.tune_development.value();
+	// score += development(pos) * parameters.development;
 
 	// forks
 	//score += find_forks(pos);
 
 	// number of bishops
-	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * parameters.tune_bishop_count.value();
+	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * parameters.bishop_count;
 
 	// 8 pawns: not good
-	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 8) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 8)) * parameters.tune_too_many_pawns.value();
+	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 8) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 8)) * parameters.too_many_pawns;
 
 	// 0 pawns: also not good
-	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * parameters.tune_zero_pawns.value();
+	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * parameters.zero_pawns;
 
 	const auto bb_pawns_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
 	const auto bb_pawns_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
@@ -331,31 +331,31 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
 		// double pawns
 		if (n_pawns_w[x] >= 2)
-			score -= (n_pawns_w[x] - 1) * parameters.tune_double_pawns.value();
+			score -= (n_pawns_w[x] - 1) * parameters.double_pawns;
 		if (n_pawns_b[x] >= 2)
-			score += (n_pawns_b[x] - 1) * parameters.tune_double_pawns.value();
+			score += (n_pawns_b[x] - 1) * parameters.double_pawns;
 
 		// rooks on open files
 		int n_rooks_w = (bb_rooks_w & libchess::lookups::file_mask(x)).popcount();
 		int n_rooks_b = (bb_rooks_b & libchess::lookups::file_mask(x)).popcount();
 
-		score += ((n_pawns_w[x] == 0 && n_rooks_w > 0) - (n_pawns_b[x] == 0 && n_rooks_b > 0)) * parameters.tune_rook_on_open_file.value();
+		score += ((n_pawns_w[x] == 0 && n_rooks_w > 0) - (n_pawns_b[x] == 0 && n_rooks_b > 0)) * parameters.rook_on_open_file;
 
 		// isolated pawns
 		int wleft = x > 0 ? n_pawns_w[x - 1] : 0;
 		int wright = x < 7 ? n_pawns_w[x + 1] : 0;
-		score += (wleft == 0 && wright == 0) * parameters.tune_isolated_pawns.value();
+		score += (wleft == 0 && wright == 0) * parameters.isolated_pawns;
 
 		int bleft = x > 0 ? n_pawns_b[x - 1] : 0;
 		int bright = x < 7 ? n_pawns_b[x + 1] : 0;
-		score -= (bleft == 0 && bright == 0) * parameters.tune_isolated_pawns.value();
+		score -= (bleft == 0 && bright == 0) * parameters.isolated_pawns;
 	}
 
-	// score += count_mobility(pos) * parameters.tune_mobility.value() / 10;
+	// score += count_mobility(pos) * parameters.mobility / 10;
 
-	// score -= (count_king_attacks(pos, libchess::constants::WHITE) - count_king_attacks(pos, libchess::constants::BLACK)) * parameters.tune_king_attacks.value();
+	// score -= (count_king_attacks(pos, libchess::constants::WHITE) - count_king_attacks(pos, libchess::constants::BLACK)) * parameters.king_attacks;
 
-	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.tune_king_shield.value();
+	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.king_shield;
 
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		return -score;
