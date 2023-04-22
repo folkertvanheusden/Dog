@@ -1335,7 +1335,7 @@ void tune(std::string file)
 				cur.set_eval(e.name(), e.value());
 
 			end_t         ef { false     };
-			search_pars_t sp { &ef, &cur, false, reinterpret_cast<uint32_t *>(calloc(1, sizeof(uint32_t) * history_size)) };
+			search_pars_t sp { &ef, &cur, false, reinterpret_cast<uint32_t *>(calloc(sizeof(uint32_t), history_size)) };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 
