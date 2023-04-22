@@ -1324,10 +1324,16 @@ void tune(std::string file)
 
 	printf("%zu EPDs loaded\n", normalized_results.size());
 
-	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
-	printf("%zu parameters\n", tunable_parameters.size());
+	std::vector<libchess::TunableParameterP> tunable_parameters_in = default_parameters.get_tunable_parameters();
 
-	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
+	std::vector<libchess::TunableParameter> tunable_parameters_work;
+
+	for(auto parameter : tunable_parameters_in)
+		tunable_parameters_work.push_back(libchess::TunableParameter(parameter.name(), parameter.value()));
+
+	printf("%zu parameters\n", tunable_parameters_work.size());
+
+	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters_work,
 		[](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur;
 

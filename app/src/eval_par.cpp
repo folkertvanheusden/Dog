@@ -20,9 +20,9 @@ eval_par::~eval_par()
 {
 }
 
-std::vector<libchess::TunableParameter> eval_par::get_tunable_parameters() const
+std::vector<libchess::TunableParameterP> eval_par::get_tunable_parameters() const
 {
-	std::vector<libchess::TunableParameter> list;
+	std::vector<libchess::TunableParameterP> list;
 
 	list.push_back(tune_bishop_count);
 	list.push_back(tune_too_many_pawns);
