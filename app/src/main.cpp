@@ -486,6 +486,9 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 #endif
 
+	if (qsdepth >= 256)
+		return eval(pos, *sp->parameters);
+
 	sp->nodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
