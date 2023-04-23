@@ -40,6 +40,7 @@
 #endif
 
 #include <libchess/Position.h>
+#include <libchess/Tuner.h>
 #include <libchess/UCIService.h>
 
 #include "eval.h"

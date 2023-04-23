@@ -6,7 +6,7 @@
 #include <numeric>
 #include <string>
 
-#include "tuner.h"
+#include "libchess/Tuner.h"
 
 #include "tune.h"
 
