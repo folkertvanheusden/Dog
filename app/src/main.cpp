@@ -1331,10 +1331,7 @@ void tune(std::string file)
 
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
 		[](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
-			eval_par cur;
-
-			for(auto & e : params)
-				cur.set_eval(e.name(), e.value());
+			eval_par cur(params);
 
 			end_t         ef { false     };
 			search_pars_t sp { &ef, &cur, false, reinterpret_cast<uint32_t *>(calloc(sizeof(uint32_t), history_size)) };
