@@ -1329,19 +1329,19 @@ void tune(std::string file)
 
 	printf("%zu parameters\n", tunable_parameters.size());
 
+	thread_local uint32_t history[history_size] { 0 };
+
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
-		[](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
+		[history](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
 			end_t         ef { false     };
-			search_pars_t sp { &ef, &cur, false, reinterpret_cast<uint32_t *>(calloc(sizeof(uint32_t), history_size)) };
+			search_pars_t sp { &ef, &cur, false, history };
 
 			int score = qs(pos, -32767, 32767, 0, &sp);
 
 			if (pos.side_to_move() != libchess::constants::WHITE)
 				score = -score;
-
-			free(sp.history);
 
 			return score;
 		}};
