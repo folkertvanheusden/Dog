@@ -407,7 +407,7 @@ public:
 
                 if (p->is_capture_move(move)) {
 			if (move.type() == libchess::Move::Type::ENPASSANT)
-				score += ep->tune_pawn.value() << 18;
+				score += ep->pawn << 18;
 			else {
 				auto piece_to = p->piece_on(move.to_square());
 
@@ -500,10 +500,10 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
 
-		int BIG_DELTA = sp->parameters->tune_big_delta.value();
+		int BIG_DELTA = sp->parameters->big_delta;
 
 		if (pos.is_promotion_move(*pos.previous_move()))
-			BIG_DELTA += sp->parameters->tune_big_delta_promotion.value();
+			BIG_DELTA += sp->parameters->big_delta_promotion;
 
 		if (best_score < alpha - BIG_DELTA)
 			return alpha;
@@ -526,7 +526,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 		if (!in_check && pos.is_capture_move(move)) {
 			auto piece_to    = pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp->parameters->tune_pawn.value() : eval_piece(piece_to->type(), *sp->parameters);
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp->parameters->pawn : eval_piece(piece_to->type(), *sp->parameters);
 
 			auto piece_from  = pos.piece_on(move.from_square());
 			int  eval_killer = eval_piece(piece_from->type(), *sp->parameters);
@@ -640,13 +640,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (depth == 1 && staticeval - sp->parameters->tune_knight.value() > beta)
+		if (depth == 1 && staticeval - sp->parameters->knight > beta)
 			return beta;
 
-		if (depth == 2 && staticeval - sp->parameters->tune_rook.value() > beta)
+		if (depth == 2 && staticeval - sp->parameters->rook > beta)
 			return beta;
 
-		if (depth == 3 && staticeval - sp->parameters->tune_queen.value() > beta)
+		if (depth == 3 && staticeval - sp->parameters->queen > beta)
 			depth--;
 	}
 
@@ -1324,16 +1324,11 @@ void tune(std::string file)
 
 	printf("%zu EPDs loaded\n", normalized_results.size());
 
-	std::vector<libchess::TunableParameterP> tunable_parameters_in = default_parameters.get_tunable_parameters();
+	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
 
-	std::vector<libchess::TunableParameter> tunable_parameters_work;
+	printf("%zu parameters\n", tunable_parameters.size());
 
-	for(auto parameter : tunable_parameters_in)
-		tunable_parameters_work.push_back(libchess::TunableParameter(parameter.name(), parameter.value()));
-
-	printf("%zu parameters\n", tunable_parameters_work.size());
-
-	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters_work,
+	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
 		[](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur;
 
