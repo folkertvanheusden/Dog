@@ -14,6 +14,9 @@ eval_par::eval_par(const std::vector<libchess::TunableParameter> & params)
 {
 	for(auto & p : params)
 		*m.find(p.name())->second = p.value();
+
+	if (*m.find("tune_psq_div")->second == 0)
+		*m.find("tune_psq_div")->second = 1;
 }
 
 eval_par::~eval_par()
