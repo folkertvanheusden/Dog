@@ -1050,7 +1050,34 @@ void ponder_thread(void *p)
 			start_blink(led_blue_timer);
 #endif
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID)
+			int n_threads = thread_count - 1;
+
+			printf("# starting %d threads\n", n_threads);
+
+			if (n_threads > 0) {
+				std::vector<libchess::Position *> positions;
+				std::vector<std::thread *>        ths;
+
+				for(int i=0; i<n_threads; i++) {
+					auto position = new libchess::Position(positiont2);
+					positions.push_back(position);
+
+					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2, -1));
+				}
+
+				for(auto & th : ths) {
+					th->join();
+
+					delete th;
+				}
+
+				for(auto & p : positions)
+					delete p;
+			}
+#else
 			search_it(&positiont2, 2147483647, &sp2, -1);
+#endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
@@ -1243,7 +1270,7 @@ void main_task()
 
 			// let the ponder thread run as a lazy-smp thread
 			search_fen_lock.lock();
-			run_2nd_thread = thread_count == 2;
+			run_2nd_thread = thread_count >= 2;
 			search_fen     = positiont1.fen();
 			search_fen_version++;
 			set_flag(&stop2);
@@ -1284,7 +1311,7 @@ void main_task()
 		}
 	};
 
-	libchess::UCISpinOption thread_count_option("Threads", 2, 1, 2, thread_count_handler);
+	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, thread_count, thread_count_handler);
 
 	uci_service.register_option(thread_count_option);
 
@@ -1392,11 +1419,20 @@ int main(int argc, char *argv[])
 	start_ponder();
 
 #if !defined(__ANDROID__)
-	if (argc == 2)
-		tune(argv[1]);
-	else
+	int c = -1;
+	while((c = getopt(argc, argv, "t:T:")) != -1) {
+		if (c == 'T') {
+			tune(optarg);
+
+			return 0;
+		}
+
+		if (c == 't')
+			thread_count = atoi(optarg);
+	}
+
 #endif
-		main_task();
+	main_task();
 
 	return 0;
 }
