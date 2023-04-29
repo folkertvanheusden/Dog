@@ -944,10 +944,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (!sp->is_t2) {
-					if (thought_ms == 0)
-						thought_ms = 1;
-
+				if (!sp->is_t2 && thought_ms > 0) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
 
 					std::string pv_str;
@@ -958,8 +955,6 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					uint32_t nodes = sp1.nodes + sp2.nodes;
 
 					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, uint64_t(nodes * 1000. / thought_ms), pv_str.c_str());
-
-					fflush(nullptr);
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
