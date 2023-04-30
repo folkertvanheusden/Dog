@@ -686,7 +686,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
-			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore, sp);
+			libchess::Move ignore2;
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
 
 			if (verification >= beta)
 				return beta;
