@@ -712,7 +712,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	auto tid = gettid();
 	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
-	bool sort_inv = (tid & 3) == 3;
+	bool sort_inv = !sp->is_t2 && (tid & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
 	constexpr bool sort_inv = false;
