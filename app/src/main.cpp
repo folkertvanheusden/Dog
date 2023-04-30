@@ -434,6 +434,11 @@ void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
 	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
 
+void sort_movelist_inverse(libchess::MoveList & move_list, sort_movelist_compare & smc)
+{
+	move_list.sort([&smc](const libchess::Move move) { return -smc.move_evaluater(move); });
+}
+
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -520,9 +525,23 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 
-	sort_movelist_compare smc(&pos, sp->parameters, sp);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	auto tid = gettid();
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
+	bool sort_inv = (tid & 3) == 3;
+#else
+	constexpr bool do_sort  = true;
+	constexpr bool sort_inv = false;
+#endif
 
-	sort_movelist(move_list, smc);
+	if (do_sort) {
+		sort_movelist_compare smc(&pos, sp->parameters, sp);
+
+		if (sort_inv)
+			sort_movelist_inverse(move_list, smc);
+		else
+			sort_movelist(move_list, smc);
+	}
 
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -690,17 +709,31 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
-	sort_movelist_compare smc(&pos, sp->parameters, sp);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	auto tid = gettid();
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
+	bool sort_inv = (tid & 3) == 3;
+#else
+	constexpr bool do_sort  = true;
+	constexpr bool sort_inv = false;
+#endif
 
-	if (tt_move.has_value())
-		smc.add_first_move(tt_move.value());
-	else if (iid_move.value())
-		smc.add_first_move(iid_move);
+	if (do_sort) {
+		sort_movelist_compare smc(&pos, sp->parameters, sp);
 
-	if (m->value())
-		smc.add_first_move(*m);
+		if (tt_move.has_value())
+			smc.add_first_move(tt_move.value());
+		else if (iid_move.value())
+			smc.add_first_move(iid_move);
 
-	sort_movelist(move_list, smc);
+		if (m->value())
+			smc.add_first_move(*m);
+
+		if (sort_inv)
+			sort_movelist_inverse(move_list, smc);
+		else
+			sort_movelist(move_list, smc);
+	}
 
 	int     n_played   = 0;
 
@@ -884,7 +917,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 		int8_t  max_depth = 1 + (sp->is_t2 ? rand() % 7 : 0);
+#else
+		int8_t  max_depth = 1 + sp->is_t2;
+#endif
 
 		libchess::Move cur_move { 0 };
 
