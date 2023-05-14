@@ -57,7 +57,7 @@ typedef struct {
 end_t            stop1          { false };  // main thread
 end_t            stop2          { false };  // ponder thread
 std::atomic_bool ponder_quit    { false };
-bool             run_2nd_thread { false };
+bool             run_2nd_thread { true  };
 
 typedef struct
 {
@@ -279,7 +279,7 @@ libchess::UCIService uci_service{"Dog v1.2", "Folkert van Heusden", std::cout, i
 
 tt tti;
 
-int  thread_count = 2;
+int  thread_count = 31;
 
 auto thread_count_handler = [](const int value)  { thread_count = value; };
 
@@ -434,6 +434,11 @@ void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
 	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
 
+void sort_movelist_inverse(libchess::MoveList & move_list, sort_movelist_compare & smc)
+{
+	move_list.sort([&smc](const libchess::Move move) { return -smc.move_evaluater(move); });
+}
+
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -520,9 +525,23 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 
-	sort_movelist_compare smc(&pos, sp->parameters, sp);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	auto tid = gettid();
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
+	bool sort_inv = !sp->is_t2 && (tid & 3) == 3;
+#else
+	constexpr bool do_sort  = true;
+	constexpr bool sort_inv = false;
+#endif
 
-	sort_movelist(move_list, smc);
+	if (do_sort) {
+		sort_movelist_compare smc(&pos, sp->parameters, sp);
+
+		if (sort_inv)
+			sort_movelist_inverse(move_list, smc);
+		else
+			sort_movelist(move_list, smc);
+	}
 
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -655,10 +674,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 
 	///// null move
-	bool in_check       = pos.in_check();
+	bool in_check = pos.in_check();
+
+	bool skip_nm  = sp->is_t2 && (rand() % 9) == 3;
 
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
+	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_nm) {
 		pos.make_null_move();
 
 		libchess::Move ignore;
@@ -667,7 +688,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
-			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore, sp);
+			libchess::Move ignore2;
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
 
 			if (verification >= beta)
 				return beta;
@@ -690,17 +712,31 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
-	sort_movelist_compare smc(&pos, sp->parameters, sp);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	auto tid = gettid();
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
+	bool sort_inv = !sp->is_t2 && (tid & 3) == 3;
+#else
+	constexpr bool do_sort  = true;
+	constexpr bool sort_inv = false;
+#endif
 
-	if (tt_move.has_value())
-		smc.add_first_move(tt_move.value());
-	else if (iid_move.value())
-		smc.add_first_move(iid_move);
+	if (do_sort) {
+		sort_movelist_compare smc(&pos, sp->parameters, sp);
 
-	if (m->value())
-		smc.add_first_move(*m);
+		if (tt_move.has_value())
+			smc.add_first_move(tt_move.value());
+		else if (iid_move.value())
+			smc.add_first_move(iid_move);
 
-	sort_movelist(move_list, smc);
+		if (m->value())
+			smc.add_first_move(*m);
+
+		if (sort_inv)
+			sort_movelist_inverse(move_list, smc);
+		else
+			sort_movelist(move_list, smc);
+	}
 
 	int     n_played   = 0;
 
@@ -884,7 +920,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+		int8_t  max_depth = 1 + (sp->is_t2 ? rand() % 7 : 0);
+#else
 		int8_t  max_depth = 1 + sp->is_t2;
+#endif
 
 		libchess::Move cur_move { 0 };
 
@@ -944,10 +984,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (!sp->is_t2) {
-					if (thought_ms == 0)
-						thought_ms = 1;
-
+				if (!sp->is_t2 && thought_ms > 0) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
 
 					std::string pv_str;
@@ -1050,7 +1087,34 @@ void ponder_thread(void *p)
 			start_blink(led_blue_timer);
 #endif
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID)
+			int n_threads = thread_count - 1;
+
+			printf("# starting %d threads\n", n_threads);
+
+			if (n_threads > 0) {
+				std::vector<libchess::Position *> positions;
+				std::vector<std::thread *>        ths;
+
+				for(int i=0; i<n_threads; i++) {
+					auto position = new libchess::Position(positiont2);
+					positions.push_back(position);
+
+					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2, -1));
+				}
+
+				for(auto & th : ths) {
+					th->join();
+
+					delete th;
+				}
+
+				for(auto & p : positions)
+					delete p;
+			}
+#else
 			search_it(&positiont2, 2147483647, &sp2, -1);
+#endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
@@ -1243,7 +1307,7 @@ void main_task()
 
 			// let the ponder thread run as a lazy-smp thread
 			search_fen_lock.lock();
-			run_2nd_thread = thread_count == 2;
+			run_2nd_thread = thread_count >= 2;
 			search_fen     = positiont1.fen();
 			search_fen_version++;
 			set_flag(&stop2);
@@ -1284,13 +1348,13 @@ void main_task()
 		}
 	};
 
-	libchess::UCISpinOption thread_count_option("Threads", 2, 1, 2, thread_count_handler);
+//	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, thread_count, thread_count_handler);
 
-	uci_service.register_option(thread_count_option);
+//	uci_service.register_option(thread_count_option);
 
-	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
+//	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 
-	uci_service.register_option(allow_ponder_option);
+//	uci_service.register_option(allow_ponder_option);
 
 	uci_service.register_position_handler(position_handler);
 
@@ -1392,11 +1456,20 @@ int main(int argc, char *argv[])
 	start_ponder();
 
 #if !defined(__ANDROID__)
-	if (argc == 2)
-		tune(argv[1]);
-	else
+	int c = -1;
+	while((c = getopt(argc, argv, "t:T:")) != -1) {
+		if (c == 'T') {
+			tune(optarg);
+
+			return 0;
+		}
+
+		if (c == 't')
+			thread_count = atoi(optarg);
+	}
+
 #endif
-		main_task();
+	main_task();
 
 	return 0;
 }
