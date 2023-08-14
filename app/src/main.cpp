@@ -664,6 +664,20 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	////////
 
+	if (with_syzygy && sp->is_t2) {
+		std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
+
+		if (syzygy_score.has_value()) {
+			// printf("# SYZYGY hit %d\n", syzygy_score.value());
+
+			int score = syzygy_score.value();
+
+			tti.store(hash, EXACT, depth, score, libchess::Move(0));
+
+			return score;
+		}
+	}
+
 	if (!is_root_position && depth <= 3 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
@@ -1325,7 +1339,7 @@ void main_task()
 			// probe the Syzygy endjgame table base
 #if defined(linux) || defined(_WIN32)
 			if (with_syzygy) {
-				auto probe_result = probe_fathom(positiont1);
+				auto probe_result = probe_fathom_root(positiont1);
 
 				if (probe_result.has_value()) {
 					best_move  = probe_result.value().first;

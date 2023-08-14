@@ -73,9 +73,9 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct p
 	return rc;
 }
 
-std::optional<std::pair<libchess::Move, int> > probe_fathom(libchess::Position & lpos)
+pos gen_parameters(const libchess::Position & lpos)
 {
-	struct pos pos;
+	pos pos;
 	pos.turn    = lpos.side_to_move() == libchess::constants::WHITE;
 	pos.white   = lpos.color_bb(libchess::constants::WHITE);
 	pos.black   = lpos.color_bb(libchess::constants::BLACK);
@@ -117,6 +117,14 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom(libchess::Position &
 	printf("# turn: %d\n", pos.turn);
 #endif
 
+	return pos;
+
+}
+
+std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess::Position & lpos)
+{
+	auto pos = gen_parameters(lpos);
+
 	unsigned results[TB_MAX_MOVES];
 	unsigned res = tb_probe_root(pos.white, pos.black, pos.kings, pos.queens, pos.rooks, pos.bishops, pos.knights, pos.pawns, pos.rule50, pos.castling, pos.ep, pos.turn, results);
 
@@ -126,7 +134,7 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom(libchess::Position &
 	}
 
 	std::optional<std::pair<libchess::Move, int> > m;
-	
+
 	m = get_best_dtz_move(pos, results, TB_WIN);
 	if (m.has_value())
 		return { { m.value().first, 10000 - m.value().second } };
@@ -144,6 +152,34 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom(libchess::Position &
 		return { { m.value().first, -(10000 + m.value().second) } };
 
 	return { };
+}
+
+std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
+{
+	auto pos = gen_parameters(lpos);
+
+	unsigned res = tb_probe_wdl(pos.white, pos.black, pos.kings, pos.queens, pos.rooks, pos.bishops, pos.knights, pos.pawns, pos.rule50, pos.castling, pos.ep, pos.turn);
+	if (res == TB_RESULT_FAILED) {
+		// no hit
+		return { };
+	}
+
+	int score = 0;
+
+	int result = TB_GET_WDL(res);
+
+	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
+		score = -9999;
+	else if (result == TB_DRAW)
+		score = 0;
+	else if (result == TB_CURSED_WIN || result == TB_WIN)
+		score = 9999;
+	else {
+		printf("# unexpected return code from fathom: %d (%d)\n", result, res);
+		return { };
+	}
+
+	return score;
 }
 
 void fathom_init(const std::string & path)
