@@ -280,7 +280,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v1.2", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.0", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -666,7 +666,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (sp->is_t2 && with_syzygy) {
 		// check piece count
-		int counts = pos.occupancy_bb().popcount();
+		unsigned counts = pos.occupancy_bb().popcount();
 
 		// syzygy count?
 		if (counts <= TB_LARGEST) {
@@ -1507,8 +1507,6 @@ int main(int argc, char *argv[])
 
 	hello();
 
-	start_ponder();
-
 #if !defined(__ANDROID__)
 	int c = -1;
 	while((c = getopt(argc, argv, "t:T:s:h")) != -1) {
@@ -1531,8 +1529,9 @@ int main(int argc, char *argv[])
 			return c == 'h' ? 0 : 1;
 		}
 	}
-
 #endif
+	start_ponder();
+
 	main_task();
 
 	return 0;
