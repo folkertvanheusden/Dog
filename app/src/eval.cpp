@@ -207,12 +207,12 @@ int development(libchess::Position & pos)
 }
 #endif
 
+
 int eval(libchess::Position & pos, const eval_par & parameters)
 {
 	int score = 0;
 
-	int counts[2][6];
-	memset(counts, 0x00, sizeof counts);
+	int counts[2][6] { 0 };
 
 	int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
         int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };

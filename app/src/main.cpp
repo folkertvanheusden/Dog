@@ -664,17 +664,23 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	////////
 
-	if (with_syzygy && sp->is_t2) {
-		std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
+	if (sp->is_t2 && with_syzygy) {
+		// check piece count
+		int counts = pos.occupancy_bb().popcount();
 
-		if (syzygy_score.has_value()) {
-			// printf("# SYZYGY hit %d\n", syzygy_score.value());
+		// syzygy count?
+		if (counts <= TB_LARGEST) {
+			std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
 
-			int score = syzygy_score.value();
+			if (syzygy_score.has_value()) {
+				// printf("# SYZYGY hit %d\n", syzygy_score.value());
 
-			tti.store(hash, EXACT, depth, score, libchess::Move(0));
+				int score = syzygy_score.value();
 
-			return score;
+				tti.store(hash, EXACT, depth, score, libchess::Move(0));
+
+				return score;
+			}
 		}
 	}
 
