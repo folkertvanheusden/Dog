@@ -1442,9 +1442,9 @@ void tune(std::string file)
 
 
 	uint64_t start_ts = esp_timer_get_time() / 1000;
-	double start_error = tuner.error_full();
+	double start_error = tuner.error();
 	tuner.tune();
-	double end_error = tuner.error_full();
+	double end_error = tuner.error();
 	uint64_t end_ts = esp_timer_get_time() / 1000;
 
 	time_t start = start_ts / 1000;
