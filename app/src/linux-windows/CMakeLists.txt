@@ -18,7 +18,7 @@ else()
 	set(MY_DEBUG 0)
 endif()
 
-set(DOG_VERSION 1.2)
+set(DOG_VERSION 2.0)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -Ofast -DDEBUG=${MY_DEBUG}")
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -28,8 +28,11 @@ add_executable(
   ../eval.cpp
   ../eval_par.cpp
   ../main.cpp
+  ../max.cpp
   ../psq.cpp
+  ../syzygy.cpp
   ../tt.cpp
+  ../fathom/src/tbprobe.c
 )
 
 include(FindPkgConfig)
@@ -37,6 +40,6 @@ include(FindPkgConfig)
 find_package(OpenMP REQUIRED)
 target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX)
 
-target_include_directories(Dog PUBLIC ../../include)
+target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)

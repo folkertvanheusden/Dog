@@ -19,6 +19,7 @@
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#include "max.h"
 #include <chrono>
 #include <limits.h>
 #include <pthread.h>
@@ -46,6 +47,10 @@
 #include "eval.h"
 #include "eval_par.h"
 #include "psq.h"
+#if defined(linux) || defined(_WIN32)
+#include "syzygy.h"
+bool with_syzygy = false;
+#endif
 #include "tt.h"
 
 
@@ -1313,22 +1318,44 @@ void main_task()
 			set_flag(&stop2);
 			search_fen_lock.unlock();
 
+			libchess::Move best_move  { 0 };
+			int            best_score { 0 };
+			bool           has_best   { false };
+
+			// probe the Syzygy endjgame table base
+#if defined(linux) || defined(_WIN32)
+			if (with_syzygy) {
+				auto probe_result = probe_fathom(positiont1);
+
+				if (probe_result.has_value()) {
+					best_move  = probe_result.value().first;
+
+					best_score = probe_result.value().second;
+
+					has_best   = true;
+
+					printf("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
+				}
+			}
+#endif
+
 			// main search
-			auto best_move = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1);
+			if (!has_best)
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1);
 
 			// emit result
-			libchess::UCIService::bestmove(best_move.first.to_str());
+			libchess::UCIService::bestmove(best_move.to_str());
 
 			// no longer thinking
 #if !defined(linux) && !defined(_WIN32)
 			stop_blink(led_green_timer, &led_green);
 #endif
 #if defined(__ANDROID__)
-			__android_log_print(ANDROID_LOG_INFO, APPNAME, "Performed move %s for position %s", best_move.first.to_str().c_str(), positiont1.fen().c_str());
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "Performed move %s for position %s", best_move.to_str().c_str(), positiont1.fen().c_str());
 #endif
 
 			// set ponder positition
-			positiont1.make_move(best_move.first);
+			positiont1.make_move(best_move);
 
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
@@ -1415,9 +1442,9 @@ void tune(std::string file)
 
 
 	uint64_t start_ts = esp_timer_get_time() / 1000;
-	double start_error = tuner.error();
+	double start_error = tuner.error_full();
 	tuner.tune();
-	double end_error = tuner.error();
+	double end_error = tuner.error_full();
 	uint64_t end_ts = esp_timer_get_time() / 1000;
 
 	time_t start = start_ts / 1000;
@@ -1445,6 +1472,13 @@ void hello() {
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+void help() {
+	print_max();
+
+	printf("-t x   thread count\n");
+	printf("-s x   set path to Syzygy\n");
+}
+
 int main(int argc, char *argv[])
 {
 #if !defined(_WIN32)
@@ -1457,7 +1491,7 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 
@@ -1466,6 +1500,16 @@ int main(int argc, char *argv[])
 
 		if (c == 't')
 			thread_count = atoi(optarg);
+		else if (c == 's') {
+			fathom_init(optarg);
+
+			with_syzygy = true;
+		}
+		else {
+			help();
+
+			return c == 'h' ? 0 : 1;
+		}
 	}
 
 #endif
