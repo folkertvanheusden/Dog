@@ -482,7 +482,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp)
+int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr)
 {
 	if (sp->stop->flag)
 		return 0;
@@ -531,9 +531,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	auto move_list   = gen_qs_moves(pos);
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	auto tid = gettid();
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
-	bool sort_inv = !sp->is_t2 && (tid & 3) == 3;
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 0);
+	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
 	constexpr bool sort_inv = false;
@@ -567,7 +566,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 		pos.make_move(move);
 
-		int score = -qs(pos, -beta, -alpha, qsdepth + 1, sp);
+		int score = -qs(pos, -beta, -alpha, qsdepth + 1, sp, thread_nr);
 
 		pos.unmake_move();
 
@@ -600,7 +599,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 
 	if (depth == 0)
-		return qs(pos, alpha, beta, max_depth, sp);
+		return qs(pos, alpha, beta, max_depth, sp, thread_nr);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
@@ -736,9 +735,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	auto tid = gettid();
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (tid & 1) == 1);
-	bool sort_inv = !sp->is_t2 && (tid & 3) == 3;
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 0);
+	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
 	constexpr bool sort_inv = false;
@@ -1453,7 +1451,7 @@ void tune(std::string file)
 			end_t         ef { false     };
 			search_pars_t sp { &ef, &cur, false, history };
 
-			int score = qs(pos, -32767, 32767, 0, &sp);
+			int score = qs(pos, -32767, 32767, 0, &sp, 0);
 
 			if (pos.side_to_move() != libchess::constants::WHITE)
 				score = -score;
