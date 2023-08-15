@@ -496,7 +496,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 #endif
 
-	if (qsdepth >= 256)
+	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
 	sp->nodes++;
@@ -594,7 +594,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	return best_score;
 }
 
-int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp)
+int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp, const int thread_nr)
 {
 	if (sp->stop->flag)
 		return 0;
@@ -664,7 +664,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	////////
 
-	if (sp->is_t2 && with_syzygy) {
+	if (with_syzygy && sp->is_t2 && thread_nr < 6 && (thread_nr & 1) == 0) {
 		// check piece count
 		unsigned counts = pos.occupancy_bb().popcount();
 
@@ -673,8 +673,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
 
 			if (syzygy_score.has_value()) {
-				// printf("# SYZYGY hit %d\n", syzygy_score.value());
-
 				int score = syzygy_score.value();
 
 				tti.store(hash, EXACT, depth, score, libchess::Move(0));
@@ -708,13 +706,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		pos.make_null_move();
 
 		libchess::Move ignore;
-		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
+		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
 
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
 			libchess::Move ignore2;
-			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
+			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
 
 			if (verification >= beta)
 				return beta;
@@ -728,7 +726,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	libchess::Move iid_move { 0 };
 
 	if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2) {
-		if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp)) > 9800)
+		if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp, thread_nr)) > 9800)
 			extension |= 1;
 	}
 	/////////
@@ -794,11 +792,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (check_after_move)
 			goto skip_lmr;
 
-		score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+		score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
-			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 		}
 
 		pos.unmake_move();
@@ -912,7 +910,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -957,7 +955,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int beta_repeat  = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
-			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp);
+			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
 
 			if (sp->stop->flag) {
 #if !defined(__ANDROID__)
@@ -1031,6 +1029,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				add_alpha = 75;
 				add_beta  = 75;
+
+				if (max_depth == 127)
+					break;
 
 				max_depth++;
 			}
@@ -1125,7 +1126,7 @@ void ponder_thread(void *p)
 					auto position = new libchess::Position(positiont2);
 					positions.push_back(position);
 
-					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2, -1));
+					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2, -1, i));
 				}
 
 				for(auto & th : ths) {
@@ -1138,7 +1139,7 @@ void ponder_thread(void *p)
 					delete p;
 			}
 #else
-			search_it(&positiont2, 2147483647, &sp2, -1);
+			search_it(&positiont2, 2147483647, &sp2, -1, 0);
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1248,7 +1249,7 @@ void main_task()
 				set_flag(&stop2);
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, &sp1, -1);
+				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1361,7 +1362,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
