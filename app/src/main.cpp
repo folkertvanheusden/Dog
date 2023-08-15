@@ -94,7 +94,13 @@ search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_mal
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
+
 	stop->cv.notify_all();
+}
+
+void clear_flag(end_t *const stop)
+{
+	stop->flag = false;
 }
 
 auto stop_handler = []() {
@@ -1097,7 +1103,7 @@ void ponder_thread(void *p)
 		// if other fen, then trigger search
 		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
 			for(auto & sp: sp2)
-				sp.stop->flag = false;
+				clear_flag(sp.stop);
 
 			positiont2 = libchess::Position(search_fen);
 
@@ -1183,7 +1189,7 @@ void ponder_thread(void *p)
 void start_ponder()
 {
 	for(auto & sp: sp2)
-		sp.stop->flag = false;
+		clear_flag(sp.stop);
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
@@ -1244,7 +1250,7 @@ void main_task()
 	auto play_handler = [](std::istringstream&) {
 		try {
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
-				sp1.stop->flag = false;
+				clear_flag(sp1.stop);
 
 				tti.inc_age();
 
@@ -1298,7 +1304,7 @@ void main_task()
 
 	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
 		try {
-			sp1.stop->flag = false;
+			clear_flag(sp1.stop);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_ts   = esp_timer_get_time();
