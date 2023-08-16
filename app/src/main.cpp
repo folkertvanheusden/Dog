@@ -74,6 +74,10 @@ typedef struct
 	uint32_t  nodes;
 
 	end_t    *stop;
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	uint64_t  syzygy_queries;
+	uint64_t  syzygy_query_hits;
+#endif
 } search_pars_t;
 
 constexpr const size_t history_size = 2 * 6 * 64;
@@ -678,9 +682,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		// syzygy count?
 		if (counts <= TB_LARGEST) {
+			sp->syzygy_queries++;
 			std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
 
 			if (syzygy_score.has_value()) {
+				sp->syzygy_query_hits++;
+
 				int score = syzygy_score.value();
 
 				tti.store(hash, EXACT, depth, score, libchess::Move(0));
@@ -1234,6 +1241,21 @@ void stop_ponder()
 #endif
 }
 
+void emit_syzygy_stats()
+{
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	uint64_t syzygy_queries    = 0;
+	uint64_t syzygy_query_hits = 0;
+
+	for(auto & sp: sp2) {
+		syzygy_queries += sp.syzygy_queries;
+		syzygy_query_hits += sp.syzygy_query_hits;
+	}
+
+	printf("# Syzygy queries: %zu, hits: %zu (%.2f%%)\n", size_t(syzygy_queries), size_t(syzygy_query_hits), syzygy_query_hits * 100. / syzygy_queries);
+#endif
+}
+
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -1304,6 +1326,8 @@ void main_task()
 				printf("# %s %s [%d]\n", positiont1.fen().c_str(), best_move.first.to_str().c_str(), best_move.second);
 
 				positiont1.make_move(best_move.first);
+
+				emit_syzygy_stats();
 			}
 		}
 		catch(const std::exception& e) {
@@ -1400,12 +1424,16 @@ void main_task()
 			int            best_score { 0 };
 			bool           has_best   { false };
 
-			// probe the Syzygy endjgame table base
+			// probe the Syzygy endgame table base
 #if defined(linux) || defined(_WIN32)
 			if (with_syzygy) {
+				sp1.syzygy_queries++;
+
 				auto probe_result = probe_fathom_root(positiont1);
 
 				if (probe_result.has_value()) {
+					sp1.syzygy_query_hits++;
+
 					best_move  = probe_result.value().first;
 
 					best_score = probe_result.value().second;
@@ -1448,6 +1476,8 @@ void main_task()
 			search_fen_lock.unlock();
 
 			positiont1.unmake_move();
+
+			emit_syzygy_stats();
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
