@@ -297,7 +297,7 @@ libchess::UCIService uci_service{"Dog v2.0", "Folkert van Heusden", std::cout, i
 
 tt tti;
 
-int  thread_count = 31;
+int  thread_count = 1;
 
 auto thread_count_handler = [](const int value)  { thread_count = value; };
 
@@ -1489,13 +1489,13 @@ void main_task()
 		}
 	};
 
-//	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, thread_count, thread_count_handler);
+	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
 
-//	uci_service.register_option(thread_count_option);
+	uci_service.register_option(thread_count_option);
 
-//	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
+	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 
-//	uci_service.register_option(allow_ponder_option);
+	uci_service.register_option(allow_ponder_option);
 
 	uci_service.register_position_handler(position_handler);
 
