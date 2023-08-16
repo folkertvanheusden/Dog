@@ -85,6 +85,9 @@ constexpr const size_t history_size = 2 * 6 * 64;
 
 constexpr const size_t history_malloc_size = sizeof(uint32_t) * history_size;
 
+void start_ponder();
+void stop_ponder();
+
 end_t         stop1 { false };
 search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
 
@@ -299,7 +302,31 @@ tt tti;
 
 int  thread_count = 1;
 
-auto thread_count_handler = [](const int value)  { thread_count = value; };
+auto thread_count_handler = [](const int value)  {
+	thread_count = value;
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	stop_ponder();
+
+	for(auto & stop: stop2)
+		delete stop;
+
+	stop2.clear();
+
+	for(auto & sp: sp2)
+		free(sp.history);
+
+	sp2.clear();
+
+	for(int i=0; i<thread_count - 1; i++) {
+		stop2.push_back(new end_t());
+
+		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+	}
+
+	start_ponder();
+#endif
+};
 
 bool allow_ponder = true;
 
@@ -1208,6 +1235,8 @@ void ponder_thread(void *p)
 void start_ponder()
 {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	ponder_quit = false;
+
 	for(auto & sp: sp2)
 		clear_flag(sp.stop);
 
@@ -1489,9 +1518,11 @@ void main_task()
 		}
 	};
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
 
 	uci_service.register_option(thread_count_option);
+#endif
 
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 
