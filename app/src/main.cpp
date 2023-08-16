@@ -1582,6 +1582,7 @@ void hello() {
 #else
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
 	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+	printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }
 
