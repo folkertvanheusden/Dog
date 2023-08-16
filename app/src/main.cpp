@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <thread>
+#include <unistd.h>
 #include <sys/time.h>
 #else
 #include <driver/uart.h>
