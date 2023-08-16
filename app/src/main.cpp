@@ -671,6 +671,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	////////
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (with_syzygy && sp->is_t2 && thread_nr < 6 && (thread_nr & 1) == 0) {
 		// check piece count
 		unsigned counts = pos.occupancy_bb().popcount();
@@ -688,6 +689,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 		}
 	}
+#endif
 
 	if (!is_root_position && depth <= 3 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
@@ -1089,10 +1091,15 @@ void ponder_thread(void *p)
 	printf("# pondering started\n");
 #endif
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2) {
 		sp.parameters = &default_parameters;
 		sp.is_t2 = true;
 	}
+#else
+	sp2.parameters = &default_parameters;
+	sp2.is_t2 = true;
+#endif
 
 	uint16_t prev_search_fen_version = uint16_t(-1);
 
@@ -1102,8 +1109,12 @@ void ponder_thread(void *p)
 		search_fen_lock.lock();
 		// if other fen, then trigger search
 		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			for(auto & sp: sp2)
 				clear_flag(sp.stop);
+#else
+			clear_flag(sp2.stop);
+#endif
 
 			positiont2 = libchess::Position(search_fen);
 
@@ -1188,12 +1199,14 @@ void ponder_thread(void *p)
 
 void start_ponder()
 {
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2)
 		clear_flag(sp.stop);
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_thread_handle = new std::thread(ponder_thread, nullptr);
 #else
+	clear_flag(sp2.stop);
+
 	TaskHandle_t temp;
 
 	xTaskCreatePinnedToCore(ponder_thread, "PT", 24576, NULL, 0, &temp, 0);
@@ -1217,7 +1230,7 @@ void stop_ponder()
 #else
 	ponder_quit = true;
 
-	set_flag(stop2);
+	set_flag(&stop2);
 #endif
 }
 
@@ -1279,7 +1292,7 @@ void main_task()
 				for(auto & sp: sp2)
 					set_flag(sp.stop);
 #else
-				set_flag(stop2);
+				set_flag(&stop2);
 #endif
 				search_fen_lock.unlock();
 
@@ -1379,7 +1392,7 @@ void main_task()
 			for(auto & sp: sp2)
 				set_flag(sp.stop);
 #else
-			set_flag(stop2);
+			set_flag(&stop2);
 #endif
 			search_fen_lock.unlock();
 
@@ -1430,7 +1443,7 @@ void main_task()
 			for(auto & sp: sp2)
 				set_flag(sp.stop);
 #else
-			set_flag(stop2);
+			set_flag(&stop2);
 #endif
 			search_fen_lock.unlock();
 
