@@ -539,7 +539,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	auto move_list   = gen_qs_moves(pos);
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 0);
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
 	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
@@ -706,7 +706,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	///// null move
 	bool in_check = pos.in_check();
 
-	bool skip_nm  = sp->is_t2 && (rand() % 9) == 3;
+	bool skip_nm  = sp->is_t2 && thread_nr >= 4;
 
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_nm) {
@@ -743,7 +743,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	libchess::MoveList move_list = pos.pseudo_legal_move_list();
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 0);
+	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
 	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
