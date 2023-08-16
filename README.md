@@ -40,6 +40,12 @@ To build it for windows:
 	cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
 	make
 
+The Linux/windows versions contain a Dog in ansi-art visible when you run it with '-h'.
+
+On windows this only works if you enable ansi-code processing in the registry (and restart cmd.exe):
+
+    reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /t REG_DWORD /d 0x00000001 /f
+
 
 The device can have (optional) LEDs connected:
 * a green led on pin 27 - blinks while thinking
