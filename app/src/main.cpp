@@ -598,6 +598,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			auto piece_from  = pos.piece_on(move.from_square());
 			int  eval_killer = eval_piece(piece_from->type(), *sp->parameters);
 
+			// TODO: pos.attackers_to(...) <-- redundant?
 			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
 				continue;
 		}
@@ -1060,14 +1061,22 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 					uint32_t nodes = sp1.nodes;
 
+					uint32_t syzygy_queries    = 0;
+					uint32_t syzygy_query_hits = 0;
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 					for(auto & sp: sp2)
 						nodes += sp.nodes;
+
+					for(auto & sp: sp2) {
+						syzygy_queries += sp.syzygy_queries;
+						syzygy_query_hits += sp.syzygy_query_hits;
+					}
 #else
 					nodes += sp2.nodes;
 #endif
 
-					printf("info depth %d score cp %d nodes %u time %llu nps %llu pv%s\n", max_depth, score, nodes, thought_ms, uint64_t(nodes * 1000. / thought_ms), pv_str.c_str());
+					printf("info depth %d score cp %d nodes %u time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, nodes, thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
@@ -1271,21 +1280,6 @@ void stop_ponder()
 #endif
 }
 
-void emit_syzygy_stats()
-{
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	uint64_t syzygy_queries    = 0;
-	uint64_t syzygy_query_hits = 0;
-
-	for(auto & sp: sp2) {
-		syzygy_queries += sp.syzygy_queries;
-		syzygy_query_hits += sp.syzygy_query_hits;
-	}
-
-	printf("# Syzygy queries: %zu, hits: %zu (%.2f%%)\n", size_t(syzygy_queries), size_t(syzygy_query_hits), syzygy_query_hits * 100. / syzygy_queries);
-#endif
-}
-
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -1356,8 +1350,6 @@ void main_task()
 				printf("# %s %s [%d]\n", positiont1.fen().c_str(), best_move.first.to_str().c_str(), best_move.second);
 
 				positiont1.make_move(best_move.first);
-
-				emit_syzygy_stats();
 			}
 		}
 		catch(const std::exception& e) {
@@ -1506,8 +1498,6 @@ void main_task()
 			search_fen_lock.unlock();
 
 			positiont1.unmake_move();
-
-			emit_syzygy_stats();
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
