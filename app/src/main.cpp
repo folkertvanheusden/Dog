@@ -1657,6 +1657,18 @@ int main(int argc, char *argv[])
 
 	main_task();
 
+	if (with_syzygy)
+		fathom_deinit();
+
+	while(!stop2.empty()) {
+		delete *stop2.begin();
+
+		stop2.erase(stop2.begin());
+	}
+
+	for(size_t i=0; i<sp2.size(); i++)
+		free(sp2.at(i).history);
+
 	return 0;
 }
 #else
