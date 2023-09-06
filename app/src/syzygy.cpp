@@ -193,3 +193,7 @@ void fathom_init(const std::string & path)
 	printf("# %d men syzygy\n", TB_LARGEST);
 }
 
+void fathom_deinit()
+{
+	tb_free();
+}

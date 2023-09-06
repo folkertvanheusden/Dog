@@ -8,3 +8,4 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 std::optional<int>                             probe_fathom_nonroot(const libchess::Position & lpos);
 
 void fathom_init(const std::string & path);
+void fathom_deinit();
