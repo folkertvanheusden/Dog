@@ -100,20 +100,21 @@ void loop() {
 	if (parts.at(0) == "depth" && parts.size() == 2) {
 		int depth = atoi(parts.at(1).c_str());
 
-		CRGB color { 0, 255, 0 };
+		bool red = false;
 
-		if (depth >= N_RING_LEDS) {
-			color.r = 255;
-			color.g = 0;
-			color.b = 0;
+		if (depth > N_RING_LEDS) {
+			red = true;
 
 			depth = N_RING_LEDS;
 		}
 
-		memset(leds, 0x00, sizeof leds);
-
 		for(int i=0; i<depth; i++)
-			leds[i] = color;
+			leds[i].g = 255;
+
+		for(int i=depth; i<N_RING_LEDS; i++)
+			leds[i].g = 0;
+
+		leds[N_RING_LEDS - 1].r = red ? 255 : 0;
 
 		FastLED.show();
 	}
@@ -121,6 +122,21 @@ void loop() {
 		String temp = parts.at(1).c_str();
 
 		tm.display(temp);
+	}
+	else if (parts.at(0) == "score" && parts.size() == 2) {
+		int score = atoi(parts.at(1).c_str());
+
+		bool red = false;
+
+		int normalized = std::min(N_RING_LEDS, int(log10(abs(score) + 1) * N_RING_LEDS / 4));
+
+		for(int i=0; i<normalized; i++)
+			leds[i].b = 255;
+
+		for(int i=normalized; i<N_RING_LEDS; i++)
+			leds[i].b = 0;
+
+		FastLED.show();
 	}
 	else {
 		memset(leds, 0xff, sizeof leds);
