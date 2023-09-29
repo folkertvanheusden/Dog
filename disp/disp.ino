@@ -171,6 +171,12 @@ void loop() {
 
 		mx.transform(col / 8, col / 8, MD_MAX72XX::transformType_t::TRC);
 	}
+	else if (parts.at(0) == "graph" && parts.size() >= 2) {
+		mx.clear(2, 3);
+
+		for(size_t i=1; i<parts.size(); i++)
+			mx.setPoint(atoi(parts.at(i).c_str()), 8 + i - 1, 1);
+	}
 	else {
 		static bool error_state = true;
 		memset(leds, error_state ? 0xff : 0x00, sizeof leds);
