@@ -23,6 +23,7 @@
 #include <chrono>
 #include <fcntl.h>
 #include <limits.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <termios.h>
@@ -1727,6 +1728,8 @@ void usb_disp(const std::string & device)
 		return;
 	}
 
+	pollfd fds[] { { fd, POLLIN, 0  } };
+
 	for(;;) {
 		if (!send_disp_cmd(fd, myformat("depth %d\n", sp1.md)))
 			break;
@@ -1743,8 +1746,15 @@ void usb_disp(const std::string & device)
 		if (!send_disp_cmd(fd, myformat("bitmap 8 %016llx\n", bboard)))
 			break;
 
-		char buffer[4096];
-		read(fd, buffer, sizeof buffer);
+		for(;;) {
+			int rc = poll(fds, 1, 0);
+
+			if (rc != 1)
+				break;
+
+			char buffer[4096];
+			read(fd, buffer, sizeof buffer);
+		}
 
 		usleep(101000);
 	}
@@ -1757,6 +1767,7 @@ void help() {
 
 	printf("-t x   thread count\n");
 	printf("-s x   set path to Syzygy\n");
+	printf("-u x   USB display device\n");
 }
 
 int main(int argc, char *argv[])
