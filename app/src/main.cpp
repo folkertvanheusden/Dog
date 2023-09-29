@@ -107,6 +107,11 @@ end_t         stop2 { false };
 search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(history_malloc_size, MALLOC_CAP_IRAM_8BIT)), 0, 0, &stop2 };
 #endif
 
+#if defined(linux)
+uint64_t wboard { 0 };
+uint64_t bboard { 0 };
+#endif
+
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
@@ -749,6 +754,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			depth--;
 	}
 
+#if defined(linux)
+	if (sp->is_t2 == false) {
+		wboard = pos.color_bb(libchess::constants::WHITE);
+		bboard = pos.color_bb(libchess::constants::BLACK);
+	}
+#endif
+
 	///// null move
 	bool in_check = pos.in_check();
 
@@ -1388,6 +1400,9 @@ void main_task()
 			sp1.md     = 1;
 			sp2.md     = 1;
 
+			sp.wboard  = 0;
+			sp.bboard  = 0;
+
 			sp2.nodes  = 0;
 #else
 			for(auto & sp: sp2)
@@ -1720,6 +1735,12 @@ void usb_disp(const std::string & device)
 			break;
 
 		if (!send_disp_cmd(fd, myformat("score %d\n", abs(sp1.score))))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("bitmap 0 %016llx\n", wboard)))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("bitmap 8 %016llx\n", bboard)))
 			break;
 
 		char buffer[4096];

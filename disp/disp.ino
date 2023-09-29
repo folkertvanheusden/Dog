@@ -21,6 +21,9 @@ void setup() {
 	FastLED.addLeds<NEOPIXEL, 4>(leds, N_RING_LEDS);  // IO4, N_RING_LEDS leds
 	FastLED.setBrightness(64);
 
+	memset(leds, 0x00, sizeof leds);
+	FastLED.show();
+
 	// 32 x 8 display
 	mx.begin();
 
@@ -63,6 +66,25 @@ std::vector<std::string> split(std::string in, std::string splitter)
 		out.emplace_back(in);
 
 	return out;
+}
+
+void hextobitmap(const std::string & in, uint8_t bitmap[])
+{
+	uint8_t v = 0;
+
+	for(size_t i=0; i<in.size(); i++) {
+		v <<= 4;
+
+		char c = toupper(in.at(i));
+
+		if (c >= 'A')
+			v |= c - 'A' + 10;
+		else
+			v |= c - '0';
+
+		if (i & 1)
+			bitmap[i / 2] = v;
+	}
 }
 
 char buffer[128] { 0 };
@@ -138,12 +160,22 @@ void loop() {
 
 		FastLED.show();
 	}
+	else if (parts.at(0) == "bitmap" && parts.size() == 3 && parts.at(2).size() == 16) {
+		int col = atoi(parts.at(1).c_str());
+
+		uint8_t bitmap[8] { 0 };
+		hextobitmap(parts.at(2), bitmap);
+
+		for(int i=col + 0; i<col + 8; i++)
+			mx.setColumn(i, bitmap[i - col]);
+
+		mx.transform(col / 8, col / 8, MD_MAX72XX::transformType_t::TRC);
+	}
 	else {
-		memset(leds, 0xff, sizeof leds);
+		static bool error_state = true;
+		memset(leds, error_state ? 0xff : 0x00, sizeof leds);
+		error_state = !error_state;
+
 		FastLED.show();
 	}
-
-#if 0
-	mx.setPoint(rand() & 7, rand() & 31, rand() & 1);
-#endif
 }
