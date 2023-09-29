@@ -21,8 +21,11 @@
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #include "max.h"
 #include <chrono>
+#include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
+#include <stdarg.h>
+#include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <sys/time.h>
@@ -94,6 +97,8 @@ search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(histor
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
 std::vector<end_t *>       stop2;
+
+std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
 search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(history_malloc_size, MALLOC_CAP_IRAM_8BIT)), 0, 0, &stop2 };
@@ -642,16 +647,16 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (depth == 0)
 		return qs(pos, alpha, beta, max_depth, sp, thread_nr);
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
 
 	if (d > sp->md) {
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		if (check_min_stack_size(0, sp))
 			return 0;
+#endif
 
 		sp->md = d;
 	}
-#endif
 
 	sp->nodes++;
 
@@ -999,6 +1004,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int beta_repeat  = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
+#if defined(linux)
+			sp->md = 0;
+#endif
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
 
 			if (sp->stop->flag) {
@@ -1608,6 +1616,106 @@ void hello() {
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+bool send_disp_cmd(const int fd, const std::string & cmd)
+{
+	const char *p   = cmd.c_str();
+	size_t      len = cmd.size();
+
+	while(len > 0) {
+		int rc = write(fd, p, len);
+
+		if (rc <= 0) {
+			printf("# cannot write to usb display: %s\n", strerror(errno));
+			return false;
+		}
+
+		p   += rc;
+		len -= rc;
+	}
+
+	return true;
+}
+
+std::string __attribute__((format (printf, 1, 2) )) myformat(const char *const fmt, ...)
+{
+	char *buffer = NULL;
+	va_list ap;
+
+	va_start(ap, fmt);
+	int len = vasprintf(&buffer, fmt, ap);
+	va_end(ap);
+
+	std::string result(buffer, len);
+	free(buffer);
+
+	return result;
+}
+
+void usb_disp(const std::string & device)
+{
+	int fd = open(device.c_str(), O_RDWR);
+	if (fd == -1) {
+		printf("# cannot open usb display %s\n", device.c_str());
+
+		return;
+	}
+
+	termios tty { 0 };
+
+	if (tcgetattr(fd, &tty) == -1) {
+		printf("# cannot tcgetattr %s\n", device.c_str());
+		close(fd);
+
+		return;
+	}
+
+	tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
+	tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
+	tty.c_cflag &= ~CSIZE; // Clear all bits that set the data size
+	tty.c_cflag |= CS8; // 8 bits per byte (most common)
+	tty.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
+	tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+
+	tty.c_lflag &= ~ICANON;
+	tty.c_lflag &= ~ECHO; // Disable echo
+	tty.c_lflag &= ~ECHOE; // Disable erasure
+	tty.c_lflag &= ~ECHONL; // Disable new-line echo
+	tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+	tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+	tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
+
+	tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+	tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+			       // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
+			       // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
+
+	tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+	tty.c_cc[VMIN] = 0;
+
+	cfsetispeed(&tty, B1000000);
+	cfsetospeed(&tty, B1000000);
+
+	// Save tty settings, also checking for error
+	if (tcsetattr(fd, TCSANOW, &tty) == -1) {
+		printf("# cannot tcsetattr %s\n", device.c_str());
+		close(fd);
+
+		return;
+	}
+
+	for(;;) {
+		if (!send_disp_cmd(fd, myformat("depth %d\n", sp1.md)))
+			break;
+
+		char buffer[4096];
+		read(fd, buffer, sizeof buffer);
+
+		usleep(101000);
+	}
+
+	close(fd);
+}
+
 void help() {
 	print_max();
 
@@ -1625,7 +1733,7 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 
@@ -1639,6 +1747,8 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
+		else if (c == 'u')
+			usb_disp_thread = new std::thread(usb_disp, optarg);
 		else {
 			help();
 
