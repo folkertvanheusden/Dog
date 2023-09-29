@@ -81,6 +81,7 @@ typedef struct
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	uint64_t  syzygy_queries;
 	uint64_t  syzygy_query_hits;
+	char      move[5];
 #endif
 } search_pars_t;
 
@@ -1057,6 +1058,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				best_move  = cur_move;
 				best_score = score;
 
+				strncpy(sp->move, best_move.to_str().c_str(), 4);
+
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (!sp->is_t2 && thought_ms > 0) {
@@ -1705,6 +1708,9 @@ void usb_disp(const std::string & device)
 
 	for(;;) {
 		if (!send_disp_cmd(fd, myformat("depth %d\n", sp1.md)))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("move %s\n", sp1.move)))
 			break;
 
 		char buffer[4096];

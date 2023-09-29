@@ -117,6 +117,11 @@ void loop() {
 
 		FastLED.show();
 	}
+	else if (parts.at(0) == "move" && parts.size() == 2) {
+		String temp = parts.at(1).c_str();
+
+		tm.display(temp);
+	}
 	else {
 		memset(leds, 0xff, sizeof leds);
 		FastLED.show();
@@ -124,13 +129,5 @@ void loop() {
 
 #if 0
 	mx.setPoint(rand() & 7, rand() & 31, rand() & 1);
-
-		char buffer[5] { 0 };
-		for(int i=0; i<4; i++)
-			buffer[i] = 'A' + (rand() % 26);
-
-		String temp = buffer;
-
-		tm.display(temp);
 #endif
 }
