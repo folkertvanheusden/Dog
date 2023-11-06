@@ -61,7 +61,11 @@ typedef struct {
 } end_t;
 
 std::atomic_bool ponder_quit    { false };
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+bool             run_2nd_thread { false };
+#else
 bool             run_2nd_thread { true  };
+#endif
 
 typedef struct
 {
@@ -726,8 +730,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
+	bool skip_reduction  = sp->is_t2 && thread_nr >= 4;
 
-	if (!is_root_position && depth <= 3 && beta <= 9800) {
+	if (!is_root_position && depth <= 3 && beta <= 9800 && !skip_reduction) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
@@ -744,10 +749,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	///// null move
 	bool in_check = pos.in_check();
 
-	bool skip_nm  = sp->is_t2 && thread_nr >= 4;
-
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_nm) {
+	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_reduction) {
 		pos.make_null_move();
 
 		libchess::Move ignore;
