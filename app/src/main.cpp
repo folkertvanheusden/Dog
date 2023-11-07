@@ -730,7 +730,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
-	bool skip_reduction  = sp->is_t2 && thread_nr >= 4;
+	bool skip_reduction  = sp->is_t2;
 
 	if (!is_root_position && depth <= 3 && beta <= 9800 && !skip_reduction) {
 		int staticeval = eval(pos, *sp->parameters);
