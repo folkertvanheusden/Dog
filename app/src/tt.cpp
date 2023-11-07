@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <cstdlib>
 #include <cstring>
 
@@ -78,8 +79,15 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 		}
 	}
 
-	if (use_sub_index == -1)
+	if (use_sub_index == -1) {
 		use_sub_index = min_depth_index;
+
+		if (use_sub_index == -1) {
+			use_sub_index = 0;
+
+			printf("# ERROR: sub_index < 0\n");
+		}
+	}
 
 	tt_entry *const cur = &e[use_sub_index];
 
