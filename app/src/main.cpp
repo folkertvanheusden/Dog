@@ -21,8 +21,12 @@
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 #include "max.h"
 #include <chrono>
+#include <fcntl.h>
 #include <limits.h>
+#include <poll.h>
 #include <pthread.h>
+#include <stdarg.h>
+#include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <sys/time.h>
@@ -82,6 +86,9 @@ typedef struct
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	uint64_t  syzygy_queries;
 	uint64_t  syzygy_query_hits;
+
+	char      move[5];
+	int       score;
 #endif
 } search_pars_t;
 
@@ -98,9 +105,16 @@ search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(histor
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
 std::vector<end_t *>       stop2;
+
+std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
 search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(history_malloc_size, MALLOC_CAP_IRAM_8BIT)), 0, 0, &stop2 };
+#endif
+
+#if defined(linux)
+uint64_t wboard { 0 };
+uint64_t bboard { 0 };
 #endif
 
 void set_flag(end_t *const stop)
@@ -646,16 +660,16 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (depth == 0)
 		return qs(pos, alpha, beta, max_depth, sp, thread_nr);
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	int d = max_depth - depth;
 
 	if (d > sp->md) {
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 		if (check_min_stack_size(0, sp))
 			return 0;
+#endif
 
 		sp->md = d;
 	}
-#endif
 
 	sp->nodes++;
 
@@ -745,6 +759,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (depth == 3 && staticeval - sp->parameters->queen > beta)
 			depth--;
 	}
+
+#if defined(linux)
+	if (sp->is_t2 == false) {
+		wboard = pos.color_bb(libchess::constants::WHITE);
+		bboard = pos.color_bb(libchess::constants::BLACK);
+	}
+#endif
 
 	///// null move
 	bool in_check = pos.in_check();
@@ -957,7 +978,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -966,7 +987,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #endif
 
 	if (sp->is_t2 == false) {
-		if (search_time > 0 || ultimate_max_depth == -1) {
+		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					timer(search_time, sp->stop);
@@ -1002,6 +1023,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int beta_repeat  = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
+#if defined(linux)
+			sp->md = 0;
+#endif
 			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
 
 			if (sp->stop->flag) {
@@ -1052,7 +1076,29 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				best_move  = cur_move;
 				best_score = score;
 
-				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+#if defined(linux)
+				strncpy(sp->move, best_move.to_str().c_str(), 4);
+
+				sp->score = score;
+#endif
+
+				uint64_t thought_ms        = (esp_timer_get_time() - t_offset) / 1000;
+
+				uint64_t nodes             = sp1.nodes;
+				uint32_t syzygy_queries    = 0;
+				uint32_t syzygy_query_hits = 0;
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+				for(auto & sp: sp2)
+					nodes += sp.nodes;
+
+				for(auto & sp: sp2) {
+					syzygy_queries += sp.syzygy_queries;
+					syzygy_query_hits += sp.syzygy_query_hits;
+				}
+#else
+				nodes += sp2.nodes;
+#endif
 
 				if (!sp->is_t2 && thought_ms > 0) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
@@ -1062,24 +1108,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
-					uint32_t nodes = sp1.nodes;
-
-					uint32_t syzygy_queries    = 0;
-					uint32_t syzygy_query_hits = 0;
-
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-					for(auto & sp: sp2)
-						nodes += sp.nodes;
-
-					for(auto & sp: sp2) {
-						syzygy_queries += sp.syzygy_queries;
-						syzygy_query_hits += sp.syzygy_query_hits;
-					}
-#else
-					nodes += sp2.nodes;
-#endif
-
-					printf("info depth %d score cp %d nodes %u time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, nodes, thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+					printf("info depth %d score cp %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
@@ -1094,6 +1123,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				if (max_depth == 127)
 					break;
+
+				if (max_n_nodes.has_value() && nodes >= max_n_nodes.value()) {
+					printf("# node limit reached with %zu nodes\n", size_t(nodes));
+					break;
+				}
 
 				max_depth++;
 			}
@@ -1200,12 +1234,13 @@ void ponder_thread(void *p)
 			if (n_threads > 0) {
 				std::vector<libchess::Position *> positions;
 				std::vector<std::thread *>        ths;
+				std::optional<uint64_t>           node_limit;
 
 				for(int i=0; i<n_threads; i++) {
 					auto position = new libchess::Position(positiont2);
 					positions.push_back(position);
 
-					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2.at(i), -1, i));
+					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2.at(i), -1, i, node_limit));
 				}
 
 				for(auto & th : ths) {
@@ -1218,7 +1253,7 @@ void ponder_thread(void *p)
 					delete p;
 			}
 #else
-			search_it(&positiont2, 2147483647, &sp2, -1, 0);
+			search_it(&positiont2, 2147483647, &sp2, -1, 0, { });
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1345,7 +1380,7 @@ void main_task()
 #endif
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0);
+				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1373,6 +1408,9 @@ void main_task()
 
 			sp1.md     = 1;
 			sp2.md     = 1;
+
+			sp.wboard  = 0;
+			sp.bboard  = 0;
 
 			sp2.nodes  = 0;
 #else
@@ -1472,7 +1510,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes());
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -1611,11 +1649,133 @@ void hello() {
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+bool send_disp_cmd(const int fd, const std::string & cmd)
+{
+	const char *p   = cmd.c_str();
+	size_t      len = cmd.size();
+
+	while(len > 0) {
+		int rc = write(fd, p, len);
+
+		if (rc <= 0) {
+			printf("# cannot write to usb display: %s\n", strerror(errno));
+			return false;
+		}
+
+		p   += rc;
+		len -= rc;
+	}
+
+	return true;
+}
+
+std::string __attribute__((format (printf, 1, 2) )) myformat(const char *const fmt, ...)
+{
+	char *buffer = NULL;
+	va_list ap;
+
+	va_start(ap, fmt);
+	int len = vasprintf(&buffer, fmt, ap);
+	va_end(ap);
+
+	std::string result(buffer, len);
+	free(buffer);
+
+	return result;
+}
+
+void usb_disp(const std::string & device)
+{
+	int fd = open(device.c_str(), O_RDWR);
+	if (fd == -1) {
+		printf("# cannot open usb display %s\n", device.c_str());
+
+		return;
+	}
+
+	termios tty { 0 };
+
+	if (tcgetattr(fd, &tty) == -1) {
+		printf("# cannot tcgetattr %s\n", device.c_str());
+		close(fd);
+
+		return;
+	}
+
+	tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
+	tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
+	tty.c_cflag &= ~CSIZE; // Clear all bits that set the data size
+	tty.c_cflag |= CS8; // 8 bits per byte (most common)
+	tty.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
+	tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+
+	tty.c_lflag &= ~ICANON;
+	tty.c_lflag &= ~ECHO; // Disable echo
+	tty.c_lflag &= ~ECHOE; // Disable erasure
+	tty.c_lflag &= ~ECHONL; // Disable new-line echo
+	tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+	tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+	tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
+
+	tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+	tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+			       // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
+			       // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
+
+	tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+	tty.c_cc[VMIN] = 0;
+
+	cfsetispeed(&tty, B1000000);
+	cfsetospeed(&tty, B1000000);
+
+	// Save tty settings, also checking for error
+	if (tcsetattr(fd, TCSANOW, &tty) == -1) {
+		printf("# cannot tcsetattr %s\n", device.c_str());
+		close(fd);
+
+		return;
+	}
+
+	pollfd fds[] { { fd, POLLIN, 0  } };
+
+	for(;;) {
+		if (!send_disp_cmd(fd, myformat("depth %d\n", sp1.md)))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("move %s\n", sp1.move)))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("score %d\n", abs(sp1.score))))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("bitmap 0 %016llx\n", wboard)))
+			break;
+
+		if (!send_disp_cmd(fd, myformat("bitmap 8 %016llx\n", bboard)))
+			break;
+
+		for(;;) {
+			int rc = poll(fds, 1, 0);
+
+			if (rc != 1)
+				break;
+
+			char buffer[4096];
+			read(fd, buffer, sizeof buffer);
+		}
+
+		usleep(101000);
+	}
+
+	close(fd);
+}
+
 void help() {
 	print_max();
 
 	printf("-t x   thread count\n");
 	printf("-s x   set path to Syzygy\n");
+	printf("-u x   USB display device\n");
 }
 
 int main(int argc, char *argv[])
@@ -1628,7 +1788,7 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 
@@ -1642,6 +1802,8 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
+		else if (c == 'u')
+			usb_disp_thread = new std::thread(usb_disp, optarg);
 		else {
 			help();
 
