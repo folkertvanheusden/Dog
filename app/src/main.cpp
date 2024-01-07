@@ -1108,7 +1108,17 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
-					printf("info depth %d score cp %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+					if (abs(score) > 9800) {
+						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
+						printf("info depth %d score mate %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n",
+								max_depth, mate_moves,
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+					}
+					else {
+						printf("info depth %d score cp %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n",
+								max_depth, score,
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+					}
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
