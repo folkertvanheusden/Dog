@@ -975,7 +975,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -984,7 +984,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #endif
 
 	if (sp->is_t2 == false) {
-		if (search_time > 0 || ultimate_max_depth == -1) {
+		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					timer(search_time, sp->stop);
@@ -1079,7 +1079,23 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				sp->score = score;
 #endif
 
-				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+				uint64_t thought_ms        = (esp_timer_get_time() - t_offset) / 1000;
+
+				uint64_t nodes             = sp1.nodes;
+				uint32_t syzygy_queries    = 0;
+				uint32_t syzygy_query_hits = 0;
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+				for(auto & sp: sp2)
+					nodes += sp.nodes;
+
+				for(auto & sp: sp2) {
+					syzygy_queries += sp.syzygy_queries;
+					syzygy_query_hits += sp.syzygy_query_hits;
+				}
+#else
+				nodes += sp2.nodes;
+#endif
 
 				if (!sp->is_t2 && thought_ms > 0) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
@@ -1089,24 +1105,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
-					uint32_t nodes = sp1.nodes;
-
-					uint32_t syzygy_queries    = 0;
-					uint32_t syzygy_query_hits = 0;
-
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-					for(auto & sp: sp2)
-						nodes += sp.nodes;
-
-					for(auto & sp: sp2) {
-						syzygy_queries += sp.syzygy_queries;
-						syzygy_query_hits += sp.syzygy_query_hits;
-					}
-#else
-					nodes += sp2.nodes;
-#endif
-
-					printf("info depth %d score cp %d nodes %u time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, nodes, thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+					printf("info depth %d score cp %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n", max_depth, score, size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
 				}
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
@@ -1121,6 +1120,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				if (max_depth == 127)
 					break;
+
+				if (max_n_nodes.has_value() && nodes >= max_n_nodes.value()) {
+					printf("# node limit reached with %zu nodes\n", size_t(nodes));
+					break;
+				}
 
 				max_depth++;
 			}
@@ -1227,12 +1231,13 @@ void ponder_thread(void *p)
 			if (n_threads > 0) {
 				std::vector<libchess::Position *> positions;
 				std::vector<std::thread *>        ths;
+				std::optional<uint64_t>           node_limit;
 
 				for(int i=0; i<n_threads; i++) {
 					auto position = new libchess::Position(positiont2);
 					positions.push_back(position);
 
-					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2.at(i), -1, i));
+					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2.at(i), -1, i, node_limit));
 				}
 
 				for(auto & th : ths) {
@@ -1245,7 +1250,7 @@ void ponder_thread(void *p)
 					delete p;
 			}
 #else
-			search_it(&positiont2, 2147483647, &sp2, -1, 0);
+			search_it(&positiont2, 2147483647, &sp2, -1, 0, { });
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1372,7 +1377,7 @@ void main_task()
 #endif
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0);
+				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1502,7 +1507,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes());
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
