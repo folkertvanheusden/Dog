@@ -4,6 +4,7 @@
 // above it for details.
 #include <atomic>
 #include <chrono>
+#include <cinttypes>
 #include <condition_variable>
 #include <cstdio>
 #include <cstring>
@@ -314,12 +315,11 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.0", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.2", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
 int  thread_count = 1;
-
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
@@ -338,7 +338,6 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
-
 		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
@@ -1110,12 +1109,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n",
+						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
 								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 					else {
-						printf("info depth %d score cp %d nodes %zu time %llu nps %llu tbhits %llu pv%s\n",
+						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
 								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
@@ -1123,7 +1122,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 				if (thought_ms > search_time / 2 && search_time > 0) {
 #if !defined(__ANDROID__)
-					printf("# time %u is up %llu\n", search_time, thought_ms);
+					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
 					break;
 				}
@@ -1616,12 +1615,14 @@ void tune(std::string file)
 			eval_par cur(params);
 
 			search_pars_t sp { &cur, false, history };
+			sp.stop = new end_t();
 			sp.stop->flag = false;
 
 			int score = qs(pos, -32767, 32767, 0, &sp, 0);
-
 			if (pos.side_to_move() != libchess::constants::WHITE)
 				score = -score;
+
+			delete sp.stop;
 
 			return score;
 		}};
@@ -1758,10 +1759,10 @@ void usb_disp(const std::string & device)
 		if (!send_disp_cmd(fd, myformat("score %d\n", abs(sp1.score))))
 			break;
 
-		if (!send_disp_cmd(fd, myformat("bitmap 0 %016llx\n", wboard)))
+		if (!send_disp_cmd(fd, myformat("bitmap 0 %" PRIx64 "\n", wboard)))
 			break;
 
-		if (!send_disp_cmd(fd, myformat("bitmap 8 %016llx\n", bboard)))
+		if (!send_disp_cmd(fd, myformat("bitmap 8 %" PRIx64 "\n", bboard)))
 			break;
 
 		for(;;) {
