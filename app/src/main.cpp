@@ -677,33 +677,29 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	uint64_t       hash        = pos.hash();
 	std::optional<tt_entry> te = tti.lookup(hash);
 
-        if (te.has_value()) {
-		if (te.value().data_._data.m)
+        if (te.has_value()) {  // TT hit?
+		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
 		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			tt_move.reset();
+			tt_move.reset();  // move stored in TT is not valid - TT-collision
 		}
 		else if (te.value().data_._data.depth >= depth) {
 			int csd        = max_depth - depth;
 			int score      = te.value().data_._data.score;
 			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
-
 			auto flag      = te.value().data_._data.flags;
-
-			bool use = ((flag == EXACT || flag == LOWERBOUND) && work_score >= beta) ||
-			           ((flag == EXACT || flag == UPPERBOUND) && work_score <= alpha) ;
+			bool use       = ((flag == EXACT || flag == LOWERBOUND) && work_score >= beta) ||
+			                 ((flag == EXACT || flag == UPPERBOUND) && work_score <= alpha);
 
 			if (use) {
 				if (tt_move.has_value()) {
-					*m = tt_move.value();
-
+					*m = tt_move.value();  // move in TT is valid
 					return work_score;
 				}
 
-				if (!is_root_position) {
+				if (!is_root_position) {  // no move, but score is valid
 					*m = libchess::Move(0);
-
 					return work_score;
 				}
 			}
