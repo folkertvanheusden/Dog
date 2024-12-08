@@ -689,8 +689,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			int score      = te.value().data_._data.score;
 			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
 			auto flag      = te.value().data_._data.flags;
-			bool use       = ((flag == EXACT || flag == LOWERBOUND) && work_score >= beta) ||
-			                 ((flag == EXACT || flag == UPPERBOUND) && work_score <= alpha);
+                        bool use       = flag == EXACT ||
+                                        (flag == LOWERBOUND && work_score >= beta) ||
+                                        (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
 				if (tt_move.has_value()) {
