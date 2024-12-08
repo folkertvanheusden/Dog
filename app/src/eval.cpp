@@ -60,6 +60,7 @@ int count_mobility(libchess::Position & pos)
 
 	return scores[libchess::constants::WHITE] - scores[libchess::constants::BLACK];
 }
+#endif
 
 int find_forks(libchess::Position & pos)
 {
@@ -85,7 +86,6 @@ int find_forks(libchess::Position & pos)
 
 	return score;
 }
-#endif
 
 int count_king_attacks(libchess::Position & pos, libchess::Color side)
 {
@@ -177,7 +177,6 @@ int king_shield(libchess::Position & pos, libchess::Color side)
 	return cnt;
 }
 
-#if 0
 int development(libchess::Position & pos)
 {
 	int score = 0;
@@ -205,8 +204,6 @@ int development(libchess::Position & pos)
 
 	return score;
 }
-#endif
-
 
 int eval(libchess::Position & pos, const eval_par & parameters)
 {
@@ -220,22 +217,28 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 	for(libchess::Color color : libchess::constants::COLORS) {
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-
 			counts[color][type] += piece_bb.popcount();
+		}
+	}
 
-			if (type == libchess::constants::PAWN) {
-				while (piece_bb) {
-					libchess::Square sq = piece_bb.forward_bitscan();
-					piece_bb.forward_popbit();
+	int n_pawns_w[8] { }, n_pawns_b[8] { };
 
-					int x = sq.file();
-					int y = sq.rank();
+	for(libchess::Color color : libchess::constants::COLORS) {
+		libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::PAWN, color);
+		while (piece_bb) {
+			libchess::Square sq = piece_bb.forward_bitscan();
+			piece_bb.forward_popbit();
 
-					if (color == libchess::constants::WHITE)
-						whiteYmax[x] = std::max(whiteYmax[x], y);
-					else
-						blackYmin[x] = std::min(blackYmin[x], y);
-				}
+			int x = sq.file();
+			int y = sq.rank();
+
+			if (color == libchess::constants::WHITE) {
+				whiteYmax[x] = std::max(whiteYmax[x], y);
+				n_pawns_w[x]++;
+			}
+			else {
+				blackYmin[x] = std::min(blackYmin[x], y);
+				n_pawns_b[x]++;
 			}
 		}
 	}
@@ -300,10 +303,10 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 		score -= scores[kw.file()] * parameters.edge_white_file;
 	}
 
-	// score += development(pos) * parameters.development;
+//	score += development(pos) * parameters.development;
 
 	// forks
-	//score += find_forks(pos);
+//	score += find_forks(pos);
 
 	// number of bishops
 	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * parameters.bishop_count;
@@ -313,17 +316,6 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 
 	// 0 pawns: also not good
 	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * parameters.zero_pawns;
-
-	const auto bb_pawns_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
-	const auto bb_pawns_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
-
-	int n_pawns_w[8], n_pawns_b[8];
-
-	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
-		n_pawns_w[x] = (bb_pawns_w & libchess::lookups::file_mask(x)).popcount();
-
-		n_pawns_b[x] = (bb_pawns_b & libchess::lookups::file_mask(x)).popcount();
-	}
 
 	const auto bb_rooks_w = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE);
 	const auto bb_rooks_b = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK);
