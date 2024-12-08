@@ -221,6 +221,8 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 		}
 	}
 
+	int n_pawns_w[8] { }, n_pawns_b[8] { };
+
 	for(libchess::Color color : libchess::constants::COLORS) {
 		libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::PAWN, color);
 		while (piece_bb) {
@@ -230,10 +232,14 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 			int x = sq.file();
 			int y = sq.rank();
 
-			if (color == libchess::constants::WHITE)
+			if (color == libchess::constants::WHITE) {
 				whiteYmax[x] = std::max(whiteYmax[x], y);
-			else
+				n_pawns_w[x]++;
+			}
+			else {
 				blackYmin[x] = std::min(blackYmin[x], y);
+				n_pawns_b[x]++;
+			}
 		}
 	}
 
@@ -310,17 +316,6 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 
 	// 0 pawns: also not good
 	score += ((counts[libchess::constants::WHITE][libchess::constants::PAWN] == 0) - (counts[libchess::constants::BLACK][libchess::constants::PAWN] == 0)) * parameters.zero_pawns;
-
-	const auto bb_pawns_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
-	const auto bb_pawns_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
-
-	int n_pawns_w[8], n_pawns_b[8];
-
-	for(libchess::File x=libchess::constants::FILE_A; x<=libchess::constants::FILE_H; x++) {
-		n_pawns_w[x] = (bb_pawns_w & libchess::lookups::file_mask(x)).popcount();
-
-		n_pawns_b[x] = (bb_pawns_b & libchess::lookups::file_mask(x)).popcount();
-	}
 
 	const auto bb_rooks_w = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE);
 	const auto bb_rooks_b = pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK);
