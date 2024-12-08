@@ -60,6 +60,7 @@ int count_mobility(libchess::Position & pos)
 
 	return scores[libchess::constants::WHITE] - scores[libchess::constants::BLACK];
 }
+#endif
 
 int find_forks(libchess::Position & pos)
 {
@@ -85,7 +86,6 @@ int find_forks(libchess::Position & pos)
 
 	return score;
 }
-#endif
 
 int count_king_attacks(libchess::Position & pos, libchess::Color side)
 {
@@ -177,7 +177,6 @@ int king_shield(libchess::Position & pos, libchess::Color side)
 	return cnt;
 }
 
-#if 0
 int development(libchess::Position & pos)
 {
 	int score = 0;
@@ -205,8 +204,6 @@ int development(libchess::Position & pos)
 
 	return score;
 }
-#endif
-
 
 int eval(libchess::Position & pos, const eval_par & parameters)
 {
@@ -220,23 +217,23 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 	for(libchess::Color color : libchess::constants::COLORS) {
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-
 			counts[color][type] += piece_bb.popcount();
+		}
+	}
 
-			if (type == libchess::constants::PAWN) {
-				while (piece_bb) {
-					libchess::Square sq = piece_bb.forward_bitscan();
-					piece_bb.forward_popbit();
+	for(libchess::Color color : libchess::constants::COLORS) {
+		libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::PAWN, color);
+		while (piece_bb) {
+			libchess::Square sq = piece_bb.forward_bitscan();
+			piece_bb.forward_popbit();
 
-					int x = sq.file();
-					int y = sq.rank();
+			int x = sq.file();
+			int y = sq.rank();
 
-					if (color == libchess::constants::WHITE)
-						whiteYmax[x] = std::max(whiteYmax[x], y);
-					else
-						blackYmin[x] = std::min(blackYmin[x], y);
-				}
-			}
+			if (color == libchess::constants::WHITE)
+				whiteYmax[x] = std::max(whiteYmax[x], y);
+			else
+				blackYmin[x] = std::min(blackYmin[x], y);
 		}
 	}
 
@@ -300,10 +297,10 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 		score -= scores[kw.file()] * parameters.edge_white_file;
 	}
 
-	// score += development(pos) * parameters.development;
+//	score += development(pos) * parameters.development;
 
 	// forks
-	//score += find_forks(pos);
+//	score += find_forks(pos);
 
 	// number of bishops
 	score += ((counts[libchess::constants::WHITE][libchess::constants::BISHOP] >= 2) - (counts[libchess::constants::BLACK][libchess::constants::BISHOP] >= 2)) * parameters.bishop_count;
