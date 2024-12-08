@@ -571,10 +571,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			return best_score;
 
 		int BIG_DELTA = sp->parameters->big_delta;
-
 		if (pos.is_promotion_move(*pos.previous_move()))
 			BIG_DELTA += sp->parameters->big_delta_promotion;
-
 		if (best_score < alpha - BIG_DELTA)
 			return alpha;
 
@@ -614,7 +612,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			auto piece_from  = pos.piece_on(move.from_square());
 			int  eval_killer = eval_piece(piece_from->type(), *sp->parameters);
 
-			// TODO: pos.attackers_to(...) <-- redundant?
 			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
 				continue;
 		}
