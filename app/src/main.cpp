@@ -93,8 +93,7 @@ typedef struct
 #endif
 } search_pars_t;
 
-constexpr const size_t history_size = 2 * 6 * 64;
-
+constexpr const size_t history_size        = 2 * 6 * 64;
 constexpr const size_t history_malloc_size = sizeof(uint32_t) * history_size;
 
 void start_ponder();
@@ -623,9 +622,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		n_played++;
 
 		pos.make_move(move);
-
 		int score = -qs(pos, -beta, -alpha, qsdepth + 1, sp, thread_nr);
-
 		pos.unmake_move();
 
 		if (score > best_score) {
@@ -673,7 +670,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	sp->nodes++;
 
 	bool is_root_position = max_depth == depth;
-
 	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
 		return 0;
 
@@ -1646,6 +1642,15 @@ void tune(std::string file)
 	for(auto parameter : parameters)
 		printf("%s=%d\n", parameter.name().c_str(), parameter.value());
 	printf("#---\n");
+
+	FILE *fh = fopen("tune.dat", "w");
+	if (!fh)
+		fprintf(stderr, "Failed to create tune.dat!\n");
+	else {
+		for(auto parameter : parameters)
+			fprintf(fh, "%s=%d\n", parameter.name().c_str(), parameter.value());
+		fclose(fh);
+	}
 }
 #endif
 
