@@ -1110,7 +1110,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					}
 				}
 
-				if (thought_ms > search_time / 2 && search_time > 0) {
+				if (thought_ms > uint64_t(search_time / 2) && search_time > 0) {
 #if !defined(__ANDROID__)
 					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
@@ -1450,14 +1450,15 @@ void main_task()
 			int think_time     = 0;
 			int think_time_opp = 0;
 
+			bool is_white     = positiont1.side_to_move() == libchess::constants::WHITE;
 			if (movetime.has_value())
 				think_time = movetime.value();
 			else {
-				int cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
-				int time_inc     = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
-				int time_inc_opp = positiont1.side_to_move() == libchess::constants::WHITE ? b_inc : w_inc;
-				int ms           = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
-				int ms_opponent  = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
+				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
+				int  time_inc     = is_white ? w_inc : b_inc;
+				int  time_inc_opp = is_white ? b_inc : w_inc;
+				int  ms           = is_white ? w_time : b_time;
+				int  ms_opponent  = is_white ? b_time : w_time;
 
 				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
@@ -1469,6 +1470,7 @@ void main_task()
 				if (think_time > limit_duration_min)
 					think_time = limit_duration_min;
 			}
+			printf("# Think time: %d ms (for %s)\n", think_time, is_white ? "white" : "black");
 
 			// let the ponder thread run as a lazy-smp thread
 			search_fen_lock.lock();
@@ -1623,7 +1625,7 @@ void tune(std::string file)
 	if (lf)
 		*lf = 0x00;
 
-	printf("# error: %.18f (%f%%), took: %fs, %s\n", end_error, sqrt(end_error) * 100.0, (end_ts - start_ts) / 1000.0, str);
+	printf("# error: %.18f (delta: %f) (%f%%), took: %fs, %s\n", end_error, end_error - start_error, sqrt(end_error) * 100.0, (end_ts - start_ts) / 1000.0, str);
 
 	auto parameters = tuner.tunable_parameters();
 	for(auto parameter : parameters)
@@ -1764,7 +1766,10 @@ void usb_disp(const std::string & device)
 				break;
 
 			char buffer[4096];
-			read(fd, buffer, sizeof buffer);
+			if (read(fd, buffer, sizeof buffer) <= 0) {
+				printf("# Read error (-u device)\n");
+				break;
+			}
 		}
 
 		usleep(101000);
