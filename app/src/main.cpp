@@ -74,7 +74,7 @@ bool             run_2nd_thread { true  };
 
 typedef struct
 {
-	eval_par *parameters;
+	const eval_par *parameters;
 	bool      is_t2;
 
 	uint32_t *const history;
@@ -432,13 +432,13 @@ class sort_movelist_compare
 {
 private:
         libchess::Position       *const p;
-	eval_par                 *const ep;
-	search_pars_t            *const sp;
+	const eval_par           *const ep;
+	const search_pars_t      *const sp;
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, eval_par *const ep, search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
+        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
@@ -542,7 +542,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 {
 	if (sp->stop->flag)
 		return 0;
-
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	if (qsdepth > sp->md) {
 		if (check_min_stack_size(1, sp))
@@ -551,7 +550,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		sp->md = qsdepth;
 	}
 #endif
-
 	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
@@ -580,9 +578,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	int  n_played    = 0;
 
 	auto move_list   = gen_qs_moves(pos);
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
+	bool do_sort  = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
 	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
@@ -672,33 +669,30 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	uint64_t       hash        = pos.hash();
 	std::optional<tt_entry> te = tti.lookup(hash);
 
-        if (te.has_value()) {
-		if (te.value().data_._data.m)
+        if (te.has_value()) {  // TT hit?
+		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
 		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			tt_move.reset();
+			tt_move.reset();  // move stored in TT is not valid - TT-collision
 		}
 		else if (te.value().data_._data.depth >= depth) {
 			int csd        = max_depth - depth;
 			int score      = te.value().data_._data.score;
 			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
-
 			auto flag      = te.value().data_._data.flags;
-
-			bool use = ((flag == EXACT || flag == LOWERBOUND) && work_score >= beta) ||
-			           ((flag == EXACT || flag == UPPERBOUND) && work_score <= alpha) ;
+                        bool use       = flag == EXACT ||
+                                        (flag == LOWERBOUND && work_score >= beta) ||
+                                        (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
 				if (tt_move.has_value()) {
-					*m = tt_move.value();
-
+					*m = tt_move.value();  // move in TT is valid
 					return work_score;
 				}
 
-				if (!is_root_position) {
+				if (!is_root_position) {  // no move, but score is valid
 					*m = libchess::Move(0);
-
 					return work_score;
 				}
 			}
@@ -723,7 +717,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp->syzygy_query_hits++;
 
 				int score = syzygy_score.value();
-
 				tti.store(hash, EXACT, depth, score, libchess::Move(0));
 
 				return score;
@@ -760,10 +753,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_reduction) {
 		pos.make_null_move();
-
 		libchess::Move ignore;
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
-
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
@@ -896,7 +887,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			flag = LOWERBOUND;
 
 		tti.store(hash, flag, depth, best_score, 
-				best_score > start_alpha || tt_move.has_value() == false ? *m : tt_move.value());
+				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
 	}
 
 	return best_score;
@@ -905,8 +896,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 uint64_t esp_timer_get_time()
 {
-	struct timeval tv;
-
+	timeval tv;
 	gettimeofday(&tv, nullptr);
 
 	return tv.tv_sec * 1000000 + tv.tv_usec;
@@ -1108,7 +1098,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					}
 				}
 
-				if (thought_ms > search_time / 2 && search_time > 0) {
+				if (thought_ms > uint64_t(search_time / 2) && search_time > 0) {
 #if !defined(__ANDROID__)
 					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
@@ -1337,8 +1327,8 @@ void main_task()
 
 	auto ucinewgame_handler = [](std::istringstream&) {
 		memset(sp1.history, 0x00, history_malloc_size);
-
 		tti.reset();
+		printf("# --- New game ---\n");
 	};
 
 	auto play_handler = [](std::istringstream&) {
@@ -1397,6 +1387,8 @@ void main_task()
 	};
 
 	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
+		uint64_t start_ts = esp_timer_get_time();
+
 		try {
 			clear_flag(sp1.stop);
 
@@ -1445,26 +1437,31 @@ void main_task()
 			int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
 			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
-			int think_time = 0;
+			int think_time     = 0;
+			int think_time_opp = 0;
 
+			bool time_limit_hit = false;
+			bool is_white       = positiont1.side_to_move() == libchess::constants::WHITE;
 			if (movetime.has_value())
 				think_time = movetime.value();
 			else {
-				int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
-
-				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
-
-				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
-				int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
+				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
+				int  time_inc     = is_white ? w_inc : b_inc;
+				int  time_inc_opp = is_white ? b_inc : w_inc;
+				int  ms           = is_white ? w_time : b_time;
+				int  ms_opponent  = is_white ? b_time : w_time;
 
 				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
 
-				if (ms_opponent < ms)
-					think_time += (ms - ms_opponent) / 2;
+				if (think_time_opp < think_time)
+					think_time += (think_time - think_time_opp) / 2;
 
 				int limit_duration_min = ms / 15;
-				if (think_time > limit_duration_min)
+				if (think_time > limit_duration_min) {
 					think_time = limit_duration_min;
+					time_limit_hit = true;
+				}
 			}
 
 			// let the ponder thread run as a lazy-smp thread
@@ -1495,9 +1492,7 @@ void main_task()
 					sp1.syzygy_query_hits++;
 
 					best_move  = probe_result.value().first;
-
 					best_score = probe_result.value().second;
-
 					has_best   = true;
 
 					printf("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
@@ -1522,6 +1517,9 @@ void main_task()
 
 			// set ponder positition
 			positiont1.make_move(best_move);
+
+			uint64_t end_ts = esp_timer_get_time();
+			printf("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
@@ -1555,19 +1553,13 @@ void main_task()
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 
 	uci_service.register_option(allow_ponder_option);
-
 	uci_service.register_position_handler(position_handler);
-
 	uci_service.register_go_handler(go_handler);
-
 	uci_service.register_stop_handler(stop_handler);
 
 	uci_service.register_handler("play", play_handler);
-
 	uci_service.register_handler("eval", eval_handler);
-
 	uci_service.register_handler("fen", fen_handler);
-
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 
 	while (true) {
@@ -1628,7 +1620,7 @@ void tune(std::string file)
 	if (lf)
 		*lf = 0x00;
 
-	printf("# error: %.18f (%f%%), took: %fs, %s\n", end_error, sqrt(end_error) * 100.0, (end_ts - start_ts) / 1000.0, str);
+	printf("# error: %.18f (delta: %f) (%f%%), took: %fs, %s\n", end_error, end_error - start_error, sqrt(end_error) * 100.0, (end_ts - start_ts) / 1000.0, str);
 
 	auto parameters = tuner.tunable_parameters();
 	for(auto parameter : parameters)
@@ -1769,7 +1761,10 @@ void usb_disp(const std::string & device)
 				break;
 
 			char buffer[4096];
-			read(fd, buffer, sizeof buffer);
+			if (read(fd, buffer, sizeof buffer) <= 0) {
+				printf("# Read error (-u device)\n");
+				break;
+			}
 		}
 
 		usleep(101000);
