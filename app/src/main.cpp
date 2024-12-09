@@ -542,7 +542,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 {
 	if (sp->stop->flag)
 		return 0;
-
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	if (qsdepth > sp->md) {
 		if (check_min_stack_size(1, sp))
@@ -551,7 +550,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 		sp->md = qsdepth;
 	}
 #endif
-
 	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
@@ -563,7 +561,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	int  best_score = -32767;
 
 	bool in_check   = pos.in_check();
-
 	if (!in_check) {
 		best_score = eval(pos, *sp->parameters);
 
@@ -583,9 +580,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	int  n_played    = 0;
 
 	auto move_list   = gen_qs_moves(pos);
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
+	bool do_sort  = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
 	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
@@ -725,7 +721,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp->syzygy_query_hits++;
 
 				int score = syzygy_score.value();
-
 				tti.store(hash, EXACT, depth, score, libchess::Move(0));
 
 				return score;
@@ -762,10 +757,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_reduction) {
 		pos.make_null_move();
-
 		libchess::Move ignore;
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
-
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
@@ -1449,7 +1442,8 @@ void main_task()
 			int think_time     = 0;
 			int think_time_opp = 0;
 
-			bool is_white = positiont1.side_to_move() == libchess::constants::WHITE;
+			bool time_limit_hit = false;
+			bool is_white       = positiont1.side_to_move() == libchess::constants::WHITE;
 			if (movetime.has_value())
 				think_time = movetime.value();
 			else {
@@ -1467,8 +1461,10 @@ void main_task()
 					think_time += (think_time - think_time_opp) / 2;
 
 				int limit_duration_min = ms / 15;
-				if (think_time > limit_duration_min)
+				if (think_time > limit_duration_min) {
 					think_time = limit_duration_min;
+					time_limit_hit = true;
+				}
 			}
 
 			// let the ponder thread run as a lazy-smp thread
@@ -1526,7 +1522,7 @@ void main_task()
 			positiont1.make_move(best_move);
 
 			uint64_t end_ts = esp_timer_get_time();
-			printf("# Think time: %d ms, used %.3f ms (for %s, %d halfmoves, %d fullmoves)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves());
+			printf("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
