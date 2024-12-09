@@ -74,7 +74,7 @@ bool             run_2nd_thread { true  };
 
 typedef struct
 {
-	eval_par *parameters;
+	const eval_par *parameters;
 	bool      is_t2;
 
 	uint32_t *const history;
@@ -432,13 +432,13 @@ class sort_movelist_compare
 {
 private:
         libchess::Position       *const p;
-	eval_par                 *const ep;
-	search_pars_t            *const sp;
+	const eval_par           *const ep;
+	const search_pars_t      *const sp;
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, eval_par *const ep, search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
+        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
