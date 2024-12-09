@@ -1453,9 +1453,7 @@ void main_task()
 				think_time = movetime.value();
 			else {
 				int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
-
 				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
-
 				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
 				int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
 
@@ -1497,9 +1495,7 @@ void main_task()
 					sp1.syzygy_query_hits++;
 
 					best_move  = probe_result.value().first;
-
 					best_score = probe_result.value().second;
-
 					has_best   = true;
 
 					printf("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
@@ -1557,19 +1553,13 @@ void main_task()
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 
 	uci_service.register_option(allow_ponder_option);
-
 	uci_service.register_position_handler(position_handler);
-
 	uci_service.register_go_handler(go_handler);
-
 	uci_service.register_stop_handler(stop_handler);
 
 	uci_service.register_handler("play", play_handler);
-
 	uci_service.register_handler("eval", eval_handler);
-
 	uci_service.register_handler("fen", fen_handler);
-
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 
 	while (true) {
