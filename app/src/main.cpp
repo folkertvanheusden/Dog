@@ -1447,20 +1447,23 @@ void main_task()
 			int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
 			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
-			int think_time = 0;
+			int think_time     = 0;
+			int think_time_opp = 0;
 
 			if (movetime.has_value())
 				think_time = movetime.value();
 			else {
-				int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
-				int time_inc    = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
-				int ms          = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
-				int ms_opponent = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
+				int cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
+				int time_inc     = positiont1.side_to_move() == libchess::constants::WHITE ? w_inc : b_inc;
+				int time_inc_opp = positiont1.side_to_move() == libchess::constants::WHITE ? b_inc : w_inc;
+				int ms           = positiont1.side_to_move() == libchess::constants::WHITE ? w_time : b_time;
+				int ms_opponent  = positiont1.side_to_move() == libchess::constants::WHITE ? b_time : w_time;
 
 				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
 
-				if (ms_opponent < ms)
-					think_time += (ms - ms_opponent) / 2;
+				if (think_time_opp < think_time)
+					think_time += (think_time - think_time_opp) / 2;
 
 				int limit_duration_min = ms / 15;
 				if (think_time > limit_duration_min)
