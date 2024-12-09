@@ -1339,8 +1339,8 @@ void main_task()
 
 	auto ucinewgame_handler = [](std::istringstream&) {
 		memset(sp1.history, 0x00, history_malloc_size);
-
 		tti.reset();
+		printf("# --- New game ---\n");
 	};
 
 	auto play_handler = [](std::istringstream&) {
