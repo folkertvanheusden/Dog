@@ -898,7 +898,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			flag = LOWERBOUND;
 
 		tti.store(hash, flag, depth, best_score, 
-				best_score > start_alpha || tt_move.has_value() == false ? *m : tt_move.value());
+				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
 	}
 
 	return best_score;
