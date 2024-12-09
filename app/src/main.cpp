@@ -1423,7 +1423,9 @@ void main_task()
 			start_blink(led_green_timer);
 #endif
 
-			auto depth    = go_parameters.depth();
+			int moves_to_go = 40 - positiont1.fullmoves();
+
+			auto depth     = go_parameters.depth();
 
 			auto movetime = go_parameters.movetime();
 
@@ -1447,12 +1449,11 @@ void main_task()
 			if (movetime.has_value())
 				think_time = movetime.value();
 			else {
-				int moves_done   = positiont1.fullmoves();
-				int cur_n_moves  = 40 - (moves_done % 40);
-				int time_inc     = is_white ? w_inc : b_inc;
-				int time_inc_opp = is_white ? b_inc : w_inc;
-				int ms           = is_white ? w_time : b_time;
-				int ms_opponent  = is_white ? b_time : w_time;
+				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
+				int  time_inc     = is_white ? w_inc : b_inc;
+				int  time_inc_opp = is_white ? b_inc : w_inc;
+				int  ms           = is_white ? w_time : b_time;
+				int  ms_opponent  = is_white ? b_time : w_time;
 
 				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
