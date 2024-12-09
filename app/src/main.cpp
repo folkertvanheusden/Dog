@@ -907,8 +907,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 uint64_t esp_timer_get_time()
 {
-	struct timeval tv;
-
+	timeval tv;
 	gettimeofday(&tv, nullptr);
 
 	return tv.tv_sec * 1000000 + tv.tv_usec;
@@ -1399,6 +1398,8 @@ void main_task()
 	};
 
 	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
+		uint64_t start_ts = esp_timer_get_time();
+
 		try {
 			clear_flag(sp1.stop);
 
@@ -1470,7 +1471,6 @@ void main_task()
 				if (think_time > limit_duration_min)
 					think_time = limit_duration_min;
 			}
-			printf("# Think time: %d ms (for %s)\n", think_time, is_white ? "white" : "black");
 
 			// let the ponder thread run as a lazy-smp thread
 			search_fen_lock.lock();
@@ -1525,6 +1525,9 @@ void main_task()
 
 			// set ponder positition
 			positiont1.make_move(best_move);
+
+			uint64_t end_ts = esp_timer_get_time();
+			printf("# Think time: %d ms, used %.3f ms (for %s, %d halfmoves, %d fullmoves)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves());
 
 			search_fen_lock.lock();
 			run_2nd_thread = allow_ponder;
