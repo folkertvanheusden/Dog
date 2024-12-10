@@ -13,7 +13,7 @@ To build the program and upload it to a wemos32 mini:
 
 The ESP32 version can be used with xboard as well.
 Adapt app/wrapper.sh to let it use the correct port in case the ESP32 is not connected to /dev/ttyUSB0.
-Then run: `xboard -fUCI -fcp app/wrapper.sh`.
+Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be installed).
 
 To build it for Linux:
 

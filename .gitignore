@@ -1,3 +1,4 @@
 app/.pio
+app/sdkconfig.esp32
 app/src/linux-windows/build
 app/src/tune.dat
