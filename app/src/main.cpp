@@ -976,7 +976,6 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 	int16_t best_score = 0;
 
 	auto move_list = pos->legal_move_list();
-
 	libchess::Move best_move { *move_list.begin() };
 
 	if (move_list.size() > 1) {
@@ -1087,12 +1086,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
 						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 					else {
 						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000. / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 				}
 
