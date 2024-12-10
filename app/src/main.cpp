@@ -1190,7 +1190,7 @@ void ponder_thread(void *p)
 #endif
 
 #if !defined(__ANDROID__)
-			printf("# new ponder position (%d/%d)\n", valid, run_2nd_thread);
+			printf("# new ponder position (val: %d/ena: %d): %s\n", valid, run_2nd_thread, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
