@@ -130,7 +130,6 @@ void clear_flag(end_t *const stop)
 
 auto stop_handler = []() {
 	set_flag(sp1.stop);
-
 #if !defined(__ANDROID__)
 	printf("# stop_handler invoked\n");
 #endif
@@ -1370,8 +1369,19 @@ void main_task()
 		printf("# --- New game ---\n");
 	};
 
-	auto play_handler = [](std::istringstream&) {
+	auto play_handler = [](std::istringstream& line_stream) {
 		try {
+			int think_time = 1000;
+
+			try {
+				std::string temp;
+				line_stream >> temp;
+				think_time = std::stoi(temp);
+			}
+			catch(...) {
+				printf("No or invalid thinktime (ms) given, using %d instead\n", think_time);
+			}
+
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
 
@@ -1406,7 +1416,7 @@ void main_task()
 #endif
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, 1000, &sp1, -1, 0, { });
+				auto best_move = search_it(&positiont1, think_time, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1415,6 +1425,8 @@ void main_task()
 
 				positiont1.make_move(best_move.first);
 			}
+
+			printf("\nFinished.\n");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
