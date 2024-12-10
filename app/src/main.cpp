@@ -51,6 +51,7 @@
 
 #include "eval.h"
 #include "eval_par.h"
+#include "max-ascii.h"
 #include "psq.h"
 #if defined(linux) || defined(_WIN32)
 #include "syzygy.h"
@@ -1348,6 +1349,10 @@ void main_task()
 		printf("# fen: %s\n", positiont1.fen().c_str());
 	};
 
+	auto dog_handler = [](std::istringstream&) {
+		print_max_ascii();
+	};
+
 	auto display_handler = [](std::istringstream&) {
 		positiont1.display();
 	};
@@ -1592,6 +1597,8 @@ void main_task()
 	uci_service.register_handler("fen",        fen_handler);
 	uci_service.register_handler("d",          display_handler);
 	uci_service.register_handler("display",    display_handler);
+	uci_service.register_handler("dog",        dog_handler);
+	uci_service.register_handler("max",        dog_handler);
 	uci_service.register_handler("perft",      perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 

@@ -31,6 +31,7 @@ add_executable(
   ../eval_par.cpp
   ../main.cpp
   ../max.cpp
+  ../max-ascii.cpp
   ../psq.cpp
   ../syzygy.cpp
   ../tt.cpp
