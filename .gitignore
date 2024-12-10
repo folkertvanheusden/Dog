@@ -1,0 +1,3 @@
+app/.pio
+app/src/linux-windows/build
+app/src/tune.dat

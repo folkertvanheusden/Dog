@@ -310,7 +310,7 @@ class inbuf : public std::streambuf {
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.2", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.3", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -1575,7 +1575,6 @@ void main_task()
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
-
 	uci_service.register_option(thread_count_option);
 #endif
 
@@ -1585,18 +1584,18 @@ void main_task()
 	uci_service.register_option(commerial_option);
 
 	uci_service.register_position_handler(position_handler);
-	uci_service.register_go_handler(go_handler);
-	uci_service.register_stop_handler(stop_handler);
+	uci_service.register_go_handler      (go_handler);
+	uci_service.register_stop_handler    (stop_handler);
 
-	uci_service.register_handler("play", play_handler);
-	uci_service.register_handler("eval", eval_handler);
-	uci_service.register_handler("fen", fen_handler);
-	uci_service.register_handler("d", display_handler);
-	uci_service.register_handler("display", display_handler);
-	uci_service.register_handler("perft", perft_handler);
+	uci_service.register_handler("play",       play_handler);
+	uci_service.register_handler("eval",       eval_handler);
+	uci_service.register_handler("fen",        fen_handler);
+	uci_service.register_handler("d",          display_handler);
+	uci_service.register_handler("display",    display_handler);
+	uci_service.register_handler("perft",      perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 
-	while (true) {
+	for(;;) {
 		std::string line;
 		std::getline(is, line);
 
