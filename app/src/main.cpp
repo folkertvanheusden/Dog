@@ -38,7 +38,6 @@
 #include <esp32/rom/uart.h>
 
 #include <esp_task_wdt.h>
-
 #include <esp_timer.h>
 
 #include <freertos/FreeRTOS.h>
@@ -228,7 +227,6 @@ uint16_t    search_fen_version { 0 };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
-
 	if (!position_parameters.move_list())
 		return;
 
@@ -342,8 +340,7 @@ auto thread_count_handler = [](const int value)  {
 #endif
 };
 
-bool allow_ponder = true;
-
+bool allow_ponder         = true;
 auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -896,7 +893,6 @@ uint64_t esp_timer_get_time()
 {
 	timeval tv;
 	gettimeofday(&tv, nullptr);
-
 	return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 #endif
@@ -1302,6 +1298,35 @@ void stop_ponder()
 #endif
 }
 
+uint64_t do_perft(libchess::Position &pos, int depth)
+{
+	libchess::MoveList move_list = pos.legal_move_list();
+	if (depth == 1)
+		return move_list.size();
+
+	uint64_t count     = 0;
+	for(const libchess::Move & move: move_list) {
+		pos.make_move(move);
+		count += do_perft(pos, depth - 1);
+		pos.unmake_move();
+	}
+
+	return count;
+}
+
+void perft(libchess::Position &pos, int depth)
+{
+	printf("Perft for fen: %s\n", pos.fen().c_str());
+
+	for(int d=1; d<=depth; d++) {
+		uint64_t t_start = esp_timer_get_time();
+		uint64_t count   = do_perft(pos, d);
+		uint64_t t_end   = esp_timer_get_time();
+		double   t_diff  = std::max(uint64_t(1), t_end - t_start) / 1000000.;
+		printf("%d: %" PRIu64 " (%.3f nps, %.2f seconds)\n", d, count, count / t_diff, t_diff);
+	}
+}
+
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -1314,12 +1339,18 @@ void main_task()
 
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
-
 		printf("# eval: %d\n", score);
 	};
 
 	auto fen_handler = [](std::istringstream&) {
 		printf("# fen: %s\n", positiont1.fen().c_str());
+	};
+
+	auto perft_handler = [](std::istringstream& line_stream) {
+		std::string temp;
+		line_stream >> temp;
+
+		perft(positiont1, std::stoi(temp));
 	};
 
 	auto ucinewgame_handler = [](std::istringstream&) {
@@ -1552,6 +1583,7 @@ void main_task()
 	uci_service.register_handler("play", play_handler);
 	uci_service.register_handler("eval", eval_handler);
 	uci_service.register_handler("fen", fen_handler);
+	uci_service.register_handler("perft", perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 
 	while (true) {
