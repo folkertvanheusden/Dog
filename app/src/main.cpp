@@ -343,6 +343,8 @@ auto thread_count_handler = [](const int value)  {
 bool allow_ponder         = true;
 auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
 
+auto commerial_option_handler = [](const std::string & value) { };
+
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 extern "C" {
 void vApplicationMallocFailedHook()
@@ -1574,8 +1576,10 @@ void main_task()
 #endif
 
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
-
 	uci_service.register_option(allow_ponder_option);
+	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
+	uci_service.register_option(commerial_option);
+
 	uci_service.register_position_handler(position_handler);
 	uci_service.register_go_handler(go_handler);
 	uci_service.register_stop_handler(stop_handler);
