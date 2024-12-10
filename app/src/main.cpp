@@ -951,7 +951,7 @@ void timer(const int think_time, end_t *const ei)
 }
 
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -1093,7 +1093,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					}
 				}
 
-				if (thought_ms > uint64_t(search_time / 2) && search_time > 0) {
+				if (thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) {
 #if !defined(__ANDROID__)
 					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
@@ -1222,7 +1222,7 @@ void ponder_thread(void *p)
 					auto position = new libchess::Position(positiont2);
 					positions.push_back(position);
 
-					ths.push_back(new std::thread(search_it, position, 2147483647, &sp2.at(i), -1, i, node_limit));
+					ths.push_back(new std::thread(search_it, position, 2147483647, true, &sp2.at(i), -1, i, node_limit));
 				}
 
 				for(auto & th : ths) {
@@ -1235,7 +1235,7 @@ void ponder_thread(void *p)
 					delete p;
 			}
 #else
-			search_it(&positiont2, 2147483647, &sp2, -1, 0, { });
+			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1416,7 +1416,7 @@ void main_task()
 #endif
 				search_fen_lock.unlock();
 
-				auto best_move = search_it(&positiont1, think_time, &sp1, -1, 0, { });
+				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -1486,10 +1486,13 @@ void main_task()
 			int think_time     = 0;
 			int think_time_opp = 0;
 
-			bool time_limit_hit = false;
-			bool is_white       = positiont1.side_to_move() == libchess::constants::WHITE;
-			if (movetime.has_value())
-				think_time = movetime.value();
+			bool is_absolute_time  = false;
+			bool time_limit_hit    = false;
+			bool is_white          = positiont1.side_to_move() == libchess::constants::WHITE;
+			if (movetime.has_value()) {
+				think_time       = movetime.value();
+				is_absolute_time = true;
+			}
 			else {
 				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
 				int  time_inc     = is_white ? w_inc : b_inc;
@@ -1548,7 +1551,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes());
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes());
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
