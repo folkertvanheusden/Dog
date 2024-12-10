@@ -390,13 +390,13 @@ void vTaskGetRunTimeStats()
 	vPortFree(pxTaskStatusArray);
 }
 
-int64_t start_ts = 0;
+int64_t esp_start_ts = 0;
 
 int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	printf("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+	printf("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
 		set_flag(sp->stop);
@@ -1390,18 +1390,16 @@ void main_task()
 			clear_flag(sp1.stop);
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_ts   = esp_timer_get_time();
-
-			sp1.md     = 1;
-			sp2.md     = 1;
-
-			sp2.nodes  = 0;
+			esp_start_ts = start_ts;
+			sp1.md       = 1;
+			sp2.md       = 1;
+			sp2.nodes    = 0;
 #else
 			for(auto & sp: sp2)
 				sp.nodes = 0;
 #endif
 
-			sp1.nodes  = 0;
+			sp1.nodes    = 0;
 
 			tti.inc_age();
 
