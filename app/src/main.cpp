@@ -120,7 +120,6 @@ uint64_t bboard { 0 };
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
-
 	stop->cv.notify_all();
 }
 
@@ -145,7 +144,6 @@ TaskHandle_t ponder_thread_handle;
 
 void think_timeout(void *arg) {
 	end_t *stop = reinterpret_cast<end_t *>(arg);
-
 	set_flag(stop);
 }
 
@@ -162,7 +160,7 @@ void think_timeout(void *arg) {
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
-            .arg      = &sp1.stop,
+            .arg      = sp1.stop,
             .name     = "searchto"
 };
 
