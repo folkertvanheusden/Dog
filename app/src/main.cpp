@@ -1398,9 +1398,6 @@ void main_task()
 			sp1.md     = 1;
 			sp2.md     = 1;
 
-			sp.wboard  = 0;
-			sp.bboard  = 0;
-
 			sp2.nodes  = 0;
 #else
 			for(auto & sp: sp2)
@@ -1857,6 +1854,8 @@ extern "C" void app_main()
 	gpio_set_level(LED_BLUE,     0);
 	gpio_set_level(LED_RED,      0);
 
+	// esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
+	// esp_task_wdt_init(&wdtcfg);
 	esp_task_wdt_init(30, false);
 
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
