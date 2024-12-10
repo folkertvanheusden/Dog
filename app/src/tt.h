@@ -37,7 +37,7 @@ constexpr uint64_t n_entries { 16 * 1024 * 1024 / sizeof(tt_hash_group) };
 #elif defined(linux) || defined(_WIN32)
 constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
 #else
-constexpr uint64_t n_entries { 65536 / sizeof(tt_hash_group) };
+constexpr uint64_t n_entries { 49152 / sizeof(tt_hash_group) };
 #endif
 
 class tt
