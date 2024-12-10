@@ -1348,6 +1348,10 @@ void main_task()
 		printf("# fen: %s\n", positiont1.fen().c_str());
 	};
 
+	auto display_handler = [](std::istringstream&) {
+		positiont1.display();
+	};
+
 	auto perft_handler = [](std::istringstream& line_stream) {
 		std::string temp;
 		line_stream >> temp;
@@ -1587,6 +1591,8 @@ void main_task()
 	uci_service.register_handler("play", play_handler);
 	uci_service.register_handler("eval", eval_handler);
 	uci_service.register_handler("fen", fen_handler);
+	uci_service.register_handler("d", display_handler);
+	uci_service.register_handler("display", display_handler);
 	uci_service.register_handler("perft", perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 
