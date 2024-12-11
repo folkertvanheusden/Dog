@@ -849,7 +849,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (score > best_score) {
 			best_score = score;
 
-			*m = move;
+			if (!pos.is_capture_move(move))
+				*m = move;
 
 			if (score > alpha) {
 				if (score >= beta) {
