@@ -15,6 +15,8 @@ The ESP32 version can be used with xboard as well.
 Adapt app/wrapper.sh to let it use the correct port in case the ESP32 is not connected to /dev/ttyUSB0.
 Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be installed).
 
+The program also has a integrated text-interface. For that just run it and enter "tui".
+
 To build it for Linux:
 
 	cd app/src/linux-windows
