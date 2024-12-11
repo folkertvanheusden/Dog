@@ -1367,7 +1367,13 @@ void tui()
 	for(;;) {
 		positiont1.display();
 
-		if (player == positiont1.side_to_move()) {
+		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
+		if (player == positiont1.side_to_move() || finished) {
+			if (finished)
+				printf("Game is finished\n");
+			else
+				printf("Move number: %d, color: %s\n", positiont1.fullmoves(), positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+
 			std::string line;
 			printf("> ");
 			if (!std::getline(is, line))
@@ -1380,11 +1386,18 @@ void tui()
 				printf("new     restart game\n");
 				printf("player  select player (\"white\" or \"black\")\n");
 				printf("time    set think time, in seconds\n");
+				printf("fen     show fen for current position\n");
+				printf("eval    show current evaluation score\n");
 				printf("undo    take back last move\n");
+				printf("perft   run \"perft\" for the given depth\n");
 			}
 			else if (parts[0] == "quit") {
 				break;
 			}
+			else if (parts[0] == "fen")
+				printf("FEN: %s\n", positiont1.fen().c_str());
+			else if (parts[0] == "perft" && parts.size() == 2)
+				perft(positiont1, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
 				memset(sp1.history, 0x00, history_malloc_size);
 				tti.reset();
@@ -1402,6 +1415,10 @@ void tui()
 				positiont1.unmake_move();
 				player = positiont1.side_to_move();
 			}
+			else if (parts[0] == "eval") {
+				int score = eval(positiont1, *sp1.parameters);
+				printf("evaluation score: %d\n", score);
+			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else {
@@ -1413,6 +1430,7 @@ void tui()
 			}
 		}
 		else {
+			printf("color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
 			libchess::Move best_move  { };
 			int            best_score { };
