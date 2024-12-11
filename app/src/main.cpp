@@ -441,14 +441,18 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 class sort_movelist_compare
 {
 private:
-        libchess::Position       *const p;
-	const eval_par           *const ep;
-	const search_pars_t      *const sp;
+        libchess::Position       *const p  { nullptr };
+	const eval_par           *const ep { nullptr };
+	const search_pars_t      *const sp { nullptr };
         std::vector<libchess::Move>     first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
+        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) :
+		p(p),
+		ep(ep),
+		sp(sp)
+	{
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
@@ -465,9 +469,7 @@ public:
                 }
 
                 int  score      = 0;
-
                 auto piece_from = p->piece_on(move.from_square());
-
                 auto from_type  = piece_from->type();
                 auto to_type    = from_type;
 
