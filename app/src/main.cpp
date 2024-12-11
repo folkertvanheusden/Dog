@@ -1329,6 +1329,101 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
+std::vector<std::string> split(std::string in, std::string splitter)
+{
+	std::vector<std::string> out;
+	size_t splitter_size = splitter.size();
+
+	for(;;)
+	{
+		size_t pos = in.find(splitter);
+		if (pos == std::string::npos)
+			break;
+
+		std::string before = in.substr(0, pos);
+		out.push_back(before);
+
+		size_t bytes_left = in.size() - (pos + splitter_size);
+		if (bytes_left == 0)
+		{
+			out.push_back("");
+			return out;
+		}
+
+		in = in.substr(pos + splitter_size);
+	}
+
+	if (in.size() > 0)
+		out.push_back(in);
+
+	return out;
+}
+
+void tui()
+{
+	int think_time         = 1000;  // in ms
+	libchess::Color player = positiont1.side_to_move();
+
+	for(;;) {
+		positiont1.display();
+
+		if (player == positiont1.side_to_move()) {
+			std::string line;
+			printf("> ");
+			if (!std::getline(is, line))
+				break;
+
+			auto parts = split(line, " ");
+
+			if (parts[0] == "help") {
+				printf("quit    stop the tui\n");
+				printf("new     restart game\n");
+				printf("player  select player (\"white\" or \"black\")\n");
+				printf("time    set think time, in seconds\n");
+				printf("undo    take back last move\n");
+			}
+			else if (parts[0] == "quit") {
+				break;
+			}
+			else if (parts[0] == "new") {
+				memset(sp1.history, 0x00, history_malloc_size);
+				tti.reset();
+				positiont1 = libchess::Position(libchess::constants::STARTPOS_FEN);
+			}
+			else if (parts[0] == "player" && parts.size() == 2) {
+				if (parts[1] == "white" || parts[1] == "w")
+					player = libchess::constants::WHITE;
+				else
+					player = libchess::constants::BLACK;
+			}
+			else if (parts[0] == "time" && parts.size() == 2)
+				think_time = std::stod(parts[1]) * 1000;
+			else if (parts[0] == "undo") {
+				positiont1.unmake_move();
+				player = positiont1.side_to_move();
+			}
+			else if (parts[0] == "dog")
+				print_max_ascii();
+			else {
+				auto move = *libchess::Move::from(parts[0]);
+				if (positiont1.is_legal_move(move))
+					positiont1.make_move(move);
+				else
+					printf("Not a valid move nor command (enter \"help\" for command list)\n");
+			}
+		}
+		else {
+			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
+			libchess::Move best_move  { };
+			int            best_score { };
+			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
+			printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
+			positiont1.make_move(best_move);
+			printf("\n");
+		}
+	}
+}
+
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -1342,6 +1437,11 @@ void main_task()
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
 		printf("# eval: %d\n", score);
+	};
+
+	auto tui_handler = [](std::istringstream&) {
+		printf("Invoking TUI...\n");
+		tui();
 	};
 
 	auto fen_handler = [](std::istringstream&) {
@@ -1616,14 +1716,23 @@ void main_task()
 	uci_service.register_handler("max",        dog_handler);
 	uci_service.register_handler("perft",      perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
+	uci_service.register_handler("tui",        tui_handler);
 
 	for(;;) {
+		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
+
 		std::string line;
 		std::getline(is, line);
 
 		if (line == "uci") {
 			uci_service.run();
 			break;
+		}
+
+		if (line == "tui") {
+			printf("Invoking TUI...\n");
+			tui();
+			printf("Waiting for \"tui\" or \"uci\"...\n");
 		}
 	}
 
