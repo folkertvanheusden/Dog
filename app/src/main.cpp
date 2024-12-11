@@ -1093,7 +1093,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					}
 				}
 
-				if (thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) {
+				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
+				    (thought_ms >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
 					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
@@ -1359,10 +1360,42 @@ std::vector<std::string> split(std::string in, std::string splitter)
 	return out;
 }
 
+void set_ponder_lazy()
+{
+	search_fen_lock.lock();
+	run_2nd_thread = thread_count >= 2;
+	search_fen     = positiont1.fen();
+	search_fen_version++;
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	for(auto & sp: sp2)
+		set_flag(sp.stop);
+#else
+	set_flag(&stop2);
+#endif
+	search_fen_lock.unlock();
+}
+
+void restart_ponder()
+{
+	search_fen_lock.lock();
+	run_2nd_thread = allow_ponder;
+	search_fen     = positiont1.fen();
+	search_fen_version++;
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	for(auto & sp: sp2)
+		set_flag(sp.stop);
+#else
+	set_flag(&stop2);
+#endif
+	search_fen_lock.unlock();
+}
+
 void tui()
 {
 	int think_time         = 1000;  // in ms
 	libchess::Color player = positiont1.side_to_move();
+
+	set_ponder_lazy();
 
 	for(;;) {
 		positiont1.display();
@@ -1378,9 +1411,11 @@ void tui()
 			printf("> ");
 			if (!std::getline(is, line))
 				break;
+			printf("%s\n", line.c_str());
+			if (line.empty())
+				continue;
 
 			auto parts = split(line, " ");
-
 			if (parts[0] == "help") {
 				printf("quit    stop the tui\n");
 				printf("new     restart game\n");
@@ -1430,16 +1465,27 @@ void tui()
 			}
 		}
 		else {
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+			stop_blink(led_red_timer, &led_red);
+			start_blink(led_green_timer);
+#endif
+
 			printf("color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
-			libchess::Move best_move  { };
-			int            best_score { };
+			libchess::Move best_move  { 0 };
+			int            best_score { 0 };
+			clear_flag(sp1.stop);
 			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 			printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
 			positiont1.make_move(best_move);
 			printf("\n");
+#if !defined(linux) && !defined(_WIN32)
+			stop_blink(led_green_timer, &led_green);
+#endif
 		}
 	}
+
+	restart_ponder();
 }
 
 void main_task()
@@ -1577,9 +1623,6 @@ void main_task()
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_red_timer, &led_red);
-#endif
-
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			start_blink(led_green_timer);
 #endif
 
@@ -1632,17 +1675,7 @@ void main_task()
 			}
 
 			// let the ponder thread run as a lazy-smp thread
-			search_fen_lock.lock();
-			run_2nd_thread = thread_count >= 2;
-			search_fen     = positiont1.fen();
-			search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-			for(auto & sp: sp2)
-				set_flag(sp.stop);
-#else
-			set_flag(&stop2);
-#endif
-			search_fen_lock.unlock();
+			set_ponder_lazy();
 
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
@@ -1684,22 +1717,9 @@ void main_task()
 
 			// set ponder positition
 			positiont1.make_move(best_move);
-
 			uint64_t end_ts = esp_timer_get_time();
 			printf("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
-
-			search_fen_lock.lock();
-			run_2nd_thread = allow_ponder;
-			search_fen     = positiont1.fen();
-			search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-			for(auto & sp: sp2)
-				set_flag(sp.stop);
-#else
-			set_flag(&stop2);
-#endif
-			search_fen_lock.unlock();
-
+			restart_ponder();
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
