@@ -1488,6 +1488,14 @@ void tui()
 	restart_ponder();
 }
 
+void run_tui()
+{
+	// because of ESP32 stack
+	auto th = new std::thread{tui};
+	th->join();
+	delete th;
+}
+
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -1505,7 +1513,7 @@ void main_task()
 
 	auto tui_handler = [](std::istringstream&) {
 		printf("Invoking TUI...\n");
-		tui();
+		run_tui();
 	};
 
 	auto fen_handler = [](std::istringstream&) {
@@ -1769,7 +1777,7 @@ void main_task()
 
 		if (line == "tui") {
 			printf("Invoking TUI...\n");
-			tui();
+			run_tui();
 			printf("Waiting for \"tui\" or \"uci\"...\n");
 		}
 	}
