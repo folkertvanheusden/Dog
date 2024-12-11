@@ -2002,10 +2002,69 @@ void usb_disp(const std::string & device)
 	close(fd);
 }
 
+void run_tests(const std::string & file)
+{
+	FILE *fh = fopen(file.c_str(), "r");
+	if (!fh) {
+		fprintf(stderr, "Failed to open %s\n", file.c_str());
+		exit(1);
+	}
+
+	constexpr int think_time = 1000;
+
+	int line_nr = 0;
+	while(!feof(fh)) {
+		char buffer[4096] { };
+		if (!fgets(buffer, sizeof buffer, fh))
+			break;
+
+		line_nr++;
+		char *sc = strchr(buffer, ';');  // sc = semicolon
+		if (!sc) {
+			printf("Ignoring line %d\n", line_nr);
+			continue;
+		}
+		*sc = 0x00;
+
+		libchess::Move best_move  { 0 };
+
+		auto parts = split(sc + 1, " ");
+		for(size_t i=0; i<parts.size(); i++) {
+			if (parts[i] == "bm") {
+				best_move = *libchess::Move::from(parts[++i]);
+				if (best_move.value() == 0) {
+					printf("Line %d: move in unexpected format (san?)\n", line_nr);
+					continue;
+				}
+				break;
+			}
+		}
+
+		if (best_move.value()) {
+			libchess::Position p { buffer };
+
+			libchess::Move sel_move  { 0 };
+			int            sel_score { 0 };
+			clear_flag(sp1.stop);
+			std::tie(sel_move, sel_score) = search_it(&p, think_time, true, &sp1, -1, 0, { });
+
+			if (best_move != sel_move) {
+				printf("Line %d (%s): should be %s, is %s\n", line_nr, buffer, best_move.to_str().c_str(), best_move.to_str().c_str());
+			}
+		}
+		else {
+			printf("Ignoring line %d\n", line_nr);
+		}
+	}
+
+	fclose(fh);
+}
+
 void help() {
 	print_max();
 
 	printf("-t x   thread count\n");
+	printf("-U x   run unit test x\n");
 	printf("-s x   set path to Syzygy\n");
 	printf("-u x   USB display device\n");
 }
@@ -2020,11 +2079,15 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:U:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
-
 			return 0;
+		}
+
+		if (c == 'U') {
+			run_tests(optarg);
+			return 1;
 		}
 
 		if (c == 't')
