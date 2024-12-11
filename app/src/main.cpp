@@ -117,6 +117,17 @@ uint64_t wboard { 0 };
 uint64_t bboard { 0 };
 #endif
 
+bool trace_enabled = true;
+void trace(const char *const fmt, ...)
+{
+	if (trace_enabled) {
+		va_list ap { };
+		va_start(ap, fmt);
+		vprintf(fmt, ap);
+		va_end(ap);
+	}
+}
+
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
@@ -131,7 +142,7 @@ void clear_flag(end_t *const stop)
 auto stop_handler = []() {
 	set_flag(sp1.stop);
 #if !defined(__ANDROID__)
-	printf("# stop_handler invoked\n");
+	trace("# stop_handler invoked\n");
 #endif
 };
 
@@ -357,9 +368,7 @@ extern "C" {
 void vApplicationMallocFailedHook()
 {
 	printf("# *** OUT OF MEMORY (heap) ***\n");
-
 	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
-
 	start_blink(led_red_timer);
 }
 }
@@ -380,13 +389,13 @@ void vTaskGetRunTimeStats()
 			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
 
 			if (ulStatsAsPercentage > 0UL) {
-				printf("# %s\t%u%%\t%u\n",
+				trace("# %s\t%u%%\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
 						ulStatsAsPercentage,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
 			else {
-				printf("# %s\t%u\n",
+				trace("# %s\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
@@ -402,7 +411,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	printf("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
 		set_flag(sp->stop);
@@ -410,9 +419,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
-
 		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-
 		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 		vTaskGetRunTimeStats();
@@ -422,7 +429,6 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 
 	if (level < 1280) {
 		printf("# stack protector %d engaged (%d), stop QS\n", nr, level);
-
 		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 		return 1;
@@ -953,7 +959,7 @@ void timer(const int think_time, end_t *const ei)
 	set_flag(ei);
 
 #if !defined(__ANDROID__)
-	printf("# time is up; set stop flag\n");
+	trace("# time is up; set stop flag\n");
 #endif
 }
 
@@ -1141,7 +1147,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #else
 		esp_timer_stop(think_timeout_timer);
 
-		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		trace("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 
 		vTaskGetRunTimeStats();
 #endif
@@ -1159,7 +1165,7 @@ void gpio_set_level(int a, int b)
 void ponder_thread(void *p)
 {
 #if !defined(__ANDROID__)
-	printf("# pondering started\n");
+	trace("# pondering started\n");
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -1200,7 +1206,7 @@ void ponder_thread(void *p)
 #endif
 
 #if !defined(__ANDROID__)
-			printf("# new ponder position (val: %d/ena: %d): %s\n", valid, run_2nd_thread, search_fen.c_str());
+			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, run_2nd_thread, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
@@ -1209,7 +1215,7 @@ void ponder_thread(void *p)
 
 		if (valid && run_2nd_thread) {
 #if !defined(__ANDROID__)
-			printf("# ponder search start\n");
+			trace("# ponder search start\n");
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1219,7 +1225,7 @@ void ponder_thread(void *p)
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID)
 			int n_threads = thread_count - 1;
 
-			printf("# starting %d threads\n", n_threads);
+			trace("# starting %d threads\n", n_threads);
 
 			if (n_threads > 0) {
 				std::vector<libchess::Position *> positions;
@@ -1261,7 +1267,7 @@ void ponder_thread(void *p)
 	}
 
 #if !defined(__ANDROID__)
-	printf("# pondering stopping\n");
+	trace("# pondering stopping\n");
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1404,6 +1410,7 @@ void tui()
 
 	set_ponder_lazy();
 
+	trace_enabled = false;
 	i.set_local_echo(true);
 
 	for(;;) {
@@ -1433,6 +1440,7 @@ void tui()
 				printf("fen     show fen for current position\n");
 				printf("eval    show current evaluation score\n");
 				printf("undo    take back last move\n");
+				printf("trace   on/off\n");
 				printf("perft   run \"perft\" for the given depth\n");
 			}
 			else if (parts[0] == "quit") {
@@ -1455,6 +1463,8 @@ void tui()
 			}
 			else if (parts[0] == "time" && parts.size() == 2)
 				think_time = std::stod(parts[1]) * 1000;
+			else if (parts[0] == "trace" && parts.size() == 2)
+				trace_enabled = parts[1] == "on";
 			else if (parts[0] == "undo") {
 				positiont1.unmake_move();
 				player = positiont1.side_to_move();
@@ -1495,6 +1505,7 @@ void tui()
 	}
 
 	i.set_local_echo(false);
+	trace_enabled = true;
 
 	restart_ponder();
 }
@@ -1675,8 +1686,8 @@ void main_task()
 			}
 			else {
 				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
-				int  time_inc     = is_white ? w_inc : b_inc;
-				int  time_inc_opp = is_white ? b_inc : w_inc;
+				int  time_inc     = is_white ? w_inc  : b_inc;
+				int  time_inc_opp = is_white ? b_inc  : w_inc;
 				int  ms           = is_white ? w_time : b_time;
 				int  ms_opponent  = is_white ? b_time : w_time;
 
@@ -1714,7 +1725,7 @@ void main_task()
 					best_score = probe_result.value().second;
 					has_best   = true;
 
-					printf("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
+					trace("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
 				}
 			}
 #endif
@@ -1737,7 +1748,7 @@ void main_task()
 			// set ponder positition
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
-			printf("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
+			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 			restart_ponder();
 			positiont1.unmake_move();
 		}
@@ -1802,15 +1813,12 @@ void main_task()
 void tune(std::string file)
 {
 	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });
-
 	printf("%zu EPDs loaded\n", normalized_results.size());
 
 	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
-
 	printf("%zu parameters\n", tunable_parameters.size());
 
 	uint32_t history[history_size] { 0 };
-
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
 		[&history](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
