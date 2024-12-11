@@ -1525,7 +1525,6 @@ void main_task()
 
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
-
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	auto eval_handler = [](std::istringstream&) {
@@ -2002,62 +2001,53 @@ void usb_disp(const std::string & device)
 	close(fd);
 }
 
-void run_tests(const std::string & file)
+void run_tests()
 {
-	FILE *fh = fopen(file.c_str(), "r");
-	if (!fh) {
-		fprintf(stderr, "Failed to open %s\n", file.c_str());
-		exit(1);
+	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
+
+	sp1.parameters = &default_parameters;
+	sp1.is_t2 = false;
+
+	// - mate in 1
+	const std::vector<std::pair<std::string, std::string> > mate_in_1 {
+            {"6k1/R7/6K1/8/8/8/8/8 w - - 0 1", "a7a8"},
+            {"8/8/8/8/8/6k1/r7/6K1 b - - 0 1", "a2a1"},
+            {"6k1/4R3/6K1/q7/8/8/8/8 w - - 0 1", "e7e8"},
+            {"8/8/8/8/Q7/6k1/4r3/6K1 b - - 0 1", "e2e1"},
+            {"6k1/8/6K1/q3R3/8/8/8/8 w - - 0 1", "e5e8"},
+            {"8/8/8/8/Q3r3/6k1/8/6K1 b - - 0 1", "e4e1"},
+            {"k7/6R1/5R1P/8/8/8/8/K7 w - - 0 1", "f6f8"},
+            {"k7/8/8/8/8/5r1p/6r1/K7 b - - 0 1", "f3f1"},
+	};
+
+	for(auto & entry: mate_in_1) {
+		printf("Testing \"%s\" for mate-in-1\n", entry.first.c_str());
+		libchess::Position p { entry.first };
+		p.make_move(*libchess::Move::from(entry.second));
+		assert(p.game_state() == libchess::Position::GameState::CHECKMATE);
 	}
 
-	constexpr int think_time = 1000;
+	printf("Ok\n");
 
-	int line_nr = 0;
-	while(!feof(fh)) {
-		char buffer[4096] { };
-		if (!fgets(buffer, sizeof buffer, fh))
-			break;
+	// - underpromotions
+	const std::vector<std::pair<std::string, std::string> > underpromotions {
+            {"8/5P1k/8/4B1K1/8/1B6/2N5/8 w - - 0 1", "f7f8n"},
+            {"8/2n5/1b6/8/4b1k1/8/5p1K/8 b - - 0 1", "f2f1n"},
+	};
 
-		line_nr++;
-		char *sc = strchr(buffer, ';');  // sc = semicolon
-		if (!sc) {
-			printf("Ignoring line %d\n", line_nr);
-			continue;
-		}
-		*sc = 0x00;
+	for(auto & entry: underpromotions) {
+		printf("Testing \"%s\" for underpromotions\n", entry.first.c_str());
+		libchess::Position p { entry.first };
+		assert(p.fen() == entry.first);
 
+		clear_flag(sp1.stop);
+		memset(sp1.history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
-
-		auto parts = split(sc + 1, " ");
-		for(size_t i=0; i<parts.size(); i++) {
-			if (parts[i] == "bm") {
-				best_move = *libchess::Move::from(parts[++i]);
-				if (best_move.value() == 0) {
-					printf("Line %d: move in unexpected format (san?)\n", line_nr);
-					continue;
-				}
-				break;
-			}
-		}
-
-		if (best_move.value()) {
-			libchess::Position p { buffer };
-
-			libchess::Move sel_move  { 0 };
-			int            sel_score { 0 };
-			clear_flag(sp1.stop);
-			std::tie(sel_move, sel_score) = search_it(&p, think_time, true, &sp1, -1, 0, { });
-
-			if (best_move != sel_move) {
-				printf("Line %d (%s): should be %s, is %s\n", line_nr, buffer, best_move.to_str().c_str(), best_move.to_str().c_str());
-			}
-		}
-		else {
-			printf("Ignoring line %d\n", line_nr);
-		}
+		int            best_score { 0 };
+		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
+		
+		assert(best_move == *libchess::Move::from(entry.second));
 	}
-
-	fclose(fh);
 }
 
 void help() {
@@ -2079,14 +2069,14 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:U:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
 		}
 
 		if (c == 'U') {
-			run_tests(optarg);
+			run_tests();
 			return 1;
 		}
 
