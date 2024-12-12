@@ -245,6 +245,12 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 	int counts[2][6] { 0 };
 	count_board(pos, counts);
 
+	// material
+	for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+		score += eval_piece(type, parameters) * counts[libchess::constants::WHITE][type];
+		score -= eval_piece(type, parameters) * counts[libchess::constants::BLACK][type];
+	}
+
 	int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
         int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
 	int n_pawns_w[8] { };
@@ -259,9 +265,6 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
 
-			// material
-			score += eval_piece(type, parameters) * piece_bb.popcount() * mul;
-
 			// psq
 			while (piece_bb) {
 				libchess::Square sq = piece_bb.forward_bitscan();
@@ -269,32 +272,43 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 
 				int psq_score = (psq(sq, color, type, phase) * mul * parameters.psq_mul) / parameters.psq_div;
 				score += psq_score;
-
-				// passed pawns
-				if (type == libchess::constants::PAWN) {
-					int x = sq.file();
-					int y = sq.rank();
-
-					if (color == libchess::constants::WHITE) {
-						bool left = (x > 0 && (blackYmin[x - 1] <= y || blackYmin[x - 1] == 8)) || x == 0;
-						bool front = blackYmin[x] < y || blackYmin[x] == 8;
-						bool right = (x < 7 && (blackYmin[x + 1] <= y || blackYmin[x + 1] == 8)) || x == 7;
-
-						if (left && front && right)
-							score += *parameters.pp_scores[false][y];
-						//score += (parameters.pp_scores[0][y].value() * (256 - phase) + parameters.pp_scores[1][y].value() * phase) / 256;
-					}
-					else {
-						bool left = (x > 0 && (whiteYmax[x - 1] >= y || whiteYmax[x - 1] == -1)) || x == 0;
-						bool front = whiteYmax[x] > y || whiteYmax[x] == -1;
-						bool right = (x < 7 && (whiteYmax[x + 1] >= y || whiteYmax[x + 1] == -1)) || x == 7;
-
-						if (left && front && right)
-							score -= *parameters.pp_scores[false][7 - y];
-						// score -= (parameters.pp_scores[0][7 - y].value() * (256 - phase) + parameters.pp_scores[1][7 - y].value() * phase) / 256;
-					}
-				}
 			}
+		}
+	}
+
+	{
+		libchess::Bitboard piece_bb_w = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
+
+		while(piece_bb_w) {
+			libchess::Square sq = piece_bb_w.forward_bitscan();
+			piece_bb_w.forward_popbit();
+			int x = sq.file();
+			int y = sq.rank();
+
+			bool left = (x > 0 && (blackYmin[x - 1] <= y || blackYmin[x - 1] == 8)) || x == 0;
+			bool front = blackYmin[x] < y || blackYmin[x] == 8;
+			bool right = (x < 7 && (blackYmin[x + 1] <= y || blackYmin[x + 1] == 8)) || x == 7;
+
+			if (left && front && right)
+				score += *parameters.pp_scores[false][y];
+				//score += (parameters.pp_scores[0][y].value() * (256 - phase) + parameters.pp_scores[1][y].value() * phase) / 256;
+		}
+
+		libchess::Bitboard piece_bb_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
+
+		while(piece_bb_b) {
+			libchess::Square sq = piece_bb_b.forward_bitscan();
+			piece_bb_b.forward_popbit();
+			int x = sq.file();
+			int y = sq.rank();
+
+			bool left = (x > 0 && (whiteYmax[x - 1] >= y || whiteYmax[x - 1] == -1)) || x == 0;
+			bool front = whiteYmax[x] > y || whiteYmax[x] == -1;
+			bool right = (x < 7 && (whiteYmax[x + 1] >= y || whiteYmax[x + 1] == -1)) || x == 7;
+
+			if (left && front && right)
+				score -= *parameters.pp_scores[false][7 - y];
+			// score -= (parameters.pp_scores[0][7 - y].value() * (256 - phase) + parameters.pp_scores[1][7 - y].value() * phase) / 256;
 		}
 	}
 
