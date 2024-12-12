@@ -448,14 +448,14 @@ private:
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) : p(p), ep(ep), sp(sp) {
+        sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp) : p(p), ep(sp->parameters), sp(sp) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
 
         void add_first_move(const libchess::Move move) {
-                if (move.value())
-                        first_moves.push_back(move);
+                assert(move.value());
+		first_moves.push_back(move);
         }
 
         int move_evaluater(const libchess::Move move) const {
@@ -467,7 +467,6 @@ public:
                 int  score      = 0;
 
                 auto piece_from = p->piece_on(move.from_square());
-
                 auto from_type  = piece_from->type();
                 auto to_type    = from_type;
 
@@ -490,7 +489,7 @@ public:
                         if (from_type != libchess::constants::KING)
                                 score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
                 }
-                else if (sp->history) {
+                else {
                         score += sp->history[p->side_to_move() * 6 * 64 + from_type * 64 + move.to_square()] << 8;
                 }
 
@@ -597,7 +596,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 #endif
 
 	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp->parameters, sp);
+		sort_movelist_compare smc(&pos, sp);
 
 		if (sort_inv)
 			sort_movelist_inverse(move_list, smc);
@@ -801,7 +800,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 
 	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp->parameters, sp);
+		sort_movelist_compare smc(&pos, sp);
 
 		if (tt_move.has_value())
 			smc.add_first_move(tt_move.value());
@@ -2048,6 +2047,31 @@ void run_tests()
 		
 		assert(best_move == *libchess::Move::from(entry.second));
 	}
+
+	printf("Ok\n");
+
+	// - move sorting & generation
+	{
+		printf("move sorting & generation test\n");
+		libchess::Position p { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
+
+		clear_flag(sp1.stop);
+		memset(sp1.history, 0x00, history_malloc_size);
+
+		libchess::MoveList move_list = p.pseudo_legal_move_list();
+		assert(move_list.size() == 7);
+		sort_movelist_compare smc(&p, &sp1);
+		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+
+		int prev_v = 32767;
+		for(auto & m: move_list) {
+			int cur_v = smc.move_evaluater(m);
+			assert(cur_v <= prev_v);
+			prev_v = cur_v;
+		}
+	}
+
+	printf("Ok\n");
 }
 
 void help() {
