@@ -6,14 +6,14 @@
 #include "eval.h"
 #include "psq.h"
 
-int eval_piece(libchess::PieceType piece, const eval_par & parameters)
+int eval_piece(const libchess::PieceType piece, const eval_par & parameters)
 {
 	int values[] = { parameters.pawn, parameters.knight, parameters.bishop, parameters.rook, parameters.queen, 10000 };
 
 	return values[piece];
 }
 
-int game_phase(int counts[2][6], const eval_par & parameters)
+int game_phase(const int counts[2][6], const eval_par & parameters)
 {
         const int num_knights = counts[libchess::constants::WHITE][libchess::constants::KNIGHT] + counts[libchess::constants::BLACK][libchess::constants::KNIGHT];
         const int num_bishops = counts[libchess::constants::WHITE][libchess::constants::BISHOP] + counts[libchess::constants::BLACK][libchess::constants::BISHOP];
@@ -62,7 +62,7 @@ int count_mobility(libchess::Position & pos)
 }
 #endif
 
-int find_forks(libchess::Position & pos)
+int find_forks(const libchess::Position & pos)
 {
 	int score = 0;
 
@@ -87,7 +87,7 @@ int find_forks(libchess::Position & pos)
 	return score;
 }
 
-int count_king_attacks(libchess::Position & pos, libchess::Color side)
+int count_king_attacks(const libchess::Position & pos, const libchess::Color side)
 {
 	auto opp = !side;
 	auto ksq = pos.king_square(side);
@@ -125,7 +125,7 @@ int count_king_attacks(libchess::Position & pos, libchess::Color side)
 	return score;
 }
 
-bool is_piece(libchess::Position & pos, libchess::Color side, libchess::PieceType pt, libchess::Square sq)
+bool is_piece(const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const libchess::Square sq)
 {
 	std::optional<libchess::Piece> p = pos.piece_on(sq);
 
@@ -135,7 +135,7 @@ bool is_piece(libchess::Position & pos, libchess::Color side, libchess::PieceTyp
 	return p.value().color() == side && p.value().type() == pt;
 }
 
-bool is_piece(libchess::Position & pos, libchess::Color side, libchess::PieceType pt, int file, int rank)
+bool is_piece(const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const int file, const int rank)
 {
 	libchess::Square sq = libchess::Square::from(libchess::File(file), libchess::Rank(rank)).value();
 	std::optional<libchess::Piece> p = pos.piece_on(sq);
@@ -146,7 +146,7 @@ bool is_piece(libchess::Position & pos, libchess::Color side, libchess::PieceTyp
 	return p.value().color() == side && p.value().type() == pt;
 }
 
-int king_shield(libchess::Position & pos, libchess::Color side)
+int king_shield(const libchess::Position & pos, const libchess::Color side)
 {
 	auto ksq = pos.king_square(libchess::constants::WHITE);
 	if (ksq.rank())
@@ -177,7 +177,7 @@ int king_shield(libchess::Position & pos, libchess::Color side)
 	return cnt;
 }
 
-int development(libchess::Position & pos)
+int development(const libchess::Position & pos)
 {
 	int score = 0;
 
@@ -205,24 +205,18 @@ int development(libchess::Position & pos)
 	return score;
 }
 
-int eval(libchess::Position & pos, const eval_par & parameters)
+void count_board(const libchess::Position & pos, int counts[2][6])
 {
-	int score = 0;
-
-	int counts[2][6] { 0 };
-
-	int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-        int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
-
 	for(libchess::Color color : libchess::constants::COLORS) {
 		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
 			counts[color][type] += piece_bb.popcount();
 		}
 	}
+}
 
-	int n_pawns_w[8] { }, n_pawns_b[8] { };
-
+void scan_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[8], int n_pawns_w[8], int n_pawns_b[8])
+{
 	for(libchess::Color color : libchess::constants::COLORS) {
 		libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::PAWN, color);
 		while (piece_bb) {
@@ -242,6 +236,20 @@ int eval(libchess::Position & pos, const eval_par & parameters)
 			}
 		}
 	}
+}
+
+int eval(const libchess::Position & pos, const eval_par & parameters)
+{
+	int score = 0;
+
+	int counts[2][6] { 0 };
+	count_board(pos, counts);
+
+	int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+        int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+	int n_pawns_w[8] { };
+	int n_pawns_b[8] { };
+	scan_pawns(pos, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
 
 	int phase = game_phase(counts, parameters);
 

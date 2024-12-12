@@ -2001,6 +2001,9 @@ void usb_disp(const std::string & device)
 
 void run_tests()
 {
+#if defined(NDEBUG)
+	printf(" *** RECOMPILE IN DEBUG MODE ***\n");
+#else
 	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
 
 	sp1.parameters = &default_parameters;
@@ -2045,9 +2048,9 @@ void run_tests()
 		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
 		
 		assert(best_move == *libchess::Move::from(entry.second));
-	}
 
-	printf("Ok\n");
+		printf("Ok\n");
+	}
 
 	// - move sorting & generation
 	{
@@ -2068,9 +2071,129 @@ void run_tests()
 			assert(cur_v <= prev_v);
 			prev_v = cur_v;
 		}
+
+		printf("Ok\n");
 	}
 
-	printf("Ok\n");
+	// eval function: count_board
+	{
+		printf("count_board test\n");
+		libchess::Position p1 { libchess::constants::STARTPOS_FEN };
+
+		int counts[2][6] { };
+		count_board(p1, counts);
+		assert(counts[libchess::constants::WHITE][libchess::constants::PAWN  ] == 8);
+		assert(counts[libchess::constants::BLACK][libchess::constants::PAWN  ] == 8);
+		assert(counts[libchess::constants::WHITE][libchess::constants::ROOK  ] == 2);
+		assert(counts[libchess::constants::BLACK][libchess::constants::ROOK  ] == 2);
+		assert(counts[libchess::constants::WHITE][libchess::constants::BISHOP] == 2);
+		assert(counts[libchess::constants::BLACK][libchess::constants::BISHOP] == 2);
+		assert(counts[libchess::constants::WHITE][libchess::constants::KNIGHT] == 2);
+		assert(counts[libchess::constants::BLACK][libchess::constants::KNIGHT] == 2);
+		assert(counts[libchess::constants::WHITE][libchess::constants::QUEEN ] == 1);
+		assert(counts[libchess::constants::BLACK][libchess::constants::KING  ] == 1);
+
+		printf("Ok\n");
+	}
+
+	// eval function: is_piece
+	{
+		printf("is_piece test\n");
+
+		libchess::Position p1 { libchess::constants::STARTPOS_FEN };
+		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 1) == true);  // A2
+		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 0) == false);  // A1
+		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 6) == true);  // A7
+		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 7) == false);  // A8
+		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 1) == false);  // A2
+		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 0) == true);  // A1
+		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 6) == false);  // A7
+		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 7) == true);  // A8
+
+		printf("Ok\n");
+	}
+
+	// eval function: eval_piece
+	{
+		printf("eval_piece test\n");
+
+		assert(eval_piece(libchess::constants::PAWN,   default_parameters) == TUNE_PAWN  );
+		assert(eval_piece(libchess::constants::BISHOP, default_parameters) == TUNE_BISHOP);
+		assert(eval_piece(libchess::constants::QUEEN,  default_parameters) == TUNE_QUEEN );
+		assert(eval_piece(libchess::constants::KING,   default_parameters) == 10000      );
+		assert(eval_piece(libchess::constants::ROOK,   default_parameters) == TUNE_ROOK  );
+		assert(eval_piece(libchess::constants::KNIGHT, default_parameters) == TUNE_KNIGHT);
+
+		printf("Ok\n");
+	}
+
+	// eval function: game_phase
+	{
+		printf("game_phase test\n");
+
+		int counts1[2][6] { };
+		assert(game_phase(counts1, default_parameters) == 256);
+
+		int counts2[2][6] {
+			{ 8, 2, 2, 2, 1, 1 },
+			{ 8, 2, 2, 2, 1, 1 }
+		};
+		assert(game_phase(counts2, default_parameters) == 0);
+
+		printf("Ok\n");
+	}
+
+	// eval function: scan_pawns
+	{
+		printf("scan_pawns test\n");
+
+		libchess::Position p1 { "rnbqkbnr/2p1p1pp/1p2p1p1/p7/Q3PP2/4PP2/PP3P2/RNB1KBNR b KQkq - 0 1" };
+
+		int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+		int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+		int n_pawns_w[8] { };
+		int n_pawns_b[8] { };
+		scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
+
+		assert(whiteYmax[0] ==  1);
+		assert(whiteYmax[1] ==  1);
+		assert(whiteYmax[2] == -1);
+		assert(whiteYmax[3] == -1);
+		assert(whiteYmax[4] ==  3);
+		assert(whiteYmax[5] ==  3);
+		assert(whiteYmax[6] == -1);
+		assert(whiteYmax[7] == -1);
+
+		assert(blackYmin[0] == 4);
+		assert(blackYmin[1] == 5);
+		assert(blackYmin[2] == 6);
+		assert(blackYmin[3] == 8);
+		assert(blackYmin[4] == 5);
+		assert(blackYmin[5] == 8);
+		assert(blackYmin[6] == 5);
+		assert(blackYmin[7] == 6);
+
+		assert(n_pawns_w[0] == 1);
+		assert(n_pawns_w[1] == 1);
+		assert(n_pawns_w[2] == 0);
+		assert(n_pawns_w[3] == 0);
+		assert(n_pawns_w[4] == 2);
+		assert(n_pawns_w[5] == 3);
+		assert(n_pawns_w[6] == 0);
+		assert(n_pawns_w[7] == 0);
+
+		assert(n_pawns_b[0] == 1);
+		assert(n_pawns_b[1] == 1);
+		assert(n_pawns_b[2] == 1);
+		assert(n_pawns_b[3] == 0);
+		assert(n_pawns_b[4] == 2);
+		assert(n_pawns_b[5] == 0);
+		assert(n_pawns_b[6] == 2);
+		assert(n_pawns_b[7] == 1);
+
+		printf("Ok\n");
+	}
+#endif
 }
 
 void help() {
