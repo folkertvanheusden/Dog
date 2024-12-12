@@ -270,8 +270,7 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 				libchess::Square sq = piece_bb.forward_bitscan();
 				piece_bb.forward_popbit();
 
-				int psq_score = (psq(sq, color, type, phase) * mul * parameters.psq_mul) / parameters.psq_div;
-				score += psq_score;
+				score += (psq(sq, color, type, phase) * mul * parameters.psq_mul) / parameters.psq_div;
 			}
 		}
 	}
@@ -294,7 +293,7 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 				//score += (parameters.pp_scores[0][y].value() * (256 - phase) + parameters.pp_scores[1][y].value() * phase) / 256;
 		}
 
-		libchess::Bitboard piece_bb_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE);
+		libchess::Bitboard piece_bb_b = pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK);
 
 		while(piece_bb_b) {
 			libchess::Square sq = piece_bb_b.forward_bitscan();
