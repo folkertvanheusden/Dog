@@ -2193,6 +2193,19 @@ void run_tests()
 
 		printf("Ok\n");
 	}
+
+	// eval function: calc_psq
+	{
+		printf("calc_psq test\n");
+
+		libchess::Position p1 { "8/8/8/8/8/8/8/4K3 w - - 0 1" };
+		assert(calc_psq(p1, 0, default_parameters) > calc_psq(p1, 255, default_parameters));
+
+		libchess::Position p2 { "3K4/8/8/8/8/8/8/8 w - - 0 1" };
+		assert(calc_psq(p1, 255, default_parameters) < calc_psq(p2, 255, default_parameters));
+
+		printf("Ok\n");
+	}
 #endif
 }
 
