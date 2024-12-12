@@ -328,7 +328,7 @@ protected:
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.3", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.4", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
