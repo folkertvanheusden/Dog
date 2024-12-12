@@ -62,6 +62,7 @@ int count_mobility(libchess::Position & pos)
 }
 #endif
 
+#if 0
 int find_forks(const libchess::Position & pos)
 {
 	int score = 0;
@@ -86,7 +87,9 @@ int find_forks(const libchess::Position & pos)
 
 	return score;
 }
+#endif
 
+#if 0
 int count_king_attacks(const libchess::Position & pos, const libchess::Color side)
 {
 	auto opp = !side;
@@ -124,6 +127,7 @@ int count_king_attacks(const libchess::Position & pos, const libchess::Color sid
 
 	return score;
 }
+#endif
 
 bool is_piece(const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const libchess::Square sq)
 {
@@ -177,6 +181,7 @@ int king_shield(const libchess::Position & pos, const libchess::Color side)
 	return cnt;
 }
 
+#if 0
 int development(const libchess::Position & pos)
 {
 	int score = 0;
@@ -204,6 +209,7 @@ int development(const libchess::Position & pos)
 
 	return score;
 }
+#endif
 
 void count_board(const libchess::Position & pos, int counts[2][6])
 {
