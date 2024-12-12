@@ -448,18 +448,14 @@ private:
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, const eval_par *const ep, const search_pars_t *const sp) :
-		p(p),
-		ep(ep),
-		sp(sp)
-	{
+        sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp) : p(p), ep(sp->parameters), sp(sp) {
                 if (p->previous_move())
                         previous_move_target = p->previous_move()->to_square();
         }
 
         void add_first_move(const libchess::Move move) {
-                if (move.value())
-                        first_moves.push_back(move);
+                assert(move.value());
+		first_moves.push_back(move);
         }
 
         int move_evaluater(const libchess::Move move) const {
@@ -492,7 +488,7 @@ public:
                         if (from_type != libchess::constants::KING)
                                 score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
                 }
-                else if (sp->history) {
+                else {
                         score += sp->history[p->side_to_move() * 6 * 64 + from_type * 64 + move.to_square()] << 8;
                 }
 
@@ -599,7 +595,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 #endif
 
 	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp->parameters, sp);
+		sort_movelist_compare smc(&pos, sp);
 
 		if (sort_inv)
 			sort_movelist_inverse(move_list, smc);
@@ -803,7 +799,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 
 	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp->parameters, sp);
+		sort_movelist_compare smc(&pos, sp);
 
 		if (tt_move.has_value())
 			smc.add_first_move(tt_move.value());
@@ -1527,7 +1523,6 @@ void main_task()
 
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
-
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	auto eval_handler = [](std::istringstream&) {
@@ -2004,10 +1999,85 @@ void usb_disp(const std::string & device)
 	close(fd);
 }
 
+void run_tests()
+{
+	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
+
+	sp1.parameters = &default_parameters;
+	sp1.is_t2 = false;
+
+	// - mate in 1
+	const std::vector<std::pair<std::string, std::string> > mate_in_1 {
+            {"6k1/R7/6K1/8/8/8/8/8 w - - 0 1", "a7a8"},
+            {"8/8/8/8/8/6k1/r7/6K1 b - - 0 1", "a2a1"},
+            {"6k1/4R3/6K1/q7/8/8/8/8 w - - 0 1", "e7e8"},
+            {"8/8/8/8/Q7/6k1/4r3/6K1 b - - 0 1", "e2e1"},
+            {"6k1/8/6K1/q3R3/8/8/8/8 w - - 0 1", "e5e8"},
+            {"8/8/8/8/Q3r3/6k1/8/6K1 b - - 0 1", "e4e1"},
+            {"k7/6R1/5R1P/8/8/8/8/K7 w - - 0 1", "f6f8"},
+            {"k7/8/8/8/8/5r1p/6r1/K7 b - - 0 1", "f3f1"},
+	};
+
+	for(auto & entry: mate_in_1) {
+		printf("Testing \"%s\" for mate-in-1\n", entry.first.c_str());
+		libchess::Position p { entry.first };
+		p.make_move(*libchess::Move::from(entry.second));
+		assert(p.game_state() == libchess::Position::GameState::CHECKMATE);
+	}
+
+	printf("Ok\n");
+
+	// - underpromotions
+	const std::vector<std::pair<std::string, std::string> > underpromotions {
+            {"8/5P1k/8/4B1K1/8/1B6/2N5/8 w - - 0 1", "f7f8n"},
+            {"8/2n5/1b6/8/4b1k1/8/5p1K/8 b - - 0 1", "f2f1n"},
+	};
+
+	for(auto & entry: underpromotions) {
+		printf("Testing \"%s\" for underpromotions\n", entry.first.c_str());
+		libchess::Position p { entry.first };
+		assert(p.fen() == entry.first);
+
+		clear_flag(sp1.stop);
+		memset(sp1.history, 0x00, history_malloc_size);
+		libchess::Move best_move  { 0 };
+		int            best_score { 0 };
+		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
+		
+		assert(best_move == *libchess::Move::from(entry.second));
+	}
+
+	printf("Ok\n");
+
+	// - move sorting & generation
+	{
+		printf("move sorting & generation test\n");
+		libchess::Position p { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
+
+		clear_flag(sp1.stop);
+		memset(sp1.history, 0x00, history_malloc_size);
+
+		libchess::MoveList move_list = p.pseudo_legal_move_list();
+		assert(move_list.size() == 7);
+		sort_movelist_compare smc(&p, &sp1);
+		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+
+		int prev_v = 32767;
+		for(auto & m: move_list) {
+			int cur_v = smc.move_evaluater(m);
+			assert(cur_v <= prev_v);
+			prev_v = cur_v;
+		}
+	}
+
+	printf("Ok\n");
+}
+
 void help() {
 	print_max();
 
 	printf("-t x   thread count\n");
+	printf("-U x   run unit test x\n");
 	printf("-s x   set path to Syzygy\n");
 	printf("-u x   USB display device\n");
 }
@@ -2022,11 +2092,15 @@ int main(int argc, char *argv[])
 
 #if !defined(__ANDROID__)
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
-
 			return 0;
+		}
+
+		if (c == 'U') {
+			run_tests();
+			return 1;
 		}
 
 		if (c == 't')
