@@ -18,7 +18,7 @@ void tests()
 	sp1.is_t2 = false;
 	
 	printf("Size of int must be 32 bit\n");
-	assert(sizeof(int) == 4);
+	my_assert(sizeof(int) == 4);
 	printf("Ok\n");
 
 	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
