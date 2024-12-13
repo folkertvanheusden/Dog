@@ -1483,8 +1483,10 @@ void main_task()
 		std::string line;
 		std::getline(is, line);
 
-		if (line == "uci")
+		if (line == "uci") {
 			uci_service.run();
+			break;  // else lichess-bot will break
+		}
 		else if (line == "tui") {
 			printf("Invoking TUI...\n");
 			run_tui();
