@@ -152,15 +152,11 @@ bool is_piece(const libchess::Position & pos, const libchess::Color side, const 
 
 int king_shield(const libchess::Position & pos, const libchess::Color side)
 {
-	auto ksq = pos.king_square(side);
-	if ((ksq.rank() && side == libchess::constants::WHITE) ||
-	    (ksq.rank() == 7 && libchess::constants::BLACK))
-		return 0;
-
-	int kx = ksq.file();
-	int ky = ksq.rank();
-	int checkx = kx;
-	int checky = 0;
+	auto ksq    = pos.king_square(side);
+	int  kx     = ksq.file();
+	int  ky     = ksq.rank();
+	int  checkx = kx;
+	int  checky = 0;
 
 	if (side == libchess::constants::WHITE)
 		checky = ky == 7 ? 6 : ky + 1;
@@ -168,18 +164,11 @@ int king_shield(const libchess::Position & pos, const libchess::Color side)
 		checky = ky == 0 ? 1 : ky - 1;
 
 	int cnt = 0;
-
-	if (checkx) {
+	if (checkx)
 		cnt += is_piece(pos, side, libchess::constants::PAWN, checkx - 1, checky);
-		cnt += is_piece(pos, side, libchess::constants::PAWN, checkx - 1, ky);
-	}
-
 	cnt += is_piece(pos, side, libchess::constants::PAWN, checkx, checky);
-
-	if (checkx < 7) {
+	if (checkx < 7)
 		cnt += is_piece(pos, side, libchess::constants::PAWN, checkx + 1, checky);
-		cnt += is_piece(pos, side, libchess::constants::PAWN, checkx + 1, ky);
-	}
 
 	return cnt;
 }
