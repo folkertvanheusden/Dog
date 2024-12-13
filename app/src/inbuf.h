@@ -1,6 +1,15 @@
 #include <cstdio>
 #include <streambuf>
 
+#if defined(ESP32)
+#include <driver/gpio.h>
+#include <esp_task_wdt.h>
+#include <esp_timer.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+#endif
+
 
 // http://www.josuttis.com/libbook/io/inbuf1.hpp.html
 class inbuf : public std::streambuf {

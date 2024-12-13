@@ -33,8 +33,10 @@ add_executable(
   ../max.cpp
   ../max-ascii.cpp
   ../psq.cpp
+  ../str.cpp
   ../syzygy.cpp
   ../tt.cpp
+  ../tui.cpp
   ../fathom/src/tbprobe.c
 )
 
