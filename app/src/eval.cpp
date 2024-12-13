@@ -308,7 +308,7 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 {
 	int score = 0;
 
-	int counts[2][6] { 0 };
+	int counts[2][6] { };
 	count_board(pos, counts);
 
 	// material
