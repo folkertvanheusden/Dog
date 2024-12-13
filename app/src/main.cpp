@@ -2267,6 +2267,17 @@ void run_tests()
 
 		printf("Ok\n");
 	}
+
+	// eval function: king_shield
+	{
+		printf("king_shield test\n");
+
+		libchess::Position p1 { "8/1k6/8/8/8/ppp1K3/2P3PP/8 w - - 0 1" };
+		my_assert(king_shield(p1, libchess::constants::WHITE) == 0);
+		my_assert(king_shield(p1, libchess::constants::BLACK) != 0);
+
+		printf("Ok\n");
+	}
 }
 
 void help() {
