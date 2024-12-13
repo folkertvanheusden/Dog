@@ -1090,7 +1090,6 @@ void ponder_thread(void *p)
 
 				for(auto & th : ths) {
 					th->join();
-
 					delete th;
 				}
 
