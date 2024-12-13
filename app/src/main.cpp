@@ -1502,6 +1502,7 @@ void main_task()
 
 	for(;;) {
 		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
+		printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -1513,6 +1514,8 @@ void main_task()
 			run_tui();
 			printf("Waiting for \"tui\" or \"uci\"...\n");
 		}
+		else if (line == "test")
+			run_tests();
 		else if (line == "quit") {
 			break;
 		}

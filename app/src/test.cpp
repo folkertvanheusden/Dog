@@ -1,10 +1,12 @@
+#include <thread>
+
 #include <libchess/Position.h>
 
 #include "eval.h"
 #include "main.h"
 
 
-void run_tests()
+void tests()
 {
 #define my_assert(x) \
 	if (!(x)) { \
@@ -368,4 +370,12 @@ void run_tests()
 
 		printf("Ok\n");
 	}
+}
+
+void run_tests()
+{
+	// because of ESP32 stack
+	auto th = new std::thread{tests};
+	th->join();
+	delete th;
 }
