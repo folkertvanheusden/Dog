@@ -476,8 +476,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	auto move_list   = gen_qs_moves(pos);
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort  = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
-	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
+	bool do_sort     = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
+	bool sort_inv    = sp->is_t2 && (thread_nr & 3) == 3;
 #else
 	constexpr bool do_sort  = true;
 	constexpr bool sort_inv = false;
