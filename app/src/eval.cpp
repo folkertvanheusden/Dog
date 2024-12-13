@@ -153,7 +153,8 @@ bool is_piece(const libchess::Position & pos, const libchess::Color side, const 
 int king_shield(const libchess::Position & pos, const libchess::Color side)
 {
 	auto ksq = pos.king_square(side);
-	if (ksq.rank())
+	if ((ksq.rank() && side == libchess::constants::WHITE) ||
+	    (ksq.rank() == 7 && libchess::constants::BLACK))
 		return 0;
 
 	int kx = ksq.file();
