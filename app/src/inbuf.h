@@ -1,4 +1,6 @@
+#pragma once
 #include <cstdio>
+#include <cstring>
 #include <streambuf>
 
 #if defined(ESP32)

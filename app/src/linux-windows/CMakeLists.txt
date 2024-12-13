@@ -35,6 +35,7 @@ add_executable(
   ../psq.cpp
   ../str.cpp
   ../syzygy.cpp
+  ../test.cpp
   ../tt.cpp
   ../tui.cpp
   ../fathom/src/tbprobe.c

@@ -7,20 +7,10 @@
 
 #include "eval.h"
 #include "main.h"
-#include "inbuf.h"
 #include "main.h"
 #include "max-ascii.h"
 #include "str.h"
-#include "tt.h"
 #include "tui.h"
-
-
-extern bool               trace_enabled;
-extern inbuf              i;
-extern std::istream       is;
-extern search_pars_t      sp1;
-extern libchess::Position positiont1;
-extern tt                 tti;
 
 
 uint64_t do_perft(libchess::Position &pos, int depth)
