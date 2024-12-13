@@ -2206,6 +2206,64 @@ void run_tests()
 
 		printf("Ok\n");
 	}
+
+	// eval function: passed pawns
+	{
+		printf("passed pawns test\n");
+
+		{
+			int score1 = 0;
+			int score2 = 0;
+
+			{
+				libchess::Position p1 { "8/4k3/8/3PP3/8/8/8/8 w - - 0 1" };  // has pp
+
+				int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+				int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+				int n_pawns_w[8] { };
+				int n_pawns_b[8] { };
+				scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
+				score1 = calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters);
+			}
+
+			{
+				libchess::Position p1 { "8/2p1k3/8/3PP3/8/8/8/8 w - - 0 1" };  // has 1 less
+
+				int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+				int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+				int n_pawns_w[8] { };
+				int n_pawns_b[8] { };
+				scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
+				score2 = calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters);
+			}
+
+			assert(score2 < score1);
+		}
+
+		{
+			libchess::Position p1 { "8/2p1k3/8/2PPP3/8/8/8/8 w - - 0 1" };  // has pp
+
+			int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+			int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+			int n_pawns_w[8] { };
+			int n_pawns_b[8] { };
+			scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
+			assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) != 0);
+		}
+
+		{
+			libchess::Position p1 { libchess::constants::STARTPOS_FEN };  // has no pp
+
+			int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+			int blackYmin[8] = { 8, 8, 8, 8, 8, 8, 8, 8 };
+			int n_pawns_w[8] { };
+			int n_pawns_b[8] { };
+			scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
+			assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) == 0);
+		}
+
+		printf("Ok\n");
+	}
 #endif
 }
 
