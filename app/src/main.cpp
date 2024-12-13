@@ -1391,6 +1391,8 @@ void main_task()
 					think_time = limit_duration_min;
 					time_limit_hit = true;
 				}
+
+				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves());
 			}
 
 			// let the ponder thread run as a lazy-smp thread
