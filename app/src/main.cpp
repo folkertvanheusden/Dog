@@ -2001,9 +2001,12 @@ void usb_disp(const std::string & device)
 
 void run_tests()
 {
-#if defined(NDEBUG)
-	printf(" *** RECOMPILE IN DEBUG MODE ***\n");
-#else
+#define my_assert(x) \
+	if (!(x)) { \
+		fprintf(stderr, "assert fail at line %d (%s) in %s\n", __LINE__, __func__, __FILE__); \
+		exit(1); \
+	}
+
 	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
 
 	sp1.parameters = &default_parameters;
@@ -2025,7 +2028,7 @@ void run_tests()
 		printf("Testing \"%s\" for mate-in-1\n", entry.first.c_str());
 		libchess::Position p { entry.first };
 		p.make_move(*libchess::Move::from(entry.second));
-		assert(p.game_state() == libchess::Position::GameState::CHECKMATE);
+		my_assert(p.game_state() == libchess::Position::GameState::CHECKMATE);
 	}
 
 	printf("Ok\n");
@@ -2039,7 +2042,7 @@ void run_tests()
 	for(auto & entry: underpromotions) {
 		printf("Testing \"%s\" for underpromotions\n", entry.first.c_str());
 		libchess::Position p { entry.first };
-		assert(p.fen() == entry.first);
+		my_assert(p.fen() == entry.first);
 
 		clear_flag(sp1.stop);
 		memset(sp1.history, 0x00, history_malloc_size);
@@ -2047,7 +2050,7 @@ void run_tests()
 		int            best_score { 0 };
 		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
 		
-		assert(best_move == *libchess::Move::from(entry.second));
+		my_assert(best_move == *libchess::Move::from(entry.second));
 
 		printf("Ok\n");
 	}
@@ -2061,14 +2064,14 @@ void run_tests()
 		memset(sp1.history, 0x00, history_malloc_size);
 
 		libchess::MoveList move_list = p.pseudo_legal_move_list();
-		assert(move_list.size() == 7);
+		my_assert(move_list.size() == 7);
 		sort_movelist_compare smc(&p, &sp1);
 		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 
 		int prev_v = 32767;
 		for(auto & m: move_list) {
 			int cur_v = smc.move_evaluater(m);
-			assert(cur_v <= prev_v);
+			my_assert(cur_v <= prev_v);
 			prev_v = cur_v;
 		}
 
@@ -2082,16 +2085,16 @@ void run_tests()
 
 		int counts[2][6] { };
 		count_board(p1, counts);
-		assert(counts[libchess::constants::WHITE][libchess::constants::PAWN  ] == 8);
-		assert(counts[libchess::constants::BLACK][libchess::constants::PAWN  ] == 8);
-		assert(counts[libchess::constants::WHITE][libchess::constants::ROOK  ] == 2);
-		assert(counts[libchess::constants::BLACK][libchess::constants::ROOK  ] == 2);
-		assert(counts[libchess::constants::WHITE][libchess::constants::BISHOP] == 2);
-		assert(counts[libchess::constants::BLACK][libchess::constants::BISHOP] == 2);
-		assert(counts[libchess::constants::WHITE][libchess::constants::KNIGHT] == 2);
-		assert(counts[libchess::constants::BLACK][libchess::constants::KNIGHT] == 2);
-		assert(counts[libchess::constants::WHITE][libchess::constants::QUEEN ] == 1);
-		assert(counts[libchess::constants::BLACK][libchess::constants::KING  ] == 1);
+		my_assert(counts[libchess::constants::WHITE][libchess::constants::PAWN  ] == 8);
+		my_assert(counts[libchess::constants::BLACK][libchess::constants::PAWN  ] == 8);
+		my_assert(counts[libchess::constants::WHITE][libchess::constants::ROOK  ] == 2);
+		my_assert(counts[libchess::constants::BLACK][libchess::constants::ROOK  ] == 2);
+		my_assert(counts[libchess::constants::WHITE][libchess::constants::BISHOP] == 2);
+		my_assert(counts[libchess::constants::BLACK][libchess::constants::BISHOP] == 2);
+		my_assert(counts[libchess::constants::WHITE][libchess::constants::KNIGHT] == 2);
+		my_assert(counts[libchess::constants::BLACK][libchess::constants::KNIGHT] == 2);
+		my_assert(counts[libchess::constants::WHITE][libchess::constants::QUEEN ] == 1);
+		my_assert(counts[libchess::constants::BLACK][libchess::constants::KING  ] == 1);
 
 		printf("Ok\n");
 	}
@@ -2101,14 +2104,14 @@ void run_tests()
 		printf("is_piece test\n");
 
 		libchess::Position p1 { libchess::constants::STARTPOS_FEN };
-		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 1) == true);  // A2
-		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 0) == false);  // A1
-		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 6) == true);  // A7
-		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 7) == false);  // A8
-		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 1) == false);  // A2
-		assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 0) == true);  // A1
-		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 6) == false);  // A7
-		assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 7) == true);  // A8
+		my_assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 1) == true);  // A2
+		my_assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::PAWN, 0, 0) == false);  // A1
+		my_assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 6) == true);  // A7
+		my_assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::PAWN, 0, 7) == false);  // A8
+		my_assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 1) == false);  // A2
+		my_assert(is_piece(p1, libchess::constants::WHITE, libchess::constants::ROOK, 0, 0) == true);  // A1
+		my_assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 6) == false);  // A7
+		my_assert(is_piece(p1, libchess::constants::BLACK, libchess::constants::ROOK, 0, 7) == true);  // A8
 
 		printf("Ok\n");
 	}
@@ -2117,12 +2120,12 @@ void run_tests()
 	{
 		printf("eval_piece test\n");
 
-		assert(eval_piece(libchess::constants::PAWN,   default_parameters) == TUNE_PAWN  );
-		assert(eval_piece(libchess::constants::BISHOP, default_parameters) == TUNE_BISHOP);
-		assert(eval_piece(libchess::constants::QUEEN,  default_parameters) == TUNE_QUEEN );
-		assert(eval_piece(libchess::constants::KING,   default_parameters) == 10000      );
-		assert(eval_piece(libchess::constants::ROOK,   default_parameters) == TUNE_ROOK  );
-		assert(eval_piece(libchess::constants::KNIGHT, default_parameters) == TUNE_KNIGHT);
+		my_assert(eval_piece(libchess::constants::PAWN,   default_parameters) == TUNE_PAWN  );
+		my_assert(eval_piece(libchess::constants::BISHOP, default_parameters) == TUNE_BISHOP);
+		my_assert(eval_piece(libchess::constants::QUEEN,  default_parameters) == TUNE_QUEEN );
+		my_assert(eval_piece(libchess::constants::KING,   default_parameters) == 10000      );
+		my_assert(eval_piece(libchess::constants::ROOK,   default_parameters) == TUNE_ROOK  );
+		my_assert(eval_piece(libchess::constants::KNIGHT, default_parameters) == TUNE_KNIGHT);
 
 		printf("Ok\n");
 	}
@@ -2132,13 +2135,13 @@ void run_tests()
 		printf("game_phase test\n");
 
 		int counts1[2][6] { };
-		assert(game_phase(counts1, default_parameters) == 256);
+		my_assert(game_phase(counts1, default_parameters) == 256);
 
 		int counts2[2][6] {
 			{ 8, 2, 2, 2, 1, 1 },
 			{ 8, 2, 2, 2, 1, 1 }
 		};
-		assert(game_phase(counts2, default_parameters) == 0);
+		my_assert(game_phase(counts2, default_parameters) == 0);
 
 		printf("Ok\n");
 	}
@@ -2155,41 +2158,41 @@ void run_tests()
 		int n_pawns_b[8] { };
 		scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
 
-		assert(whiteYmax[0] ==  1);
-		assert(whiteYmax[1] ==  1);
-		assert(whiteYmax[2] == -1);
-		assert(whiteYmax[3] == -1);
-		assert(whiteYmax[4] ==  3);
-		assert(whiteYmax[5] ==  3);
-		assert(whiteYmax[6] == -1);
-		assert(whiteYmax[7] == -1);
+		my_assert(whiteYmax[0] ==  1);
+		my_assert(whiteYmax[1] ==  1);
+		my_assert(whiteYmax[2] == -1);
+		my_assert(whiteYmax[3] == -1);
+		my_assert(whiteYmax[4] ==  3);
+		my_assert(whiteYmax[5] ==  3);
+		my_assert(whiteYmax[6] == -1);
+		my_assert(whiteYmax[7] == -1);
 
-		assert(blackYmin[0] == 4);
-		assert(blackYmin[1] == 5);
-		assert(blackYmin[2] == 6);
-		assert(blackYmin[3] == 8);
-		assert(blackYmin[4] == 5);
-		assert(blackYmin[5] == 8);
-		assert(blackYmin[6] == 5);
-		assert(blackYmin[7] == 6);
+		my_assert(blackYmin[0] == 4);
+		my_assert(blackYmin[1] == 5);
+		my_assert(blackYmin[2] == 6);
+		my_assert(blackYmin[3] == 8);
+		my_assert(blackYmin[4] == 5);
+		my_assert(blackYmin[5] == 8);
+		my_assert(blackYmin[6] == 5);
+		my_assert(blackYmin[7] == 6);
 
-		assert(n_pawns_w[0] == 1);
-		assert(n_pawns_w[1] == 1);
-		assert(n_pawns_w[2] == 0);
-		assert(n_pawns_w[3] == 0);
-		assert(n_pawns_w[4] == 2);
-		assert(n_pawns_w[5] == 3);
-		assert(n_pawns_w[6] == 0);
-		assert(n_pawns_w[7] == 0);
+		my_assert(n_pawns_w[0] == 1);
+		my_assert(n_pawns_w[1] == 1);
+		my_assert(n_pawns_w[2] == 0);
+		my_assert(n_pawns_w[3] == 0);
+		my_assert(n_pawns_w[4] == 2);
+		my_assert(n_pawns_w[5] == 3);
+		my_assert(n_pawns_w[6] == 0);
+		my_assert(n_pawns_w[7] == 0);
 
-		assert(n_pawns_b[0] == 1);
-		assert(n_pawns_b[1] == 1);
-		assert(n_pawns_b[2] == 1);
-		assert(n_pawns_b[3] == 0);
-		assert(n_pawns_b[4] == 2);
-		assert(n_pawns_b[5] == 0);
-		assert(n_pawns_b[6] == 2);
-		assert(n_pawns_b[7] == 1);
+		my_assert(n_pawns_b[0] == 1);
+		my_assert(n_pawns_b[1] == 1);
+		my_assert(n_pawns_b[2] == 1);
+		my_assert(n_pawns_b[3] == 0);
+		my_assert(n_pawns_b[4] == 2);
+		my_assert(n_pawns_b[5] == 0);
+		my_assert(n_pawns_b[6] == 2);
+		my_assert(n_pawns_b[7] == 1);
 
 		printf("Ok\n");
 	}
@@ -2199,10 +2202,10 @@ void run_tests()
 		printf("calc_psq test\n");
 
 		libchess::Position p1 { "8/8/8/8/8/8/8/4K3 w - - 0 1" };
-		assert(calc_psq(p1, 0, default_parameters) > calc_psq(p1, 255, default_parameters));
+		my_assert(calc_psq(p1, 0, default_parameters) > calc_psq(p1, 255, default_parameters));
 
 		libchess::Position p2 { "3K4/8/8/8/8/8/8/8 w - - 0 1" };
-		assert(calc_psq(p1, 255, default_parameters) < calc_psq(p2, 255, default_parameters));
+		my_assert(calc_psq(p1, 255, default_parameters) < calc_psq(p2, 255, default_parameters));
 
 		printf("Ok\n");
 	}
@@ -2237,7 +2240,7 @@ void run_tests()
 				score2 = calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters);
 			}
 
-			assert(score2 < score1);
+			my_assert(score2 < score1);
 		}
 
 		{
@@ -2248,7 +2251,7 @@ void run_tests()
 			int n_pawns_w[8] { };
 			int n_pawns_b[8] { };
 			scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
-			assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) != 0);
+			my_assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) != 0);
 		}
 
 		{
@@ -2259,12 +2262,11 @@ void run_tests()
 			int n_pawns_w[8] { };
 			int n_pawns_b[8] { };
 			scan_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b);
-			assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) == 0);
+			my_assert(calc_passed_pawns(p1, whiteYmax, blackYmin, n_pawns_w, n_pawns_b, default_parameters) == 0);
 		}
 
 		printf("Ok\n");
 	}
-#endif
 }
 
 void help() {
