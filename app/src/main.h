@@ -48,6 +48,8 @@ extern std::istream       is;
 extern search_pars_t      sp1;
 extern libchess::Position positiont1;
 extern tt                 tti;
+extern uint64_t           bboard;
+extern uint64_t           wboard;
 
 #if defined(ESP32)
 #include <driver/gpio.h>

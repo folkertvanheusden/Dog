@@ -38,6 +38,7 @@ add_executable(
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
+  ../usb-device.cpp
   ../fathom/src/tbprobe.c
 )
 

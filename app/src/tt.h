@@ -1,5 +1,11 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+
+#include <libchess/Position.h>
+
+
 #define __PRAGMA_PACKED__ __attribute__ ((__packed__))
 
 typedef enum { NOTVALID = 0, EXACT = 1, LOWERBOUND = 2, UPPERBOUND = 3 } tt_entry_flag;
