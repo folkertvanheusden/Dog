@@ -392,11 +392,6 @@ void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
 	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
 
-void sort_movelist_inverse(libchess::MoveList & move_list, sort_movelist_compare & smc)
-{
-	move_list.sort([&smc](const libchess::Move move) { return -smc.move_evaluater(move); });
-}
-
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -473,24 +468,10 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 
 	int  n_played    = 0;
-
 	auto move_list   = gen_qs_moves(pos);
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort     = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
-	bool sort_inv    = sp->is_t2 && (thread_nr & 3) == 3;
-#else
-	constexpr bool do_sort  = true;
-	constexpr bool sort_inv = false;
-#endif
 
-	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp);
-
-		if (sort_inv)
-			sort_movelist_inverse(move_list, smc);
-		else
-			sort_movelist(move_list, smc);
-	}
+	sort_movelist_compare smc(&pos, sp);
+	sort_movelist(move_list, smc);
 
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -601,7 +582,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	////////
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	if (with_syzygy && sp->is_t2 && thread_nr < 6 && (thread_nr & 1) == 0) {
+	if (with_syzygy && sp->is_t2) {
 		// check piece count
 		unsigned counts = pos.occupancy_bb().popcount();
 
@@ -621,9 +602,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
-	bool skip_reduction  = sp->is_t2 && thread_nr >= 4;
-
-	if (!is_root_position && depth <= 3 && beta <= 9800 && !skip_reduction) {
+	if (!is_root_position && depth <= 3 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
@@ -648,7 +627,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	bool in_check = pos.in_check();
 
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2 && !skip_reduction) {
+	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
 		pos.make_null_move();
 		libchess::Move ignore;
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
@@ -675,41 +654,25 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	/////////
 
-	int     best_score = -32767;
+	int                best_score = -32767;
+	libchess::MoveList move_list  = pos.pseudo_legal_move_list();
 
-	libchess::MoveList move_list = pos.pseudo_legal_move_list();
+	sort_movelist_compare smc(&pos, sp);
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	bool do_sort = !sp->is_t2 || (sp->is_t2 && (thread_nr & 1) == 1);
-	bool sort_inv = sp->is_t2 && (thread_nr & 3) == 3;
-#else
-	constexpr bool do_sort  = true;
-	constexpr bool sort_inv = false;
-#endif
+	if (tt_move.has_value())
+		smc.add_first_move(tt_move.value());
+	else if (iid_move.value())
+		smc.add_first_move(iid_move);
 
-	if (do_sort) {
-		sort_movelist_compare smc(&pos, sp);
+	if (m->value())
+		smc.add_first_move(*m);
 
-		if (tt_move.has_value())
-			smc.add_first_move(tt_move.value());
-		else if (iid_move.value())
-			smc.add_first_move(iid_move);
-
-		if (m->value())
-			smc.add_first_move(*m);
-
-		if (sort_inv)
-			sort_movelist_inverse(move_list, smc);
-		else
-			sort_movelist(move_list, smc);
-	}
+	sort_movelist(move_list, smc);
 
 	int     n_played   = 0;
-
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
 	libchess::Move new_move { 0 };
-
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
@@ -884,7 +847,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int16_t add_beta  = 75;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		int8_t  max_depth = 1 + (sp->is_t2 ? rand() % 7 : 0);
+		int8_t  max_depth = 1 + sp->is_t2 ? 1 + thread_nr : 0;
 #else
 		int8_t  max_depth = 1 + sp->is_t2;
 #endif
@@ -1081,7 +1044,6 @@ void ponder_thread(void *p)
 #endif
 
 			positiont2 = libchess::Position(search_fen);
-
 			valid      = positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -1238,7 +1200,7 @@ void main_task()
 		printf("Malloc of sp1-history failed\n");
 
 	sp1.parameters = &default_parameters;
-	sp1.is_t2 = false;
+	sp1.is_t2      = false;
 	memset(sp1.history, 0x00, history_malloc_size);
 #if defined(ESP32)
 	if (!sp2.history)
