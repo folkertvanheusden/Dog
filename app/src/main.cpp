@@ -84,7 +84,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(heap_caps_malloc(history_malloc_size, MALLOC_CAP_IRAM_8BIT)), 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -1235,9 +1235,15 @@ void main_task()
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
+	if (!sp1.history)
+		printf("Malloc of sp1-history failed\n");
+
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
 	memset(sp1.history, 0x00, history_malloc_size);
+
+	if (!sp2.history)
+		printf("Malloc of sp2-history failed\n");
 
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
