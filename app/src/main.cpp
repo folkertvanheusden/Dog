@@ -1267,6 +1267,17 @@ void main_task()
 		positiont1.display();
 	};
 
+	auto help_handler = [](std::istringstream&) {
+		printf("Apart from the standard UCI commands, the following can be used:\n");
+		printf("play         play game upto the end. optional parameter is think time\n");
+		printf("eval         show evaluation score\n");
+		printf("fen          show fen of current position\n");
+		printf("d / display  show current board layout\n");
+		printf("perft        perft, parameter is depth\n");
+		printf("tui          switch to text interface\n");
+		printf("quit         exit to main menu\n");
+	};
+
 	auto perft_handler = [](std::istringstream& line_stream) {
 		std::string temp;
 		line_stream >> temp;
@@ -1502,6 +1513,7 @@ void main_task()
 	uci_service.register_handler("perft",      perft_handler);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler);
 	uci_service.register_handler("tui",        tui_handler);
+	uci_service.register_handler("help",       help_handler);
 
 	for(;;) {
 		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
