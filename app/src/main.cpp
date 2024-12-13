@@ -1301,7 +1301,7 @@ void main_task()
 				think_time = std::stoi(temp);
 			}
 			catch(...) {
-				printf("No or invalid thinktime (ms) given, using %d instead\n", think_time);
+				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
 			}
 
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
