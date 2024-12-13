@@ -2274,13 +2274,99 @@ void run_tests()
 
 		libchess::Position p1 { "8/1k6/8/8/8/ppp1K3/2P3PP/8 w - - 0 1" };
 		my_assert(king_shield(p1, libchess::constants::WHITE) == 0);
-		my_assert(king_shield(p1, libchess::constants::BLACK) != 0);
+		my_assert(king_shield(p1, libchess::constants::BLACK) == 0);
+
+		libchess::Position p2 { "8/8/8/8/1k6/ppp1K3/2P3PP/8 w - - 0 1" };
+		my_assert(king_shield(p2, libchess::constants::WHITE) == 0);
+		my_assert(king_shield(p2, libchess::constants::BLACK) != 0);
+
+		printf("Ok\n");
+	}
+
+	// tt
+	{
+		printf("tt test\n");
+
+		tti.reset();
+		// initial state
+		my_assert(tti.lookup(1).has_value() == false);
+		my_assert(tti.lookup(0).has_value() == true);
+
+		// just set a record
+		{
+			tti.store(2, EXACT, 3, 4, *libchess::Move::from("e2e4"));
+			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(1).has_value() == false);
+			auto record1 = tti.lookup(2);
+			my_assert(record1.has_value());
+			auto data1 = record1.value();
+			my_assert((data1.hash ^ data1.data_.data) == 2);
+			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("e2e4"));
+			my_assert(data1.data_._data.depth == 3);
+			my_assert(data1.data_._data.score == 4);
+		}
+
+		// increase age set a record: should replace
+		{
+			tti.inc_age();
+			tti.store(2, EXACT, 9, 10, *libchess::Move::from("h7h5"));
+			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(1).has_value() == false);
+			auto record2 = tti.lookup(2);
+			my_assert(record2.has_value());
+			auto data2 = record2.value();
+			my_assert((data2.hash ^ data2.data_.data) == 2);
+			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
+			my_assert(data2.data_._data.depth == 9);
+			my_assert(data2.data_._data.score == 10);
+		}
+
+		// set a record with shallower depth: should not replace
+		{
+			tti.store(2, EXACT, 8, 20, *libchess::Move::from("c1b3"));
+			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(1).has_value() == false);
+			auto record2 = tti.lookup(2);
+			my_assert(record2.has_value());
+			auto data2 = record2.value();
+			my_assert((data2.hash ^ data2.data_.data) == 2);
+			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
+			my_assert(data2.data_._data.depth == 9);
+			my_assert(data2.data_._data.score == 10);
+		}
+
+		// set a record with bounds: should not replace
+		{
+			tti.store(2, LOWERBOUND, 9, 20, *libchess::Move::from("a2a4"));
+			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(1).has_value() == false);
+			auto record2 = tti.lookup(2);
+			my_assert(record2.has_value());
+			auto data2 = record2.value();
+			my_assert((data2.hash ^ data2.data_.data) == 2);
+			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
+			my_assert(data2.data_._data.depth == 9);
+			my_assert(data2.data_._data.score == 10);
+		}
+		{
+			tti.store(2, UPPERBOUND, 9, 20, *libchess::Move::from("a2a4"));
+			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(1).has_value() == false);
+			auto record2 = tti.lookup(2);
+			my_assert(record2.has_value());
+			auto data2 = record2.value();
+			my_assert((data2.hash ^ data2.data_.data) == 2);
+			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
+			my_assert(data2.data_._data.depth == 9);
+			my_assert(data2.data_._data.score == 10);
+		}
 
 		printf("Ok\n");
 	}
 }
 
-void help() {
+void help()
+{
 	print_max();
 
 	printf("-t x   thread count\n");

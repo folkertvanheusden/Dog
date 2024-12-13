@@ -35,7 +35,6 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 		if ((cur.hash ^ cur.data_.data) == hash) {
 			cur.data_._data.age = age;
 			cur.hash = hash ^ cur.data_.data;
-
 			return cur;
 		}
 	}
@@ -49,9 +48,9 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	tt_entry   *const e     = entries[index].entries;
 
-	int use_sub_index       = -1;
+	int use_sub_index       =  -1;
 	int min_depth           = 999;
-	int min_depth_index     = -1;
+	int min_depth_index     =  -1;
 
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		if ((e[i].hash ^ e[i].data_.data) == hash) {
