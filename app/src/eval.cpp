@@ -129,6 +129,7 @@ int count_king_attacks(const libchess::Position & pos, const libchess::Color sid
 }
 #endif
 
+#if 0
 bool is_piece(const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const libchess::Square sq)
 {
 	std::optional<libchess::Piece> p = pos.piece_on(sq);
@@ -138,6 +139,7 @@ bool is_piece(const libchess::Position & pos, const libchess::Color side, const 
 
 	return p.value().color() == side && p.value().type() == pt;
 }
+#endif
 
 bool is_piece(const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const int file, const int rank)
 {
