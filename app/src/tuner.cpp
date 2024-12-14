@@ -4,6 +4,7 @@
 
 #include "eval.h"
 #include "main.h"
+#include "my_tuner.h"
 
 
 #if defined(linux) || defined(_WIN32)
@@ -17,20 +18,23 @@ void tune(std::string file)
 
 	uint32_t history[history_size] { 0 };
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
-		[&history](libchess::Position& pos, const std::vector<libchess::TunableParameter> & params) {
+		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			search_pars_t sp { &cur, false, history };
-			sp.stop = new end_t();
-			sp.stop->flag = false;
+			for(auto &p: positions) {
+				search_pars_t sp { &cur, false, history };
+				sp.stop = new end_t();
+				sp.stop->flag = false;
 
-			int score = qs(pos, -32767, 32767, 0, &sp, 0);
-			if (pos.side_to_move() != libchess::constants::WHITE)
-				score = -score;
+				auto & pos = p.position();
+				int score = qs(pos, -32767, 32767, 0, &sp, 0);
+				if (pos.side_to_move() != libchess::constants::WHITE)
+					score = -score;
 
-			delete sp.stop;
+				delete sp.stop;
 
-			return score;
+				p.set_result(score);
+			}
 		}};
 
 
