@@ -25,7 +25,7 @@ void tune(std::string file)
 			sp.stop = new end_t();
 			sp.stop->flag = false;
 
-#pragma omp parallel
+#pragma omp parallel for
 			for(auto &p: positions) {
 				const auto & pos = p.position();
 				int score = eval(pos, cur);
