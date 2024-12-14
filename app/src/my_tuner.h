@@ -161,6 +161,7 @@ class Tuner {
     [[nodiscard]] double error() noexcept {
 	eval(normalized_results_);
 	double sum = 0.;
+#pragma omp parallel for reduction(+ : sum)
         for (unsigned i = 0; i < normalized_results_.size(); ++i) {
             double err = normalized_results_.at(i).value() - sigmoid(normalized_results_.at(i).get_result());
             sum += err * err;
