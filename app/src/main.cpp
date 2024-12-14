@@ -847,7 +847,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int16_t add_beta  = 75;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-		int8_t  max_depth = 1 + (sp->is_t2 ? 1 + thread_nr : 0);
+		int8_t  max_depth = 1 + (sp->is_t2 ? thread_nr + 1: 0);
 #else
 		int8_t  max_depth = 1 + sp->is_t2;
 #endif
