@@ -27,8 +27,8 @@ void tune(std::string file)
 
 #pragma omp parallel for
 			for(auto &p: positions) {
-				const auto & pos = p.position();
-				int score = eval(pos, cur);
+				auto & pos = p.position();
+				int score = qs(pos, -32767, 32767, 0, &sp, 0);
 				if (pos.side_to_move() != libchess::constants::WHITE)
 					score = -score;
 				p.set_result(score);
