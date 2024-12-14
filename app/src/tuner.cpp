@@ -21,20 +21,20 @@ void tune(std::string file)
 		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			for(auto &p: positions) {
-				search_pars_t sp { &cur, false, history };
-				sp.stop = new end_t();
-				sp.stop->flag = false;
+			search_pars_t sp { &cur, false, history };
+			sp.stop = new end_t();
+			sp.stop->flag = false;
 
-				auto & pos = p.position();
-				int score = qs(pos, -32767, 32767, 0, &sp, 0);
+#pragma omp parallel
+			for(auto &p: positions) {
+				const auto & pos = p.position();
+				int score = eval(pos, cur);
 				if (pos.side_to_move() != libchess::constants::WHITE)
 					score = -score;
-
-				delete sp.stop;
-
 				p.set_result(score);
 			}
+
+			delete sp.stop;
 		}};
 
 
