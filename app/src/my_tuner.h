@@ -240,6 +240,7 @@ class Tuner {
             return (random_bool(0.5) ? 1 : -1) * increment_values[increment_distribution(rng)];
         };
 
+	time_t start_time = time(nullptr);
         double current_error = error();
         for (int step = 0; step < max_steps; ++step) {
             double temperature = 1.0 / (1.667 * (1.0 + double(step)));
@@ -261,9 +262,11 @@ class Tuner {
             }
 
             display();
-	    time_t t = time(nullptr);
+	    time_t now = time(nullptr);
+	    long diff = std::max(long(now - start_time), 1l);
             std::cout << "acceptance prob: " << acceptance_probability << " step: " << step
-                      << " temperature: " << temperature << " error: " << current_error << " " << ctime(&t);
+                      << " temperature: " << temperature << " error: " << current_error << " t phase 1 left: " <<
+		      (max_steps - step) * step / diff << std::endl;
         }
     }
 
