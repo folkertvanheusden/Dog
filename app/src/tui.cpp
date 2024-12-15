@@ -207,8 +207,10 @@ void tui()
 				else
 					player = libchess::constants::BLACK;
 			}
-			else if (parts[0] == "time" && parts.size() == 2)
+			else if (parts[0] == "time" && parts.size() == 2) {
 				think_time = std::stod(parts[1]) * 1000;
+				write_settings();
+			}
 			else if (parts[0] == "trace") {
 				if (parts.size() == 2)
 					trace_enabled = parts[1] == "on";
