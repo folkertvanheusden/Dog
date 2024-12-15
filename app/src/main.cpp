@@ -1160,7 +1160,7 @@ void stop_ponder()
 
 void pause_ponder()
 {
-	trace(" *** PAUSE PONDER ***\n");
+	trace("# *** PAUSE PONDER ***\n");
 	search_fen_lock.lock();
 	search_fen.clear();
 	search_fen_version++;
@@ -1169,7 +1169,7 @@ void pause_ponder()
 
 void set_new_ponder_position()
 {
-	trace(" *** RESTART PONDER ***\n");
+	trace("# *** RESTART PONDER ***\n");
 	search_fen_lock.lock();
 	search_fen = positiont1.fen();
 	search_fen_version++;
