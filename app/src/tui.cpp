@@ -155,6 +155,8 @@ void tui()
 {
 	load_settings();
 
+	set_thread_name("TUI");
+
 	if (do_ponder)
 		set_new_ponder_position();
 

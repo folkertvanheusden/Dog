@@ -113,7 +113,8 @@ void clear_flag(end_t *const stop)
 	stop->flag = false;
 }
 
-auto stop_handler = []() {
+auto stop_handler = []()
+{
 	set_flag(sp1.stop);
 #if !defined(__ANDROID__)
 	trace("# stop_handler invoked\n");
@@ -126,7 +127,8 @@ std::thread *ponder_thread_handle { nullptr };
 TaskHandle_t ponder_thread_handle;
 #endif
 
-void think_timeout(void *arg) {
+void think_timeout(void *arg)
+{
 	end_t *stop = reinterpret_cast<end_t *>(arg);
 	set_flag(stop);
 }
@@ -148,11 +150,10 @@ const esp_timer_create_args_t think_timeout_pars = {
             .name     = "searchto"
 };
 
-void blink_led(void *arg) {
+void blink_led(void *arg)
+{
 	led_t *l = reinterpret_cast<led_t *>(arg);
-
 	gpio_set_level(l->pin_nr, l->state);
-
 	l->state = !l->state;
 }
 
@@ -214,6 +215,15 @@ auto position_handler = [](const libchess::UCIPositionParameters & position_para
 		positiont1.make_move(*libchess::Move::from(move_str));
 };
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+void set_thread_name(std::string name)
+{
+        if (name.length() > 15)
+                name = name.substr(0, 15);
+
+        pthread_setname_np(pthread_self(), name.c_str());
+}
+#endif
 
 inbuf i;
 std::istream is(&i);
@@ -262,15 +272,13 @@ void vApplicationMallocFailedHook()
 
 void vTaskGetRunTimeStats()
 {
-	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
+	UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
+	TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
 
-	TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
-
-	uint32_t ulTotalRunTime = 0;
+	uint32_t      ulTotalRunTime    = 0;
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
 
 	ulTotalRunTime /= 100UL;
-
 	if (ulTotalRunTime > 0) {
 		for(int x = 0; x < uxArraySize; x++) {
 			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
@@ -819,6 +827,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			think_timeout_timer = new std::thread([search_time, sp] {
+					set_thread_name("searchtotimer");
 					timer(search_time, sp->stop);
 				});
 #else
@@ -1007,6 +1016,7 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
+	set_thread_name("PT");
 #if !defined(__ANDROID__)
 	trace("# pondering started\n");
 #endif
@@ -1068,23 +1078,22 @@ void ponder_thread(void *p)
 
 			trace("# starting %d threads\n", n_threads);
 
-			std::vector<libchess::Position *> positions;
 			std::vector<std::thread *>        ths;
 			std::optional<uint64_t>           node_limit;
 
 			for(int i=0; i<n_threads; i++) {
-				auto position = new libchess::Position(positiont2.fen());
-				positions.push_back(position);
-				ths.push_back(new std::thread(search_it, position, 2147483647, true, &sp2.at(i), -1, i, node_limit));
+				ths.push_back(new std::thread([i, node_limit] {
+					auto *p = new libchess::Position(positiont2.fen());
+                                        set_thread_name("PT-" + std::to_string(i));
+					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit);
+					delete p;
+                                }));
 			}
 
 			for(auto & th : ths) {
 				th->join();
 				delete th;
 			}
-
-			for(auto & p : positions)
-				delete p;
 #else
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
 #endif

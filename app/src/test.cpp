@@ -14,6 +14,8 @@ void tests()
 		exit(1); \
 	}
 
+	set_thread_name("TESTS");
+
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
 	
