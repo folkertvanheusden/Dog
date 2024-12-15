@@ -43,49 +43,123 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
-void display(const libchess::Position & p, const bool large)
+void display(const libchess::Position & p, const bool large, const bool colors)
 {
 	if (!large) {
 		p.display();
 		return;
 	}
 
+	if (colors) {
+		printf("\x1b[0m");
+		printf("\x1b[43;30m    ");
+		for(int x=0; x<8; x++)
+			printf("   ");
+		printf(" \x1b[0m\n");
+	}
+
 	for(int y=7; y>=0; y--) {
-		printf(" %c |", y + '1');
+		if (colors)
+			printf("\x1b[43;30m %c |", y + '1');
+		else
+			printf(" %c |", y + '1');
 		for(int x=0; x<8; x++) {
 			const auto piece = p.piece_on(libchess::Square::from(libchess::File(x), libchess::Rank(y)).value());
 			if (piece.has_value()) {
-				int    c     = piece.value().type().to_char();
+				int  c        = piece.value().type().to_char();
+				bool is_white = piece.value().color() == libchess::constants::WHITE;
+				if (colors) {
+					if (is_white)
+						printf("\x1b[30;47m");
+					else
+						printf("\x1b[40;37m");
+				}
 				printf(" %c ", piece.value().color() == libchess::constants::WHITE ? toupper(c) : c);
+				if (colors)
+					printf("\x1b[43;30m");
 			}
 			else {
 				printf("   ");
 			}
 		}
+		printf(" \x1b[0m\n");
+	}
+	if (colors) {
+		printf("\x1b[43;30m   +");
+		for(int x=0; x<8; x++)
+			printf("---");
+		printf(" \x1b[0m\n");
+		printf("\x1b[43;30m    ");
+		for(int x=0; x<8; x++)
+			printf(" %c ", 'A' + x);
+		printf(" \x1b[0m\n");
+		printf("\x1b[0m");
+	}
+	else {
+		printf("   +");
+		for(int x=0; x<8; x++)
+			printf("---");
+		printf("\n");
+		printf("    ");
+		for(int x=0; x<8; x++)
+			printf(" %c ", 'A' + x);
 		printf("\n");
 	}
-	printf("   +");
-	for(int x=0; x<8; x++)
-		printf("---");
-	printf("\n");
-	printf("    ");
-	for(int x=0; x<8; x++)
-		printf(" %c ", 'A' + x);
-	printf("\n");
+}
+
+bool colors        = false;
+bool default_trace = false;
+int  think_time    = 1000;  // milliseconds
+
+void write_settings()
+{
+#if defined(ESP32)
+	FILE *fh = fopen("/spiffs/settings.dat", "w");
+	if (!fh) {
+		fprintf(stderr, "Cannot write settings\n");
+		return;
+	}
+
+	fprintf(fh, "%d\n", colors);
+	fprintf(fh, "%d\n", default_trace);
+	fprintf(fh, "%d\n", think_time);
+
+	fclose(fh);
+#endif
+}
+
+void load_settings()
+{
+#if defined(ESP32)
+	FILE *fh = fopen("/spiffs/settings.dat", "r");
+	if (!fh)
+		return;
+
+	char buffer[16] { };
+	fgets(buffer, sizeof buffer, fh);
+	colors        = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	default_trace = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	think_time    = atoi(buffer);
+
+	fclose(fh);
+#endif
 }
 
 void tui()
 {
-	int think_time         = 1000;  // in ms
+	load_settings();
+
 	libchess::Color player = positiont1.side_to_move();
 
 	set_ponder_lazy();
 
-	trace_enabled = false;
+	trace_enabled = default_trace;
 	i.set_local_echo(true);
 
 	for(;;) {
-		display(positiont1, true);
+		display(positiont1, true, colors);
 
 		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (player == positiont1.side_to_move() || finished) {
@@ -112,6 +186,7 @@ void tui()
 				printf("eval    show current evaluation score\n");
 				printf("undo    take back last move\n");
 				printf("trace   on/off\n");
+				printf("colors  on/off\n");
 				printf("perft   run \"perft\" for the given depth\n");
 			}
 			else if (parts[0] == "quit") {
@@ -134,8 +209,23 @@ void tui()
 			}
 			else if (parts[0] == "time" && parts.size() == 2)
 				think_time = std::stod(parts[1]) * 1000;
-			else if (parts[0] == "trace" && parts.size() == 2)
-				trace_enabled = parts[1] == "on";
+			else if (parts[0] == "trace") {
+				if (parts.size() == 2)
+					trace_enabled = parts[1] == "on";
+				else
+					trace_enabled = !trace_enabled;
+				default_trace = trace_enabled;
+				write_settings();
+				printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
+			}
+			else if (parts[0] == "colors") {
+				if (parts.size() == 2)
+					colors = parts[1] == "on";
+				else
+					colors = !colors;
+				write_settings();
+				printf("Colors are now %senabled\n", colors ? "":"not ");
+			}
 			else if (parts[0] == "undo") {
 				positiont1.unmake_move();
 				player = positiont1.side_to_move();
@@ -160,7 +250,7 @@ void tui()
 			start_blink(led_green_timer);
 #endif
 
-			printf("color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+			printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };

@@ -35,10 +35,10 @@
 #include "usb-device.h"
 #else
 #include <driver/uart.h>
-
 #include <driver/gpio.h>
 #include <esp32/rom/uart.h>
-
+#include <esp_err.h>
+#include <esp_spiffs.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 
@@ -1618,11 +1618,28 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
+	esp_vfs_spiffs_conf_t conf = {
+		.base_path       = "/spiffs",
+		.partition_label = NULL,
+		.max_files       = 5,
+		.format_if_mount_failed = true
+	};
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	if (ret != ESP_OK) {
+		if (ret == ESP_FAIL)
+			printf("Failed to mount or format filesystem\n");
+		else if (ret == ESP_ERR_NOT_FOUND)
+			printf("Failed to find SPIFFS partition\n");
+		else
+			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
+		printf("Did you run \"pio run -t uploadfs\"?\n");
+	}
+
+	run_2nd_thread = true;
+
 	hello();
 
 	gpio_set_level(LED_INTERNAL, 0);
-
-	run_2nd_thread = true;
 
 	main_task();
 
