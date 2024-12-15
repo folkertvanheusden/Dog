@@ -1445,17 +1445,17 @@ void main_task()
 	uci_service.register_go_handler      (go_handler);
 	uci_service.register_stop_handler    (stop_handler);
 
-	uci_service.register_handler("play",       play_handler);
-	uci_service.register_handler("eval",       eval_handler);
-	uci_service.register_handler("fen",        fen_handler);
-	uci_service.register_handler("d",          display_handler);
-	uci_service.register_handler("display",    display_handler);
-	uci_service.register_handler("dog",        dog_handler);
-	uci_service.register_handler("max",        dog_handler);
-	uci_service.register_handler("perft",      perft_handler);
-	uci_service.register_handler("ucinewgame", ucinewgame_handler);
-	uci_service.register_handler("tui",        tui_handler);
-	uci_service.register_handler("help",       help_handler);
+	uci_service.register_handler("play",       play_handler, true);
+	uci_service.register_handler("eval",       eval_handler, true);
+	uci_service.register_handler("fen",        fen_handler, true);
+	uci_service.register_handler("d",          display_handler, true);
+	uci_service.register_handler("display",    display_handler, true);
+	uci_service.register_handler("dog",        dog_handler, false);
+	uci_service.register_handler("max",        dog_handler, false);
+	uci_service.register_handler("perft",      perft_handler, true);
+	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
+	uci_service.register_handler("tui",        tui_handler, true);
+	uci_service.register_handler("help",       help_handler, false);
 
 	for(;;) {
 		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
