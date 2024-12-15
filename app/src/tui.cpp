@@ -1,6 +1,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
+#include <ctype.h>
 #include <thread>
 
 #include <libchess/Position.h>
@@ -42,6 +43,37 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
+void display(const libchess::Position & p, const bool large)
+{
+	if (!large) {
+		p.display();
+		return;
+	}
+
+	for(int y=7; y>=0; y--) {
+		printf(" %c |", y + '1');
+		for(int x=0; x<8; x++) {
+			const auto piece = p.piece_on(libchess::Square::from(libchess::File(x), libchess::Rank(y)).value());
+			if (piece.has_value()) {
+				int    c     = piece.value().type().to_char();
+				printf(" %c ", piece.value().color() == libchess::constants::WHITE ? toupper(c) : c);
+			}
+			else {
+				printf("   ");
+			}
+		}
+		printf("\n");
+	}
+	printf("   +");
+	for(int x=0; x<8; x++)
+		printf("---");
+	printf("\n");
+	printf("    ");
+	for(int x=0; x<8; x++)
+		printf(" %c ", 'A' + x);
+	printf("\n");
+}
+
 void tui()
 {
 	int think_time         = 1000;  // in ms
@@ -53,7 +85,7 @@ void tui()
 	i.set_local_echo(true);
 
 	for(;;) {
-		positiont1.display();
+		display(positiont1, true);
 
 		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (player == positiont1.side_to_move() || finished) {
