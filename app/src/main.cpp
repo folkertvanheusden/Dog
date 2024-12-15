@@ -202,7 +202,7 @@ libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
 std::mutex  search_fen_lock;
-std::string search_fen         { libchess::constants::STARTPOS_FEN };
+std::string search_fen;
 uint16_t    search_fen_version { 0 };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
@@ -234,7 +234,6 @@ auto thread_count_handler = [](const int value)  {
 
 	for(auto & sp: sp2)
 		free(sp.history);
-
 	sp2.clear();
 
 	for(int i=0; i<thread_count - 1; i++) {
@@ -1069,26 +1068,23 @@ void ponder_thread(void *p)
 
 			trace("# starting %d threads\n", n_threads);
 
-			if (n_threads > 0) {
-				std::vector<libchess::Position *> positions;
-				std::vector<std::thread *>        ths;
-				std::optional<uint64_t>           node_limit;
+			std::vector<libchess::Position *> positions;
+			std::vector<std::thread *>        ths;
+			std::optional<uint64_t>           node_limit;
 
-				for(int i=0; i<n_threads; i++) {
-					auto position = new libchess::Position(positiont2);
-					positions.push_back(position);
-
-					ths.push_back(new std::thread(search_it, position, 2147483647, true, &sp2.at(i), -1, i, node_limit));
-				}
-
-				for(auto & th : ths) {
-					th->join();
-					delete th;
-				}
-
-				for(auto & p : positions)
-					delete p;
+			for(int i=0; i<n_threads; i++) {
+				auto position = new libchess::Position(positiont2.fen());
+				positions.push_back(position);
+				ths.push_back(new std::thread(search_it, position, 2147483647, true, &sp2.at(i), -1, i, node_limit));
 			}
+
+			for(auto & th : ths) {
+				th->join();
+				delete th;
+			}
+
+			for(auto & p : positions)
+				delete p;
 #else
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
 #endif
