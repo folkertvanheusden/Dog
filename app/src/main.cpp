@@ -715,7 +715,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (sp->history && !pos.is_capture_move(move)) {
+					if (!pos.is_capture_move(move)) {
 						auto piece_from = pos.piece_on(move.from_square());
 
 						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()] += depth * depth;
@@ -1049,8 +1049,7 @@ void ponder_thread(void *p)
 			for(auto & sp: sp2)
 				memset(sp.history, 0x00, history_size * sizeof(uint32_t));
 #else
-			if (sp2.history)
-				memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
+			memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
 #endif
 
 #if !defined(__ANDROID__)
