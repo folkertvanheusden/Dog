@@ -67,12 +67,8 @@ bool with_syzygy = false;
 #include "tuners.h"
 
 
-std::atomic_bool ponder_quit    { false };
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-bool             run_2nd_thread { false };
-#else
-bool             run_2nd_thread { true  };
-#endif
+std::atomic_bool ponder_quit  { false };
+int              thread_count = 1;
 
 void start_ponder();
 void stop_ponder();
@@ -225,7 +221,6 @@ libchess::UCIService uci_service{"Dog v2.4", "Folkert van Heusden", std::cout, i
 
 tt tti;
 
-int  thread_count = 1;
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
@@ -1053,14 +1048,14 @@ void ponder_thread(void *p)
 #endif
 
 #if !defined(__ANDROID__)
-			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, run_2nd_thread, search_fen.c_str());
+			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, thread_count > 1, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
 		}
 		search_fen_lock.unlock();
 
-		if (valid && run_2nd_thread) {
+		if (valid && thread_count > 1 && allow_ponder) {
 #if !defined(__ANDROID__)
 			trace("# ponder search start\n");
 #endif
@@ -1113,7 +1108,7 @@ void ponder_thread(void *p)
 	}
 
 #if !defined(__ANDROID__)
-	trace("# pondering stopping\n");
+	trace("# pondering thread stopping\n");
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1141,6 +1136,7 @@ void start_ponder()
 
 void stop_ponder()
 {
+	trace(" *** STOP PONDER ***\n");
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (ponder_thread_handle) {
 		ponder_quit = true;
@@ -1153,31 +1149,24 @@ void stop_ponder()
 	}
 #else
 	ponder_quit = true;
-
 	set_flag(&stop2);
 #endif
 }
 
-void set_ponder_lazy()
+void pause_ponder()
 {
+	trace(" *** PAUSE PONDER ***\n");
 	search_fen_lock.lock();
-	run_2nd_thread = thread_count >= 2;
-	search_fen     = positiont1.fen();
+	search_fen.clear();
 	search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	for(auto & sp: sp2)
-		set_flag(sp.stop);
-#else
-	set_flag(&stop2);
-#endif
 	search_fen_lock.unlock();
 }
 
-void restart_ponder()
+void set_new_ponder_position()
 {
+	trace(" *** RESTART PONDER ***\n");
 	search_fen_lock.lock();
-	run_2nd_thread = allow_ponder;
-	search_fen     = positiont1.fen();
+	search_fen = positiont1.fen();
 	search_fen_version++;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2)
@@ -1269,7 +1258,6 @@ void main_task()
 				tti.inc_age();
 
 				sp1.nodes  = 0;
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 				for(auto & sp: sp2)
 					sp.nodes = 0;
@@ -1280,22 +1268,11 @@ void main_task()
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 				sp1.md     = 1;
 				sp2.md     = 1;
-
 				start_blink(led_green_timer);
 #endif
 
-				// restart ponder-thread
-				search_fen_lock.lock();
-				run_2nd_thread = allow_ponder;
-				search_fen     = positiont1.fen();
-				search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-				for(auto & sp: sp2)
-					set_flag(sp.stop);
-#else
-				set_flag(&stop2);
-#endif
-				search_fen_lock.unlock();
+				// handle ponder-thread
+				set_new_ponder_position();
 
 				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
@@ -1333,7 +1310,6 @@ void main_task()
 			for(auto & sp: sp2)
 				sp.nodes = 0;
 #endif
-
 			sp1.nodes    = 0;
 
 			tti.inc_age();
@@ -1394,7 +1370,7 @@ void main_task()
 			}
 
 			// let the ponder thread run as a lazy-smp thread
-			set_ponder_lazy();
+			set_new_ponder_position();
 
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
@@ -1438,7 +1414,7 @@ void main_task()
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
 			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
-			restart_ponder();
+			set_new_ponder_position();
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
@@ -1633,8 +1609,6 @@ extern "C" void app_main()
 			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
 		printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
-
-	run_2nd_thread = true;
 
 	hello();
 

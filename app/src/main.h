@@ -89,6 +89,7 @@ public:
 
 void clear_flag(end_t *const stop);
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
-void set_ponder_lazy();
-void restart_ponder();
+void set_new_ponder_position();
+void start_ponder();
+void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
