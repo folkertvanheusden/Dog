@@ -1620,11 +1620,9 @@ extern "C" void app_main()
 
 	hello();
 
-	run_2nd_thread = true;
-
-	start_ponder();
-
 	gpio_set_level(LED_INTERNAL, 0);
+
+	run_2nd_thread = true;
 
 	main_task();
 
