@@ -24,10 +24,8 @@
 #include <chrono>
 #include <fcntl.h>
 #include <limits.h>
-#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <sys/time.h>
@@ -35,10 +33,10 @@
 #include "usb-device.h"
 #else
 #include <driver/uart.h>
-
 #include <driver/gpio.h>
 #include <esp32/rom/uart.h>
-
+#include <esp_err.h>
+#include <esp_spiffs.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 
@@ -67,12 +65,8 @@ bool with_syzygy = false;
 #include "tuners.h"
 
 
-std::atomic_bool ponder_quit    { false };
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-bool             run_2nd_thread { false };
-#else
-bool             run_2nd_thread { true  };
-#endif
+std::atomic_bool ponder_quit  { false };
+int              thread_count = 1;
 
 void start_ponder();
 void stop_ponder();
@@ -117,7 +111,8 @@ void clear_flag(end_t *const stop)
 	stop->flag = false;
 }
 
-auto stop_handler = []() {
+auto stop_handler = []()
+{
 	set_flag(sp1.stop);
 #if !defined(__ANDROID__)
 	trace("# stop_handler invoked\n");
@@ -130,7 +125,8 @@ std::thread *ponder_thread_handle { nullptr };
 TaskHandle_t ponder_thread_handle;
 #endif
 
-void think_timeout(void *arg) {
+void think_timeout(void *arg)
+{
 	end_t *stop = reinterpret_cast<end_t *>(arg);
 	set_flag(stop);
 }
@@ -152,11 +148,10 @@ const esp_timer_create_args_t think_timeout_pars = {
             .name     = "searchto"
 };
 
-void blink_led(void *arg) {
+void blink_led(void *arg)
+{
 	led_t *l = reinterpret_cast<led_t *>(arg);
-
 	gpio_set_level(l->pin_nr, l->state);
-
 	l->state = !l->state;
 }
 
@@ -206,7 +201,7 @@ libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
 std::mutex  search_fen_lock;
-std::string search_fen         { libchess::constants::STARTPOS_FEN };
+std::string search_fen;
 uint16_t    search_fen_version { 0 };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
@@ -218,6 +213,15 @@ auto position_handler = [](const libchess::UCIPositionParameters & position_para
 		positiont1.make_move(*libchess::Move::from(move_str));
 };
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+void set_thread_name(std::string name)
+{
+        if (name.length() > 15)
+                name = name.substr(0, 15);
+
+        pthread_setname_np(pthread_self(), name.c_str());
+}
+#endif
 
 inbuf i;
 std::istream is(&i);
@@ -225,7 +229,6 @@ libchess::UCIService uci_service{"Dog v2.4", "Folkert van Heusden", std::cout, i
 
 tt tti;
 
-int  thread_count = 1;
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
@@ -239,7 +242,6 @@ auto thread_count_handler = [](const int value)  {
 
 	for(auto & sp: sp2)
 		free(sp.history);
-
 	sp2.clear();
 
 	for(int i=0; i<thread_count - 1; i++) {
@@ -268,15 +270,13 @@ void vApplicationMallocFailedHook()
 
 void vTaskGetRunTimeStats()
 {
-	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
+	UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
+	TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
 
-	TaskStatus_t *pxTaskStatusArray = (TaskStatus_t *)pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
-
-	uint32_t ulTotalRunTime = 0;
+	uint32_t      ulTotalRunTime    = 0;
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
 
 	ulTotalRunTime /= 100UL;
-
 	if (ulTotalRunTime > 0) {
 		for(int x = 0; x < uxArraySize; x++) {
 			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
@@ -715,7 +715,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (sp->history && !pos.is_capture_move(move)) {
+					if (!pos.is_capture_move(move)) {
 						auto piece_from = pos.piece_on(move.from_square());
 
 						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()] += depth * depth;
@@ -825,6 +825,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			think_timeout_timer = new std::thread([search_time, sp] {
+					set_thread_name("searchtotimer");
 					timer(search_time, sp->stop);
 				});
 #else
@@ -1013,6 +1014,7 @@ void gpio_set_level(int a, int b)
 
 void ponder_thread(void *p)
 {
+	set_thread_name("PT");
 #if !defined(__ANDROID__)
 	trace("# pondering started\n");
 #endif
@@ -1049,19 +1051,18 @@ void ponder_thread(void *p)
 			for(auto & sp: sp2)
 				memset(sp.history, 0x00, history_size * sizeof(uint32_t));
 #else
-			if (sp2.history)
-				memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
+			memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
 #endif
 
 #if !defined(__ANDROID__)
-			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, run_2nd_thread, search_fen.c_str());
+			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, thread_count > 1, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
 		}
 		search_fen_lock.unlock();
 
-		if (valid && run_2nd_thread) {
+		if (valid && thread_count > 1 && allow_ponder) {
 #if !defined(__ANDROID__)
 			trace("# ponder search start\n");
 #endif
@@ -1075,25 +1076,21 @@ void ponder_thread(void *p)
 
 			trace("# starting %d threads\n", n_threads);
 
-			if (n_threads > 0) {
-				std::vector<libchess::Position *> positions;
-				std::vector<std::thread *>        ths;
-				std::optional<uint64_t>           node_limit;
+			std::vector<std::thread *>        ths;
+			std::optional<uint64_t>           node_limit;
 
-				for(int i=0; i<n_threads; i++) {
-					auto position = new libchess::Position(positiont2);
-					positions.push_back(position);
-
-					ths.push_back(new std::thread(search_it, position, 2147483647, true, &sp2.at(i), -1, i, node_limit));
-				}
-
-				for(auto & th : ths) {
-					th->join();
-					delete th;
-				}
-
-				for(auto & p : positions)
+			for(int i=0; i<n_threads; i++) {
+				ths.push_back(new std::thread([i, node_limit] {
+					auto *p = new libchess::Position(positiont2.fen());
+                                        set_thread_name("PT-" + std::to_string(i));
+					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit);
 					delete p;
+                                }));
+			}
+
+			for(auto & th : ths) {
+				th->join();
+				delete th;
 			}
 #else
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
@@ -1114,7 +1111,7 @@ void ponder_thread(void *p)
 	}
 
 #if !defined(__ANDROID__)
-	trace("# pondering stopping\n");
+	trace("# pondering thread stopping\n");
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1142,6 +1139,7 @@ void start_ponder()
 
 void stop_ponder()
 {
+	trace(" *** STOP PONDER ***\n");
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (ponder_thread_handle) {
 		ponder_quit = true;
@@ -1154,31 +1152,24 @@ void stop_ponder()
 	}
 #else
 	ponder_quit = true;
-
 	set_flag(&stop2);
 #endif
 }
 
-void set_ponder_lazy()
+void pause_ponder()
 {
+	trace("# *** PAUSE PONDER ***\n");
 	search_fen_lock.lock();
-	run_2nd_thread = thread_count >= 2;
-	search_fen     = positiont1.fen();
+	search_fen.clear();
 	search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	for(auto & sp: sp2)
-		set_flag(sp.stop);
-#else
-	set_flag(&stop2);
-#endif
 	search_fen_lock.unlock();
 }
 
-void restart_ponder()
+void set_new_ponder_position()
 {
+	trace("# *** RESTART PONDER ***\n");
 	search_fen_lock.lock();
-	run_2nd_thread = allow_ponder;
-	search_fen     = positiont1.fen();
+	search_fen = positiont1.fen();
 	search_fen_version++;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2)
@@ -1270,7 +1261,6 @@ void main_task()
 				tti.inc_age();
 
 				sp1.nodes  = 0;
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 				for(auto & sp: sp2)
 					sp.nodes = 0;
@@ -1281,22 +1271,11 @@ void main_task()
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 				sp1.md     = 1;
 				sp2.md     = 1;
-
 				start_blink(led_green_timer);
 #endif
 
-				// restart ponder-thread
-				search_fen_lock.lock();
-				run_2nd_thread = allow_ponder;
-				search_fen     = positiont1.fen();
-				search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-				for(auto & sp: sp2)
-					set_flag(sp.stop);
-#else
-				set_flag(&stop2);
-#endif
-				search_fen_lock.unlock();
+				// handle ponder-thread
+				set_new_ponder_position();
 
 				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
@@ -1334,7 +1313,6 @@ void main_task()
 			for(auto & sp: sp2)
 				sp.nodes = 0;
 #endif
-
 			sp1.nodes    = 0;
 
 			tti.inc_age();
@@ -1395,7 +1373,7 @@ void main_task()
 			}
 
 			// let the ponder thread run as a lazy-smp thread
-			set_ponder_lazy();
+			set_new_ponder_position();
 
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
@@ -1439,7 +1417,7 @@ void main_task()
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
 			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
-			restart_ponder();
+			set_new_ponder_position();
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
@@ -1465,17 +1443,17 @@ void main_task()
 	uci_service.register_go_handler      (go_handler);
 	uci_service.register_stop_handler    (stop_handler);
 
-	uci_service.register_handler("play",       play_handler);
-	uci_service.register_handler("eval",       eval_handler);
-	uci_service.register_handler("fen",        fen_handler);
-	uci_service.register_handler("d",          display_handler);
-	uci_service.register_handler("display",    display_handler);
-	uci_service.register_handler("dog",        dog_handler);
-	uci_service.register_handler("max",        dog_handler);
-	uci_service.register_handler("perft",      perft_handler);
-	uci_service.register_handler("ucinewgame", ucinewgame_handler);
-	uci_service.register_handler("tui",        tui_handler);
-	uci_service.register_handler("help",       help_handler);
+	uci_service.register_handler("play",       play_handler, true);
+	uci_service.register_handler("eval",       eval_handler, true);
+	uci_service.register_handler("fen",        fen_handler, true);
+	uci_service.register_handler("d",          display_handler, true);
+	uci_service.register_handler("display",    display_handler, true);
+	uci_service.register_handler("dog",        dog_handler, false);
+	uci_service.register_handler("max",        dog_handler, false);
+	uci_service.register_handler("perft",      perft_handler, true);
+	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
+	uci_service.register_handler("tui",        tui_handler, true);
+	uci_service.register_handler("help",       help_handler, false);
 
 	for(;;) {
 		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
@@ -1554,8 +1532,10 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
+#if !defined(_WIN32)
 		else if (c == 'u')
 			usb_disp_thread = new std::thread(usb_disp, optarg);
+#endif
 		else {
 			help();
 
@@ -1618,11 +1598,24 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
+	esp_vfs_spiffs_conf_t conf = {
+		.base_path       = "/spiffs",
+		.partition_label = NULL,
+		.max_files       = 5,
+		.format_if_mount_failed = true
+	};
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	if (ret != ESP_OK) {
+		if (ret == ESP_FAIL)
+			printf("Failed to mount or format filesystem\n");
+		else if (ret == ESP_ERR_NOT_FOUND)
+			printf("Failed to find SPIFFS partition\n");
+		else
+			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
+		printf("Did you run \"pio run -t uploadfs\"?\n");
+	}
+
 	hello();
-
-	run_2nd_thread = true;
-
-	start_ponder();
 
 	gpio_set_level(LED_INTERNAL, 0);
 

@@ -7,6 +7,7 @@
 
 tt::tt()
 {
+	reset();
 }
 
 tt::~tt()
@@ -28,7 +29,6 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	uint64_t        index = hash % n_entries;
 
 	tt_entry *const e     = entries[index].entries;
-
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		tt_entry & cur = e[i];
 
@@ -46,12 +46,11 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 {
 	unsigned long int index = hash % n_entries; // FIXME is biased at the bottom of the list
 
-	tt_entry   *const e     = entries[index].entries;
-
 	int use_sub_index       =  -1;
 	int min_depth           = 999;
 	int min_depth_index     =  -1;
 
+	tt_entry   *const e     = entries[index].entries;
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		if ((e[i].hash ^ e[i].data_.data) == hash) {
 			if (e[i].data_._data.depth > d) {
