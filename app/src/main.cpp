@@ -24,10 +24,8 @@
 #include <chrono>
 #include <fcntl.h>
 #include <limits.h>
-#include <poll.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <termios.h>
 #include <thread>
 #include <unistd.h>
 #include <sys/time.h>
@@ -1534,8 +1532,10 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
+#if !defined(_WIN32)
 		else if (c == 'u')
 			usb_disp_thread = new std::thread(usb_disp, optarg);
+#endif
 		else {
 			help();
 
