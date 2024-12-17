@@ -6,9 +6,9 @@
 #include <numeric>
 #include <string>
 
-#include "libchess/Tuner.h"
-
+#include "my_tuner.h"
 #include "tune.h"
+
 
 class eval_par
 {

@@ -26,7 +26,7 @@ eval_par::~eval_par()
 std::vector<libchess::TunableParameter> eval_par::get_tunable_parameters() const
 {
 	std::vector<libchess::TunableParameter> list;
-
+	list.reserve(m.size());
 	for(auto & it : m)
 		list.push_back({ it.first, *it.second });
 
