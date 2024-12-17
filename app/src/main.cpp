@@ -72,7 +72,7 @@ void start_ponder();
 void stop_ponder();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -81,7 +81,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -246,7 +246,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();
@@ -331,6 +331,11 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 }
 #endif
 
+inline int history_index(const libchess::Color & side, const libchess::PieceType & from_type, const libchess::Square & sq)
+{
+	return side * 6 * 64 + from_type * 64 + sq;
+}
+
 sort_movelist_compare::sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp) :
 	p(p),
 	ep(sp->parameters),
@@ -378,7 +383,8 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
 	}
 	else {
-		score += sp->history[p->side_to_move() * 6 * 64 + from_type * 64 + move.to_square()] << 8;
+		int index = history_index(p->side_to_move(), from_type, move.to_square());
+		score += sp->history[index] << 8;
 	}
 
 	score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
@@ -714,9 +720,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			if (score > alpha) {
 				if (score >= beta) {
 					if (!pos.is_capture_move(move)) {
-						auto piece_from = pos.piece_on(move.from_square());
+						constexpr int max_history = 65530;
+						auto piece_type_from = pos.piece_type_on(move.from_square());
+						int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
+						int  bonus           = depth * depth;
+						int  clamped_bonus   = std::min(bonus, max_history);
+						int  final_value     = clamped_bonus - sp->history[index] * clamped_bonus / max_history;
 
-						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()] += depth * depth;
+						sp->history[index]  += final_value;
 					}
 
 					break;
@@ -1047,9 +1058,9 @@ void ponder_thread(void *p)
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			for(auto & sp: sp2)
-				memset(sp.history, 0x00, history_size * sizeof(uint32_t));
+				memset(sp.history, 0x00, history_malloc_size);
 #else
-			memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
+			memset(sp2.history, 0x00, history_malloc_size);
 #endif
 
 #if !defined(__ANDROID__)
@@ -1545,7 +1556,7 @@ int main(int argc, char *argv[])
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
 
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();
