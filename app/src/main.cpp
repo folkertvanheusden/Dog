@@ -213,15 +213,15 @@ auto position_handler = [](const libchess::UCIPositionParameters & position_para
 		positiont1.make_move(*libchess::Move::from(move_str));
 };
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void set_thread_name(std::string name)
 {
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
         if (name.length() > 15)
                 name = name.substr(0, 15);
 
         pthread_setname_np(pthread_self(), name.c_str());
-}
 #endif
+}
 
 inbuf i;
 std::istream is(&i);
