@@ -744,7 +744,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (beta_cutoff_move.has_value()) {
 		int bonus = depth * depth;
 		for(auto move : move_list) {
-			if (!pos.is_capture_move(move))
+			if (pos.is_capture_move(move))
 				continue;
 			auto piece_type_from = pos.piece_type_on(move.from_square());
 			int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
