@@ -213,15 +213,15 @@ auto position_handler = [](const libchess::UCIPositionParameters & position_para
 		positiont1.make_move(*libchess::Move::from(move_str));
 };
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void set_thread_name(std::string name)
 {
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
         if (name.length() > 15)
                 name = name.substr(0, 15);
 
         pthread_setname_np(pthread_self(), name.c_str());
-}
 #endif
+}
 
 inbuf i;
 std::istream is(&i);
@@ -635,7 +635,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 if (nmscore >= beta) {
 			libchess::Move ignore2;
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
-
 			if (verification >= beta)
 				return beta;
                 }
@@ -646,7 +645,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	// IID //
 	libchess::Move iid_move { 0 };
-
 	if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2) {
 		if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp, thread_nr)) > 9800)
 			extension |= 1;
@@ -663,7 +661,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	else if (iid_move.value())
 		smc.add_first_move(iid_move);
 
-	if (m->value())
+	if (m->value() && pos.is_capture_move(*m))
 		smc.add_first_move(*m);
 
 	sort_movelist(move_list, smc);
@@ -1499,7 +1497,7 @@ void help()
 	print_max();
 
 	printf("-t x   thread count\n");
-	printf("-U x   run unit test x\n");
+	printf("-U     run unit tests\n");
 	printf("-s x   set path to Syzygy\n");
 	printf("-u x   USB display device\n");
 }
