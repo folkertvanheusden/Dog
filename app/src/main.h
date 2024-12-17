@@ -21,6 +21,7 @@ typedef struct
 	uint16_t  md;
 
 	uint32_t  nodes;
+	uint32_t  qnodes;
 
 	end_t    *stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)

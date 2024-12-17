@@ -72,7 +72,7 @@ void start_ponder();
 void stop_ponder();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -81,7 +81,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -246,7 +246,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();
@@ -444,7 +444,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
-	sp->nodes++;
+	sp->qnodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
@@ -918,12 +918,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				uint64_t thought_ms        = (esp_timer_get_time() - t_offset) / 1000;
 
 				uint64_t nodes             = sp1.nodes;
+				uint64_t qnodes            = sp1.qnodes;
 				uint32_t syzygy_queries    = 0;
 				uint32_t syzygy_query_hits = 0;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-				for(auto & sp: sp2)
+				for(auto & sp: sp2) {
 					nodes += sp.nodes;
+					qnodes += sp.qnodes;
+				}
 
 				for(auto & sp: sp2) {
 					syzygy_queries += sp.syzygy_queries;
@@ -931,6 +934,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				}
 #else
 				nodes += sp2.nodes;
+				qnodes += sp2.qnodes;
 #endif
 
 				if (!sp->is_t2 && thought_ms > 0) {
@@ -961,6 +965,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #endif
 					break;
 				}
+
+				printf("# %" PRIu64 " search %" PRIu64 " qs: qs/s=%.3f\n", nodes, qnodes, double(qnodes)/nodes);
 
 				add_alpha = 75;
 				add_beta  = 75;
@@ -1259,11 +1265,12 @@ void main_task()
 				tti.inc_age();
 
 				sp1.nodes  = 0;
+				sp1.qnodes  = 0;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 				for(auto & sp: sp2)
-					sp.nodes = 0;
+					sp.qnodes = sp.nodes = 0;
 #else
-				sp2.nodes  = 0;
+				sp.qnodes = sp2.nodes  = 0;
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -1307,11 +1314,12 @@ void main_task()
 			sp1.md       = 1;
 			sp2.md       = 1;
 			sp2.nodes    = 0;
+			sp2.qnodes   = 0;
 #else
 			for(auto & sp: sp2)
-				sp.nodes = 0;
+				sp.qnodes = sp.nodes = 0;
 #endif
-			sp1.nodes    = 0;
+			sp1.qnodes = sp1.nodes = 0;
 
 			tti.inc_age();
 
@@ -1545,7 +1553,7 @@ int main(int argc, char *argv[])
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
 
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();
