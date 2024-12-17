@@ -351,8 +351,6 @@ void sort_movelist_compare::add_first_move(const libchess::Move move)
 	first_moves.push_back(move);
 }
 
-int max_hist = 0;
-
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
 	for(size_t i=0; i<first_moves.size(); i++) {
@@ -530,7 +528,6 @@ void update_history(search_pars_t *const sp, const int index, const int bonus)
 	int  final_value     = clamped_bonus - sp->history[index] * abs(clamped_bonus) / max_history;
 
 	sp->history[index]  += final_value;
-	max_hist = std::max(int(sp->history[index]), max_hist);
 }
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp, const int thread_nr)
@@ -743,15 +740,18 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 
-	int bonus = depth * depth;
-	for(auto move : move_list) {
-		auto piece_type_from = pos.piece_type_on(move.from_square());
-		int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
-		if (beta_cutoff_move.has_value() && move == beta_cutoff_move.value()) {
-			update_history(sp, index, bonus);
-			break;
+	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
+	if (beta_cutoff_move.has_value()) {
+		int bonus = depth * depth;
+		for(auto move : move_list) {
+			auto piece_type_from = pos.piece_type_on(move.from_square());
+			int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
+			if (move == beta_cutoff_move.value()) {
+				update_history(sp, index, bonus);
+				break;
+			}
+			update_history(sp, index, -bonus);
 		}
-		update_history(sp, index, -bonus);
 	}
 
 	if (n_played == 0) {
@@ -998,8 +998,6 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					printf("# node limit reached with %zu nodes\n", size_t(nodes));
 					break;
 				}
-
-				printf("%d\n", max_hist);
 
 				max_depth++;
 			}
