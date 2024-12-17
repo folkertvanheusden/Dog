@@ -16,7 +16,7 @@ void tune(std::string file)
 	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
 	printf("%zu parameters\n", tunable_parameters.size());
 
-	uint16_t history[history_size] { 0 };
+	int16_t history[history_size] { 0 };
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
 		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);

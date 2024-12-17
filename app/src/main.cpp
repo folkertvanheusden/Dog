@@ -72,7 +72,7 @@ void start_ponder();
 void stop_ponder();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -81,7 +81,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -246,7 +246,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();
@@ -350,6 +350,8 @@ void sort_movelist_compare::add_first_move(const libchess::Move move)
 	assert(move.value());
 	first_moves.push_back(move);
 }
+
+int max_hist = 0;
 
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
@@ -520,6 +522,17 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	return best_score;
 }
 
+void update_history(search_pars_t *const sp, const int index, const int bonus)
+{
+	constexpr int max_history = 32760;
+	constexpr int min_history = -max_history;
+	int  clamped_bonus   = std::clamp(bonus, min_history, max_history);
+	int  final_value     = clamped_bonus - sp->history[index] * abs(clamped_bonus) / max_history;
+
+	sp->history[index]  += final_value;
+	max_hist = std::max(int(sp->history[index]), max_hist);
+}
+
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp, const int thread_nr)
 {
 	if (sp->stop->flag)
@@ -675,6 +688,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int     n_played   = 0;
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
+	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move { 0 };
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -719,24 +733,25 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (!pos.is_capture_move(move)) {
-						constexpr int max_history = 65530;
-						auto piece_type_from = pos.piece_type_on(move.from_square());
-						int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
-						int  bonus           = depth * depth;
-						int  clamped_bonus   = std::min(bonus, max_history);
-						int  final_value     = clamped_bonus - sp->history[index] * clamped_bonus / max_history;
-
-						sp->history[index]  += final_value;
-					}
-
+					if (!pos.is_capture_move(move))
+						beta_cutoff_move = move;
 					break;
 				}
 
 				alpha = score;
-
 			}
 		}
+	}
+
+	int bonus = depth * depth;
+	for(auto move : move_list) {
+		auto piece_type_from = pos.piece_type_on(move.from_square());
+		int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
+		if (beta_cutoff_move.has_value() && move == beta_cutoff_move.value()) {
+			update_history(sp, index, bonus);
+			break;
+		}
+		update_history(sp, index, -bonus);
 	}
 
 	if (n_played == 0) {
@@ -983,6 +998,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					printf("# node limit reached with %zu nodes\n", size_t(nodes));
 					break;
 				}
+
+				printf("%d\n", max_hist);
 
 				max_depth++;
 			}
@@ -1556,7 +1573,7 @@ int main(int argc, char *argv[])
 	for(int i=0; i<thread_count - 1; i++) {
 		stop2.push_back(new end_t());
 
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
 	start_ponder();

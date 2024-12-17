@@ -16,7 +16,7 @@ typedef struct
 	const eval_par *parameters;
 	bool      is_t2;
 
-	uint16_t *const history;
+	int16_t *const history;
 
 	uint16_t  md;
 
@@ -37,7 +37,7 @@ uint64_t esp_timer_get_time();
 #endif
 
 constexpr size_t history_size        = 2 * 6 * 64;
-constexpr size_t history_malloc_size = sizeof(uint16_t) * history_size;
+constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
 
 #include "inbuf.h"
 #include "tt.h"
