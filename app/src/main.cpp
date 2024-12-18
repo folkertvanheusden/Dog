@@ -622,10 +622,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (depth == 1 && staticeval - sp->parameters->pawn > beta)
-			return beta;
-
-		if (depth == 2 && staticeval - sp->parameters->knight > beta)
+		if (staticeval - depth * 250 > beta)
 			return beta;
 	}
 
