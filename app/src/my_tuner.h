@@ -231,7 +231,7 @@ class Tuner {
         std::random_device random_device;
         std::mt19937 rng{random_device()};
         std::uniform_int_distribution<> increment_distribution{0, increment_values.size() - 1};
-        std::uniform_int_distribution<> parameter_distribution{0, tunable_parameters_.size() - 1};
+        std::uniform_int_distribution<> parameter_distribution{0, int(tunable_parameters_.size() - 1)};
 
         auto random_bool = [&](double probability) {
             std::bernoulli_distribution bool_distribution{probability};
