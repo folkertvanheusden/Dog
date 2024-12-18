@@ -618,12 +618,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
-	if (!is_root_position && depth <= 3 && beta <= 9800) {
+	bool in_check = pos.in_check();
+
+	if (!is_root_position && !in_check && depth <= 3 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
 		if (staticeval - depth * 250 > beta)
-			return beta;
+			return (beta + staticeval) / 2;
 	}
 
 #if defined(linux)
@@ -634,8 +636,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 
 	///// null move
-	bool in_check = pos.in_check();
-
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
 		pos.make_null_move();
