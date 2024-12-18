@@ -1078,14 +1078,14 @@ void ponder_thread(void *p)
 #endif
 
 #if !defined(__ANDROID__)
-			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, thread_count > 1, search_fen.c_str());
+			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, allow_ponder, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
 		}
 		search_fen_lock.unlock();
 
-		if (valid && thread_count > 1 && allow_ponder) {
+		if (valid && allow_ponder) {
 #if !defined(__ANDROID__)
 			trace("# ponder search start\n");
 #endif
