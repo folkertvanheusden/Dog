@@ -620,11 +620,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 	bool in_check = pos.in_check();
 
-	if (!is_root_position && !in_check && depth <= 3 && beta <= 9800) {
+	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (staticeval - depth * 250 > beta)
+		if (staticeval - depth * 121 > beta)
 			return (beta + staticeval) / 2;
 	}
 
