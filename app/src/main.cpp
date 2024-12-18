@@ -459,6 +459,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	bool in_check   = pos.in_check();
 	if (!in_check) {
+		// standing pat
 		best_score = eval(pos, *sp->parameters);
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
