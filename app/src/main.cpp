@@ -1190,7 +1190,10 @@ void pause_ponder()
 
 void set_new_ponder_position(const bool this_is_ponder)
 {
-	trace("# *** RESTART PONDER ***\n");
+	if (this_is_ponder)
+		trace("# *** RESTART PONDER ***\n");
+	else
+		trace("# *** RESTART LAZY SMP ***\n");
 	search_fen_lock.lock();
 	search_fen = positiont1.fen();
 	is_ponder  = this_is_ponder;
