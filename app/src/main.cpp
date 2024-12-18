@@ -200,9 +200,11 @@ esp_timer_handle_t led_red_timer;
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
+// for pondering
 std::mutex  search_fen_lock;
 std::string search_fen;
-uint16_t    search_fen_version { 0 };
+uint16_t    search_fen_version { 0     };
+bool        is_ponder          { false };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
@@ -244,7 +246,7 @@ auto thread_count_handler = [](const int value)  {
 		free(sp.history);
 	sp2.clear();
 
-	for(int i=0; i<thread_count - 1; i++) {
+	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
 		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
@@ -1098,7 +1100,7 @@ void ponder_thread(void *p)
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID)
-			int n_threads = thread_count - 1;
+			int n_threads = is_ponder ? thread_count : (thread_count - 1);
 
 			trace("# starting %d threads\n", n_threads);
 
@@ -1191,11 +1193,12 @@ void pause_ponder()
 	search_fen_lock.unlock();
 }
 
-void set_new_ponder_position()
+void set_new_ponder_position(const bool this_is_ponder)
 {
 	trace("# *** RESTART PONDER ***\n");
 	search_fen_lock.lock();
 	search_fen = positiont1.fen();
+	is_ponder  = this_is_ponder;
 	search_fen_version++;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2)
@@ -1300,8 +1303,8 @@ void main_task()
 				start_blink(led_green_timer);
 #endif
 
-				// handle ponder-thread
-				set_new_ponder_position();
+				// false = lazy smp
+				set_new_ponder_position(false);
 
 				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
@@ -1399,7 +1402,7 @@ void main_task()
 			}
 
 			// let the ponder thread run as a lazy-smp thread
-			set_new_ponder_position();
+			set_new_ponder_position(false);
 
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
@@ -1443,7 +1446,7 @@ void main_task()
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
 			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
-			set_new_ponder_position();
+			set_new_ponder_position(true);
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
@@ -1570,9 +1573,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	for(int i=0; i<thread_count - 1; i++) {
+	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-
 		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
