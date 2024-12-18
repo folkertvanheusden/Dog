@@ -461,6 +461,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	bool in_check   = pos.in_check();
 	if (!in_check) {
+		// standing pat
 		best_score = eval(pos, *sp->parameters);
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
@@ -593,7 +594,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 		}
 	}
-	else if (depth >= 4) {  // IIR
+	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
 	////////
@@ -619,18 +620,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
-	if (!is_root_position && depth <= 3 && beta <= 9800) {
+	bool in_check = pos.in_check();
+
+	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (depth == 1 && staticeval - sp->parameters->knight > beta)
-			return beta;
-
-		if (depth == 2 && staticeval - sp->parameters->rook > beta)
-			return beta;
-
-		if (depth == 3 && staticeval - sp->parameters->queen > beta)
-			depth--;
+		if (staticeval - depth * 121 > beta)
+			return (beta + staticeval) / 2;
 	}
 
 #if defined(linux)
@@ -641,8 +638,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 
 	///// null move
-	bool in_check = pos.in_check();
-
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
 		pos.make_null_move();
