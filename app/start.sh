@@ -1,6 +1,6 @@
 #! /bin/sh
 
-/usr/local/icsdroneng/bin/icsdrone \
+/usr/local/bin/icsdroneng \
         -icsPort 5000 -icsHost nightmare-chess.nl -handle DogPC -password uemw \
         -dontReuseEngine off \
         -program ./run.sh \

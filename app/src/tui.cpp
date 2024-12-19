@@ -158,7 +158,7 @@ void tui()
 	set_thread_name("TUI");
 
 	if (do_ponder)
-		set_new_ponder_position();
+		set_new_ponder_position(true);
 
 	libchess::Color player = positiont1.side_to_move();
 
@@ -171,7 +171,7 @@ void tui()
 		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (player == positiont1.side_to_move() || finished) {
 			if (do_ponder)
-				set_new_ponder_position();
+				set_new_ponder_position(true);
 
 			if (finished)
 				printf("Game is finished\n");
@@ -249,7 +249,7 @@ void tui()
 				if (prev_ponder && do_ponder == false)
 					pause_ponder();
 				else if (!prev_ponder && do_ponder)
-					set_new_ponder_position();
+					set_new_ponder_position(true);
 			}
 			else if (parts[0] == "undo") {
 				positiont1.unmake_move();
@@ -275,7 +275,7 @@ void tui()
 			start_blink(led_green_timer);
 #endif
 			if (do_ponder)
-				pause_ponder();
+				set_new_ponder_position(false);  // lazy smp
 
 			printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
@@ -288,7 +288,7 @@ void tui()
 			printf("\n");
 
 			if (do_ponder)
-				set_new_ponder_position();
+				set_new_ponder_position(true);  // regular ponder
 #if !defined(linux) && !defined(_WIN32)
 			stop_blink(led_green_timer, &led_green);
 #endif
@@ -298,7 +298,7 @@ void tui()
 	i.set_local_echo(false);
 	trace_enabled = true;
 
-	set_new_ponder_position();
+	set_new_ponder_position(true);
 }
 
 void run_tui()
