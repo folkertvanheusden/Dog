@@ -1124,7 +1124,6 @@ void ponder_thread(void *p)
 			}
 #else
 			start_blink(led_blue_timer);
-			printf("******* PONDERING\n");
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
 			stop_blink(led_blue_timer, &led_blue);
 #endif
