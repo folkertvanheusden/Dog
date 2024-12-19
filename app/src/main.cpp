@@ -65,11 +65,12 @@ bool with_syzygy = false;
 #include "tuners.h"
 
 
-std::atomic_bool ponder_quit  { false };
-int              thread_count = 1;
+std::atomic_bool ponder_quit    { false };
+int              thread_count   { 1     };
+std::atomic_bool ponder_running { false };
 
-void start_ponder();
-void stop_ponder();
+void start_ponder_thread();
+void stop_ponder_thread();
 
 end_t         stop1 { false };
 search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
@@ -89,7 +90,7 @@ uint64_t wboard { 0 };
 uint64_t bboard { 0 };
 #endif
 
-bool trace_enabled = true;
+bool trace_enabled = false;
 auto allow_tracing_handler = [](const bool value) {
 	trace_enabled = value;
 	printf("# Tracing %s\n", value ? "enabled" : "disabled");
@@ -239,7 +240,7 @@ auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	stop_ponder();
+	stop_ponder_thread();
 
 	for(auto & stop: stop2)
 		delete stop;
@@ -255,7 +256,7 @@ auto thread_count_handler = [](const int value)  {
 		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
-	start_ponder();
+	start_ponder_thread();
 #endif
 };
 
@@ -307,8 +308,15 @@ void vTaskGetRunTimeStats()
 	vPortFree(pxTaskStatusArray);
 }
 
-int64_t esp_start_ts = 0;
+void show_esp32_info()
+{
+	printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+	printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
+	vTaskGetRunTimeStats();
+}
+
+int64_t esp_start_ts = 0;
 int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
@@ -317,14 +325,10 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 
 	if (level < 768) {
 		set_flag(sp->stop);
-
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
-		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
-
-		vTaskGetRunTimeStats();
+		show_esp32_info();
 
 		return 2;
 	}
@@ -1093,6 +1097,7 @@ void ponder_thread(void *p)
 		search_fen_lock.unlock();
 
 		if (valid && allow_ponder) {
+			ponder_running = true;
 #if !defined(__ANDROID__)
 			trace("# ponder search start\n");
 #endif
@@ -1119,10 +1124,12 @@ void ponder_thread(void *p)
 			}
 #else
 			start_blink(led_blue_timer);
+			printf("******* PONDERING\n");
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			trace("# Pondering finished\n");
+			ponder_running = false;
 		}
 		else {
 			// TODO replace this by condition variables
@@ -1143,7 +1150,7 @@ void ponder_thread(void *p)
 #endif
 }
 
-void start_ponder()
+void start_ponder_thread()
 {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_quit = false;
@@ -1161,7 +1168,7 @@ void start_ponder()
 #endif
 }
 
-void stop_ponder()
+void stop_ponder_thread()
 {
 	trace(" *** STOP PONDER ***\n");
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -1244,6 +1251,15 @@ void main_task()
 
 	auto display_handler = [](std::istringstream&) {
 		positiont1.display();
+	};
+
+	auto status_handler = [](std::istringstream&) {
+		printf("# Ponder %s\n", allow_ponder ? "enabled" : "disabled");
+		printf("# Ponder %srunning\n", ponder_running ? "" : "NOT ");
+		printf("# Tracing %s\n", trace_enabled ? "enabled" : "disabled");
+#if defined(ESP32)
+		show_esp32_info();
+#endif
 	};
 
 	auto help_handler = [](std::istringstream&) {
@@ -1483,6 +1499,7 @@ void main_task()
 	uci_service.register_handler("perft",      perft_handler, true);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
 	uci_service.register_handler("tui",        tui_handler, true);
+	uci_service.register_handler("status",     status_handler, false);
 	uci_service.register_handler("help",       help_handler, false);
 
 	for(;;) {
@@ -1508,7 +1525,7 @@ void main_task()
 		}
 	}
 
-	stop_ponder();
+	stop_ponder_thread();
 
 	printf("TASK TERMINATED\n");
 }
@@ -1579,7 +1596,7 @@ int main(int argc, char *argv[])
 		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
 	}
 
-	start_ponder();
+	start_ponder_thread();
 
 	main_task();
 
@@ -1648,10 +1665,10 @@ extern "C" void app_main()
 
 	gpio_set_level(LED_INTERNAL, 0);
 
+	start_ponder_thread();
+
 	main_task();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	start_blink(led_red_timer);
-#endif
 }
 #endif
