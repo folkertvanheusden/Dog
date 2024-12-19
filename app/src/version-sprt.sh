@@ -11,6 +11,6 @@ do
 	git checkout $i && git submodule update --force --recursive --init --remote && cmake .. && make -j && mv Dog versions/$i && echo "-engine cmd=./$i proto=uci arg='-t 1' name='$i' \\" >> versions/sprt.sh
 done
 
-echo "-concurrency 32 -recover -each tc=8+0.08 book=/home/folkert/bin/data/dc-3200.bin -rounds 9000 -games 2 -bookmode disk -recover -pgnout dinges-t.pgn -site 'cutechess' -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05ecover" >> versions/sprt.sh
+echo "-concurrency 32 -recover -each tc=8+0.08 book=/home/folkert/bin/data/dc-3200.bin -rounds 9000 -games 2 -bookmode disk -recover -pgnout dinges-t.pgn -site 'cutechess' -sprt elo0=0 elo1=10 alpha=0.01 beta=0.01" >> versions/sprt.sh
 
 chmod +x versions/sprt.sh
