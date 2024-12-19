@@ -90,6 +90,10 @@ uint64_t bboard { 0 };
 #endif
 
 bool trace_enabled = true;
+auto allow_tracing_handler = [](const bool value) {
+	trace_enabled = value;
+	printf("# Tracing %s\n", value ? "enabled" : "disabled");
+};
 void trace(const char *const fmt, ...)
 {
 	if (trace_enabled) {
@@ -1093,13 +1097,8 @@ void ponder_thread(void *p)
 			trace("# ponder search start\n");
 #endif
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_blink(led_blue_timer);
-#endif
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID)
 			int n_threads = is_ponder ? thread_count : (thread_count - 1);
-
 			trace("# starting %d threads\n", n_threads);
 
 			std::vector<std::thread *>        ths;
@@ -1119,12 +1118,11 @@ void ponder_thread(void *p)
 				delete th;
 			}
 #else
+			start_blink(led_blue_timer);
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
-#endif
-
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
 #endif
+			trace("# Pondering finished\n");
 		}
 		else {
 			// TODO replace this by condition variables
@@ -1466,6 +1464,8 @@ void main_task()
 
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 	uci_service.register_option(allow_ponder_option);
+	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
+	uci_service.register_option(allow_tracing_option);
 	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
 	uci_service.register_option(commerial_option);
 
