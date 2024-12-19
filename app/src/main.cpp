@@ -715,11 +715,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		pos.make_move(move);
 		int score = -10000;
 		if (first_move) {
-			score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+			score = -search(pos, depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 			first_move = false;
 		}
 		else {
-			score = -search(pos, depth - 1 + extension, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+			score = -search(pos, new_depth + extension, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+
+			// if score > alpha
+			// score = -search(pos, depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 		}
 
 		if (is_lmr && score > alpha)
