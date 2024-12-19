@@ -256,7 +256,10 @@ auto thread_count_handler = [](const int value)  {
 };
 
 bool allow_ponder         = true;
-auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
+auto allow_ponder_handler = [](const bool value) {
+	allow_ponder = value;
+	printf("# Ponder %s\n", value ? "enabled" : "disabled");
+};
 
 auto commerial_option_handler = [](const std::string & value) { };
 
