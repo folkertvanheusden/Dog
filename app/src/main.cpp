@@ -692,6 +692,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	int     n_played   = 0;
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
+	bool    first_move = true;
 
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move { 0 };
@@ -714,13 +715,17 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		pos.make_move(move);
 
 		int  score            = -10000;
-
 		bool check_after_move = pos.in_check();
-
 		if (check_after_move)
 			goto skip_lmr;
 
-		score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+		if (first_move) {
+			score = -search(pos, new_depth + extension, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+			first_move = false;
+		}
+		else {
+			score = -search(pos, new_depth + extension, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+		}
 
 		if (is_lmr && score > alpha) {
 		skip_lmr:
