@@ -105,6 +105,11 @@ void trace(const char *const fmt, ...)
 	}
 }
 
+void my_printf(const char *const fmt, ...)
+{
+	// TODO
+}
+
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
@@ -146,6 +151,9 @@ void think_timeout(void *arg)
 #define LED_GREEN    (GPIO_NUM_27)
 #define LED_BLUE     (GPIO_NUM_25)
 #define LED_RED      (GPIO_NUM_22)
+
+constexpr int uart_num = UART_NUM_1;
+QueueHandle_t uart_queue;
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
@@ -1645,9 +1653,26 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
+	// configure UART1 (2nd uart)
+	uart_config_t uart_config = {
+		.baud_rate = 115200,
+		.data_bits = UART_DATA_8_BITS,
+		.parity = UART_PARITY_DISABLE,
+		.stop_bits = UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.rx_flow_ctrl_thresh = 122,
+	};
+	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	// Setup UART buffered IO with event queue
+	constexpr int uart_buffer_size = 1024 * 2;
+	// Install UART driver using an event queue here
+	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+
+	// flash filesystem
 	esp_vfs_spiffs_conf_t conf = {
 		.base_path       = "/spiffs",
-		.partition_label = NULL,
+		.partition_label = nullptr,
 		.max_files       = 5,
 		.format_if_mount_failed = true
 	};
