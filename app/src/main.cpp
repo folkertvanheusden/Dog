@@ -1597,6 +1597,8 @@ int main(int argc, char *argv[])
 
 	start_ponder_thread();
 
+	setvbuf(stdout, nullptr, _IONBF, 0);
+
 	main_task();
 
 	if (with_syzygy)
