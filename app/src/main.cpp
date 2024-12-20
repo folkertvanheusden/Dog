@@ -438,7 +438,7 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 	if (counts[white][knight] +
 		counts[black][knight] +
 		counts[white][bishop] +
-		counts[black][bishop])
+		counts[black][bishop] > 1)
 		return false;
 
 	int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
