@@ -1,6 +1,6 @@
 [submodule "libchess"]
 	path = app/include/libchess
-	url = git@github.com:folkertvanheusden/libchess.git
+	url = https://github.com/folkertvanheusden/libchess.git
 [submodule "app/src/fathom"]
 	path = app/src/fathom
 	url = https://github.com/jdart1/Fathom
