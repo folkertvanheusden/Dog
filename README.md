@@ -18,7 +18,7 @@ Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be instal
 
 The program also has a integrated text-interface. For that just run it and enter "tui".
 
-To build it for Linux:
+To build it for Linux (requires at least gcc 14 or clang 19):
 
 	cd app/src/linux-windows
 	mkdir build
@@ -26,7 +26,7 @@ To build it for Linux:
 	cmake ..
 	make
 
-To build it for windows:
+To build it for windows (using mingw-w64):
 
 	cd app/src/linux-windows
 	mkdir buildwindows
