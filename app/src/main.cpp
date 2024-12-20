@@ -417,18 +417,52 @@ bool is_check(libchess::Position & pos)
 
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
-	if (pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE).popcount() || 
-		pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
+	int counts[2][6] { };
+	count_board(pos, counts);
+
+	constexpr int white  = libchess::constants::WHITE;
+	constexpr int black  = libchess::constants::BLACK;
+
+	constexpr int pawn   = libchess::constants::PAWN;
+	constexpr int rook   = libchess::constants::ROOK;
+	constexpr int queen  = libchess::constants::QUEEN;
+	constexpr int knight = libchess::constants::KNIGHT;
+	//constexpr int king   = libchess::constants::KING;
+	constexpr int bishop = libchess::constants::BISHOP;
+
+	if (counts[white][pawn] || counts[black][pawn] ||
+		counts[white][rook] || counts[black][rook] ||
+		counts[white][queen] || counts[black][queen])
 		return false;
 
-	if (pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount())
+	if (counts[white][knight] +
+		counts[black][knight] +
+		counts[white][bishop] +
+		counts[black][bishop])
+		return false;
+
+	int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
+	if (max_n_knights >= 2)
+		return false;
+
+	bool r_b_n_p = (counts[white][rook] &&
+			counts[white][bishop] &&
+			counts[white][knight] &&
+			counts[white][pawn] &&
+			counts[black][knight]) ||
+	               (counts[black][rook] &&
+			counts[black][bishop] &&
+			counts[black][knight] &&
+			counts[black][pawn] &&
+			counts[white][knight]);
+	if (r_b_n_p)
+		return false;
+
+	if ((counts[white][bishop] && (counts[black][knight] || counts[black][pawn])) ||
+	    (counts[black][bishop] && (counts[white][knight] || counts[white][pawn])))
+		return false;
+
+	if (counts[white][bishop] && counts[black][bishop])
 		return false;
 
 	return true;
