@@ -105,11 +105,6 @@ void trace(const char *const fmt, ...)
 	}
 }
 
-void my_printf(const char *const fmt, ...)
-{
-	// TODO
-}
-
 void set_flag(end_t *const stop)
 {
 	stop->flag = true;
@@ -152,7 +147,6 @@ void think_timeout(void *arg)
 #define LED_BLUE     (GPIO_NUM_25)
 #define LED_RED      (GPIO_NUM_22)
 
-constexpr int uart_num = UART_NUM_1;
 QueueHandle_t uart_queue;
 
 const esp_timer_create_args_t think_timeout_pars = {
@@ -1510,8 +1504,8 @@ void main_task()
 	uci_service.register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
-		printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
+		my_printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
+		my_printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -1541,9 +1535,9 @@ void hello() {
 #if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
-	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
-	printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
+	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+	my_printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }
 
@@ -1663,11 +1657,11 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-	// Setup UART buffered IO with event queue
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 	constexpr int uart_buffer_size = 1024 * 2;
-	// Install UART driver using an event queue here
-	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+	if (uart_is_driver_installed(uart_num))
+		printf("UART ALREADY INSTALLED\n");
+	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
 
 	// flash filesystem
 	esp_vfs_spiffs_conf_t conf = {

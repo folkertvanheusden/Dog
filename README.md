@@ -52,4 +52,6 @@ The device can have (optional) LEDs connected:
 * a blue led on pin 25  - blinks while pondering
 * a red led on pin 22   - blinks in an error situation
 
-* internal led is blinkd during startup
+You can also can connect a TTL to UART converter to pin 16 (RX) and pin 17 (TX).
+
+* internal led is blinking during startup
