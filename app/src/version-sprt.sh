@@ -1,7 +1,7 @@
 #! /bin/sh
 
-rm -rf versions
-mkdir versions
+#rm -rf versions
+#mkdir versions
 
 P=`pwd`
 
