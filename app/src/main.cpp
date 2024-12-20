@@ -425,10 +425,10 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
 		return false;
 
-	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() +
+	if (pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() +
 		pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() +
 		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()) > 1)
+		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount())
 		return false;
 
 	return true;
@@ -465,7 +465,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	sp->nodes++;
 
-	if (pos.halfmoves() >= 100 || pos.is_repeat())
+	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
 
 	int  best_score = -32767;
@@ -566,7 +566,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	sp->nodes++;
 
 	bool is_root_position = max_depth == depth;
-	if (!is_root_position && pos.is_repeat())
+	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
 		return 0;
 
 	int start_alpha       = alpha;
