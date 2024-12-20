@@ -441,6 +441,8 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		counts[black][bishop] > 1)
 		return false;
 
+	// https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
+
 	int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
 	if (max_n_knights >= 2)
 		return false;
