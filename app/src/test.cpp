@@ -472,14 +472,13 @@ void tests()
 		{
 			std::vector<std::string> tests { "8/4k3/8/8/8/8/8/2K5 w - - 0 1",
 				"8/4k3/8/8/8/8/5N2/2K5 w - - 0 1",
-			//	"8/8/8/6k1/8/2K5/5b2/6b1 w - - 0 1",  // fails currently because of bishops on same color
+				"8/8/8/6k1/8/2K5/5b2/6b1 w - - 0 1",  // bishops on same color
 				"8/8/3B4/7k/8/8/1K6/6b1 w - - 0 1",
 				"8/6B1/8/6k1/8/2K5/8/6b1 w - - 0 1",
-			//	"3b3B/2B5/1B1B4/B7/3b4/4b2k/5b2/1K6 w - - 0 1",  // bishops on same color
-			//	"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/2B5 w - - 0 1"  // bishops on same color
+				"3b3B/2B5/1B1B4/B7/3b4/4b2k/5b2/1K6 w - - 0 1",  // bishops on same color
+				"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/2B5 w - - 0 1"  // bishops on same color
 			};
 			for(auto & test: tests) {
-				printf(" %s\n", test.c_str());
 				libchess::Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == true);
 			}
@@ -494,7 +493,6 @@ void tests()
 				"8/3k4/8/8/8/8/NNN5/1K6 w - - 0 1"
 			};
 			for(auto & test: tests) {
-				printf(" %s\n", test.c_str());
 				libchess::Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
