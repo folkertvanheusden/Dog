@@ -467,6 +467,39 @@ void tests()
 		// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
 		// TODO
 
+		// tests from https://github.com/toanth/motors/blob/main/gears/src/games/chess.rs#L1564-L1610
+		// insufficient
+		{
+			std::vector<std::string> tests { "8/4k3/8/8/8/8/8/2K5 w - - 0 1",
+				"8/4k3/8/8/8/8/5N2/2K5 w - - 0 1",
+			//	"8/8/8/6k1/8/2K5/5b2/6b1 w - - 0 1",  // fails currently because of bishops on same color
+				"8/8/3B4/7k/8/8/1K6/6b1 w - - 0 1",
+				"8/6B1/8/6k1/8/2K5/8/6b1 w - - 0 1",
+			//	"3b3B/2B5/1B1B4/B7/3b4/4b2k/5b2/1K6 w - - 0 1",  // bishops on same color
+			//	"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/2B5 w - - 0 1"  // bishops on same color
+			};
+			for(auto & test: tests) {
+				printf(" %s\n", test.c_str());
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == true);
+			}
+		}
+		// sufficient
+		{
+			std::vector<std::string> tests { "8/8/4k3/8/8/1K6/8/7R w - - 0 1",
+				"5r2/3R4/4k3/8/8/1K6/8/8 w - - 0 1",
+				"8/8/4k3/8/8/1K6/8/6BB w - - 0 1",
+				"8/8/4B3/8/8/7K/8/6bk w - - 0 1",
+				"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/1B6 w - - 0 1",
+				"8/3k4/8/8/8/8/NNN5/1K6 w - - 0 1"
+			};
+			for(auto & test: tests) {
+				printf(" %s\n", test.c_str());
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+
 		printf("Ok\n");
 	}
 }

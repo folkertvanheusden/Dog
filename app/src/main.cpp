@@ -440,6 +440,8 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 	if (counts[white][knight] + counts[white][bishop] > 1 ||
 	    counts[black][knight] + counts[black][bishop] > 1)
 		return false;
+	printf("%d %d %d\n", counts[white][knight] + counts[white][bishop], counts[black][knight] + counts[black][bishop], counts[white][knight] + counts[white][bishop] > 1 ||
+            counts[black][knight] + counts[black][bishop] > 1);
 
 	// https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
 
@@ -460,8 +462,8 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		return false;
 
 //	// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
-//	if (counts[white][bishop] && counts[black][bishop]) // FIXME
-//		return false;
+	if (counts[white][bishop] && counts[black][bishop]) // FIXME
+		return false;
 
 	return true;
 }
