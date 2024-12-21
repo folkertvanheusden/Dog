@@ -19,6 +19,7 @@ tt::tt()
 		entries = reinterpret_cast<tt_hash_group *>(heap_caps_malloc(n_entries * sizeof(tt_hash_group), MALLOC_CAP_SPIRAM));
 	}
 	else {
+		printf("Not PSRAM\n");
 		entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
 	}
 #else

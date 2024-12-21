@@ -282,6 +282,7 @@ void vApplicationMallocFailedHook()
 
 void vTaskGetRunTimeStats()
 {
+#if !defined(NO_uxTaskGetSystemState)
 	UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
 	TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
 
@@ -308,6 +309,7 @@ void vTaskGetRunTimeStats()
 	}
 
 	vPortFree(pxTaskStatusArray);
+#endif
 }
 
 void show_esp32_info()
