@@ -14,7 +14,7 @@ tt::tt()
 #if defined(ESP32)
 	size_t psram_size = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 	if (psram_size > ESP32_TT_RAM_SIZE) {
-		printf("USing %zu bytes of PSRAM\n", psram_size);
+		printf("Using %zu bytes of PSRAM\n", psram_size);
 		n_entries = psram_size / sizeof(tt_hash_group);
 		entries = reinterpret_cast<tt_hash_group *>(heap_caps_malloc(n_entries * sizeof(tt_hash_group), MALLOC_CAP_SPIRAM));
 	}
@@ -29,6 +29,7 @@ tt::tt()
 
 tt::~tt()
 {
+	free(entries);
 }
 
 void tt::reset()
