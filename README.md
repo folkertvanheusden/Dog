@@ -18,7 +18,7 @@ Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be instal
 
 The program also has a integrated text-interface. For that just run it and enter "tui".
 
-To build it for Linux:
+To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 19 (needs libomp-19-dev)):
 
 	cd app/src/linux-windows
 	mkdir build
@@ -26,7 +26,7 @@ To build it for Linux:
 	cmake ..
 	make
 
-To build it for windows:
+To build it for windows (using mingw-w64):
 
 	cd app/src/linux-windows
 	mkdir buildwindows
@@ -52,4 +52,6 @@ The device can have (optional) LEDs connected:
 * a blue led on pin 25  - blinks while pondering
 * a red led on pin 22   - blinks in an error situation
 
-* internal led is blinkd during startup
+You can also can connect a TTL to UART converter to pin 16 (RX) and pin 17 (TX).
+
+* internal led is blinking during startup

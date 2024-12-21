@@ -2,11 +2,28 @@
 #include <cstdlib>
 #include <cstring>
 
+#if defined(ESP32)
+#include <esp_heap_caps.h>
+#endif
+
 #include "libchess/Position.h"
 #include "tt.h"
 
 tt::tt()
 {
+#if defined(ESP32)
+	size_t psram_size = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+	if (psram_size > ESP32_TT_RAM_SIZE) {
+		printf("USing %zu bytes of PSRAM\n", psram_size);
+		n_entries = psram_size / sizeof(tt_hash_group);
+		entries = reinterpret_cast<tt_hash_group *>(heap_caps_malloc(n_entries * sizeof(tt_hash_group), MALLOC_CAP_SPIRAM));
+	}
+	else {
+		entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
+	}
+#else
+	entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
+#endif
 	reset();
 }
 
@@ -16,7 +33,7 @@ tt::~tt()
 
 void tt::reset()
 {
-	memset(entries, 0x00, sizeof(entries[0]) * n_entries);
+	memset(entries, 0x00, sizeof(tt_hash_group) * n_entries);
 }
 
 void tt::inc_age()
@@ -27,7 +44,6 @@ void tt::inc_age()
 std::optional<tt_entry> tt::lookup(const uint64_t hash)
 {
 	uint64_t        index = hash % n_entries;
-
 	tt_entry *const e     = entries[index].entries;
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		tt_entry & cur = e[i];
