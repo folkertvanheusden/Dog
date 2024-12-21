@@ -430,42 +430,38 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 	//constexpr int king   = libchess::constants::KING;
 	constexpr int bishop = libchess::constants::BISHOP;
 
+	// A king + any(pawn, rook, queen) is sufficient.
 	if (counts[white][pawn] || counts[black][pawn] ||
 		counts[white][rook] || counts[black][rook] ||
 		counts[white][queen] || counts[black][queen])
 		return false;
 
-	if (counts[white][knight] +
-		counts[black][knight] +
-		counts[white][bishop] +
-		counts[black][bishop] > 1)
+	// A king and more than one other type of piece is sufficient (e.g. knight + bishop).
+	if (counts[white][knight] + counts[white][bishop] > 1 ||
+	    counts[black][knight] + counts[black][bishop] > 1)
 		return false;
 
 	// https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
 
+	// A king and two (or more) knights is sufficient
 	int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
 	if (max_n_knights >= 2)
 		return false;
 
-	bool r_b_n_p = (counts[white][rook] &&
-			counts[white][bishop] &&
-			counts[white][knight] &&
-			counts[white][pawn] &&
-			counts[black][knight]) ||
-	               (counts[black][rook] &&
-			counts[black][bishop] &&
-			counts[black][knight] &&
-			counts[black][pawn] &&
-			counts[white][knight]);
+	// King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
+	bool r_b_n_p = ((counts[white][rook] || counts[white][bishop] || counts[white][knight] || counts[white][pawn]) && counts[black][knight]) ||
+	               ((counts[black][rook] || counts[black][bishop] || counts[black][knight] || counts[black][pawn]) && counts[white][knight]);
 	if (r_b_n_p)
 		return false;
 
+	// King + bishop against king + any(knight, pawn) is sufficient.
 	if ((counts[white][bishop] && (counts[black][knight] || counts[black][pawn])) ||
 	    (counts[black][bishop] && (counts[white][knight] || counts[white][pawn])))
 		return false;
 
-	if (counts[white][bishop] && counts[black][bishop])
-		return false;
+//	// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
+//	if (counts[white][bishop] && counts[black][bishop]) // FIXME
+//		return false;
 
 	return true;
 }
