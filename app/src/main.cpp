@@ -425,10 +425,10 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
 		return false;
 
-	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()) > 1)
+	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() &&
+		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount()) ||
+		(pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() &&
+		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()))
 		return false;
 
 	return true;
