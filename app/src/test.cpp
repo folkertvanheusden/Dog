@@ -497,6 +497,19 @@ void tests()
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
+		// sufficient but unreasonable
+		{
+			std::vector<std::string> tests { "6B1/8/8/6k1/8/2K5/8/6b1 w - - 0 1",
+				"8/8/4B3/8/8/7K/8/6bk b - - 0 1",
+				"8/8/4B3/7k/8/8/1K6/6b1 w - - 0 1",
+				"8/3k4/8/8/8/8/1NN5/1K6 w - - 0 1",
+				"8/2nk4/8/8/8/8/1NN5/1K6 w - - 0 1",
+			};
+			for(auto & test: tests) {
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
 
 		printf("Ok\n");
 	}
