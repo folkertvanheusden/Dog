@@ -1692,5 +1692,6 @@ extern "C" void app_main()
 	main_task();
 
 	start_blink(led_red_timer);
+	esp_restart();
 }
 #endif
