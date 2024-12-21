@@ -906,6 +906,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				if (sp->is_t2 == false)
 					printf("# stop flag set\n");
 #endif
+				printf("info depth %d score cp %d\n", max_depth, score);
 				break;
 			}
 
@@ -973,24 +974,23 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				nodes += sp2.nodes;
 #endif
 
-				if (!sp->is_t2 && thought_ms > 0) {
+				if (!sp->is_t2) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
-
 					std::string pv_str;
-
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
+					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
 						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 					else {
 						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 				}
 
