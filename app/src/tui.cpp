@@ -1,4 +1,5 @@
 #include <cinttypes>
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <ctype.h>
@@ -13,6 +14,32 @@
 #include "str.h"
 #include "tui.h"
 
+
+
+void my_printf(const char *const fmt, ...)
+{
+#if defined(ESP32)
+        char *buffer = nullptr;
+        va_list ap { };
+        va_start(ap, fmt);
+        auto buffer_len = vasprintf(&buffer, fmt, ap);
+        va_end(ap);
+
+        printf("%s", buffer);
+        ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
+        uart_write_bytes(uart_num, buffer, buffer_len);
+	if (buffer[buffer_len - 1] == '\n') {
+		const char cr = '\r';
+		uart_write_bytes(uart_num, &cr, 1);
+	}
+        free(buffer);
+#else
+        va_list ap { };
+        va_start(ap, fmt);
+        vprintf(fmt, ap);
+        va_end(ap);
+#endif
+}
 
 uint64_t do_perft(libchess::Position &pos, int depth)
 {
@@ -32,14 +59,14 @@ uint64_t do_perft(libchess::Position &pos, int depth)
 
 void perft(libchess::Position &pos, int depth)
 {
-	printf("Perft for fen: %s\n", pos.fen().c_str());
+	my_printf("Perft for fen: %s\n", pos.fen().c_str());
 
 	for(int d=1; d<=depth; d++) {
 		uint64_t t_start = esp_timer_get_time();
 		uint64_t count   = do_perft(pos, d);
 		uint64_t t_end   = esp_timer_get_time();
 		double   t_diff  = std::max(uint64_t(1), t_end - t_start) / 1000000.;
-		printf("%d: %" PRIu64 " (%.3f nps, %.2f seconds)\n", d, count, count / t_diff, t_diff);
+		my_printf("%d: %" PRIu64 " (%.3f nps, %.2f seconds)\n", d, count, count / t_diff, t_diff);
 	}
 }
 
@@ -51,18 +78,18 @@ void display(const libchess::Position & p, const bool large, const bool colors)
 	}
 
 	if (colors) {
-		printf("\x1b[0m");
-		printf("\x1b[43;30m    ");
+		my_printf("\x1b[0m");
+		my_printf("\x1b[43;30m    ");
 		for(int x=0; x<8; x++)
-			printf("   ");
-		printf(" \x1b[0m\n");
+			my_printf("   ");
+		my_printf(" \x1b[0m\n");
 	}
 
 	for(int y=7; y>=0; y--) {
 		if (colors)
-			printf("\x1b[43;30m %c |", y + '1');
+			my_printf("\x1b[43;30m %c |", y + '1');
 		else
-			printf(" %c |", y + '1');
+			my_printf(" %c |", y + '1');
 		for(int x=0; x<8; x++) {
 			const auto piece = p.piece_on(libchess::Square::from(libchess::File(x), libchess::Rank(y)).value());
 			if (piece.has_value()) {
@@ -70,40 +97,40 @@ void display(const libchess::Position & p, const bool large, const bool colors)
 				bool is_white = piece.value().color() == libchess::constants::WHITE;
 				if (colors) {
 					if (is_white)
-						printf("\x1b[30;47m");
+						my_printf("\x1b[30;47m");
 					else
-						printf("\x1b[40;37m");
+						my_printf("\x1b[40;37m");
 				}
-				printf(" %c ", piece.value().color() == libchess::constants::WHITE ? toupper(c) : c);
+				my_printf(" %c ", piece.value().color() == libchess::constants::WHITE ? toupper(c) : c);
 				if (colors)
-					printf("\x1b[43;30m");
+					my_printf("\x1b[43;30m");
 			}
 			else {
-				printf("   ");
+				my_printf("   ");
 			}
 		}
-		printf(" \x1b[0m\n");
+		my_printf(" \x1b[0m\n");
 	}
 	if (colors) {
-		printf("\x1b[43;30m   +");
+		my_printf("\x1b[43;30m   +");
 		for(int x=0; x<8; x++)
-			printf("---");
-		printf(" \x1b[0m\n");
-		printf("\x1b[43;30m    ");
+			my_printf("---");
+		my_printf(" \x1b[0m\n");
+		my_printf("\x1b[43;30m    ");
 		for(int x=0; x<8; x++)
-			printf(" %c ", 'A' + x);
-		printf(" \x1b[0m\n");
-		printf("\x1b[0m");
+			my_printf(" %c ", 'A' + x);
+		my_printf(" \x1b[0m\n");
+		my_printf("\x1b[0m");
 	}
 	else {
-		printf("   +");
+		my_printf("   +");
 		for(int x=0; x<8; x++)
-			printf("---");
-		printf("\n");
-		printf("    ");
+			my_printf("---");
+		my_printf("\n");
+		my_printf("    ");
 		for(int x=0; x<8; x++)
-			printf(" %c ", 'A' + x);
-		printf("\n");
+			my_printf(" %c ", 'A' + x);
+		my_printf("\n");
 	}
 }
 
@@ -174,36 +201,35 @@ void tui()
 				set_new_ponder_position(true);
 
 			if (finished)
-				printf("Game is finished\n");
+				my_printf("Game is finished\n");
 			else
-				printf("Move number: %d, color: %s\n", positiont1.fullmoves(), positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+				my_printf("Move number: %d, color: %s\n", positiont1.fullmoves(), positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
 			std::string line;
-			printf("> ");
+			my_printf("> ");
 			if (!std::getline(is, line))
 				break;
-			printf("%s\n", line.c_str());
 			if (line.empty())
 				continue;
 
 			auto parts = split(line, " ");
 			if (parts[0] == "help") {
-				printf("quit    stop the tui\n");
-				printf("new     restart game\n");
-				printf("player  select player (\"white\" or \"black\")\n");
-				printf("time    set think time, in seconds\n");
-				printf("fen     show fen for current position\n");
-				printf("eval    show current evaluation score\n");
-				printf("undo    take back last move\n");
-				printf("trace   on/off\n");
-				printf("colors  on/off\n");
-				printf("perft   run \"perft\" for the given depth\n");
+				my_printf("quit    stop the tui\n");
+				my_printf("new     restart game\n");
+				my_printf("player  select player (\"white\" or \"black\")\n");
+				my_printf("time    set think time, in seconds\n");
+				my_printf("fen     show fen for current position\n");
+				my_printf("eval    show current evaluation score\n");
+				my_printf("undo    take back last move\n");
+				my_printf("trace   on/off\n");
+				my_printf("colors  on/off\n");
+				my_printf("perft   run \"perft\" for the given depth\n");
 			}
 			else if (parts[0] == "quit") {
 				break;
 			}
 			else if (parts[0] == "fen")
-				printf("FEN: %s\n", positiont1.fen().c_str());
+				my_printf("FEN: %s\n", positiont1.fen().c_str());
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(positiont1, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
@@ -228,7 +254,7 @@ void tui()
 					trace_enabled = !trace_enabled;
 				default_trace = trace_enabled;
 				write_settings();
-				printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
+				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
 			}
 			else if (parts[0] == "colors") {
 				if (parts.size() == 2)
@@ -236,7 +262,7 @@ void tui()
 				else
 					colors = !colors;
 				write_settings();
-				printf("Colors are now %senabled\n", colors ? "":"not ");
+				my_printf("Colors are now %senabled\n", colors ? "":"not ");
 			}
 			else if (parts[0] == "ponder") {
 				bool prev_ponder = do_ponder;
@@ -245,7 +271,7 @@ void tui()
 				else
 					do_ponder = !do_ponder;
 				write_settings();
-				printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
+				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
 				if (prev_ponder && do_ponder == false)
 					pause_ponder();
 				else if (!prev_ponder && do_ponder)
@@ -257,7 +283,7 @@ void tui()
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(positiont1, *sp1.parameters);
-				printf("evaluation score: %d\n", score);
+				my_printf("evaluation score: %d\n", score);
 			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
@@ -266,7 +292,7 @@ void tui()
 				if (positiont1.is_legal_move(move))
 					positiont1.make_move(move);
 				else
-					printf("Not a valid move nor command (enter \"help\" for command list)\n");
+					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
 			}
 		}
 		else {
@@ -277,15 +303,15 @@ void tui()
 			if (do_ponder)
 				set_new_ponder_position(false);  // lazy smp
 
-			printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
-			printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
+			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+			my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
 			clear_flag(sp1.stop);
 			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
-			printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
+			my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
 			positiont1.make_move(best_move);
-			printf("\n");
+			my_printf("\n");
 
 			if (do_ponder)
 				set_new_ponder_position(true);  // regular ponder
