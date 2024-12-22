@@ -1325,7 +1325,7 @@ void main_task()
 				for(auto & sp: sp2)
 					sp.qnodes = sp.nodes = 0;
 #else
-				sp.qnodes = sp2.nodes  = 0;
+				sp1.qnodes = sp2.nodes  = 0;
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
