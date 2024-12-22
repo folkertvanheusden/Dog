@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ctype.h>
 #include <thread>
+#include <sys/stat.h>
 
 #include <libchess/Position.h>
 
@@ -187,12 +188,31 @@ bool default_trace = false;
 int  think_time    = 1000;  // milliseconds
 bool do_ponder     = false;
 
+std::optional<std::string> get_cfg_dir()
+{
+	const char *home = std::getenv("HOME");
+	if (!home) {
+		fprintf(stderr, "$HOME not found\n");
+		return { };
+	}
+
+	return std::string(home) + "/.config/Dog";
+}
+
 void write_settings()
 {
 #if defined(ESP32)
 	FILE *fh = fopen("/spiffs/settings.dat", "w");
+#else
+	auto home = get_cfg_dir();
+	if (home.has_value() == false)
+		return;
+	mkdir(home.value().c_str(), 0700);
+
+	FILE *fh = fopen((home.value() + "/settings.dat").c_str(), "w");
+#endif
 	if (!fh) {
-		fprintf(stderr, "Cannot write settings\n");
+		fprintf(stderr, "Cannot write settings: %s\n", strerror(errno));
 		return;
 	}
 
@@ -202,13 +222,18 @@ void write_settings()
 	fprintf(fh, "%d\n", do_ponder);
 
 	fclose(fh);
-#endif
 }
 
 void load_settings()
 {
 #if defined(ESP32)
 	FILE *fh = fopen("/spiffs/settings.dat", "r");
+#else
+	auto home = get_cfg_dir();
+	if (home.has_value() == false)
+		return;
+	FILE *fh = fopen((home.value() + "/settings.dat").c_str(), "r");
+#endif
 	if (!fh)
 		return;
 
@@ -223,7 +248,6 @@ void load_settings()
 	do_ponder     = atoi(buffer);
 
 	fclose(fh);
-#endif
 }
 
 void tui()
