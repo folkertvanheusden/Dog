@@ -619,8 +619,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			return pt.first.value();
 		}
 	}
-	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
-		depth--;
+	else {
+		if (pt.second.has_value())
+			tt_move = pt.second;
+
+		if (depth >= 4)  // IIR, Internal Iterative Reductions
+			depth--;
 	}
 
 	uint64_t hash = pos.hash();
