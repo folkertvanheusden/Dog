@@ -480,7 +480,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			return best_score;
 
 		int BIG_DELTA = sp->parameters->big_delta;
-		if (pos.is_promotion_move(*pos.previous_move()))
+		if (pos.previous_move().has_value() && pos.is_promotion_move(pos.previous_move().value()))
 			BIG_DELTA += sp->parameters->big_delta_promotion;
 		if (best_score < alpha - BIG_DELTA)
 			return alpha;
