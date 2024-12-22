@@ -562,13 +562,13 @@ std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const lib
                         tt_move.reset();  // move stored in TT is not valid - TT-collision
                 }
                 else if (te.value().data_._data.depth >= depth) {
-                        int csd        = max_depth - depth;
-                        int score      = te.value().data_._data.score;
-                        int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
-                        auto flag      = te.value().data_._data.flags;
-                        bool use       = flag == EXACT ||
-                                        (flag == LOWERBOUND && work_score >= beta) ||
-                                        (flag == UPPERBOUND && work_score <= alpha);
+                        int  csd        = max_depth - depth;
+                        int  score      = te.value().data_._data.score;
+                        int  work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
+                        auto flag       = te.value().data_._data.flags;
+                        bool use        = flag == EXACT ||
+                                         (flag == LOWERBOUND && work_score >= beta) ||
+                                         (flag == UPPERBOUND && work_score <= alpha);
 
                         if (use)
                                 return { work_score, tt_move };  // move in TT is valid
@@ -603,13 +603,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
 		return 0;
 
-	int start_alpha       = alpha;
-
-	auto pt = probe_tt(pos, depth, max_depth, alpha, beta);
+	int  start_alpha = alpha;
 
 	// TT //
+	auto     pt   = probe_tt(pos, depth, max_depth, alpha, beta);
 	std::optional<libchess::Move> tt_move { };
-	uint64_t hash = pos.hash();
 
         if (pt.first.has_value()) {
 		if (pt.second.has_value()) { // move stored in TT?
@@ -624,6 +622,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
+
+	uint64_t hash = pos.hash();
 	////////
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
