@@ -134,6 +134,54 @@ void display(const libchess::Position & p, const bool large, const bool colors)
 	}
 }
 
+void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const bool colors)
+{
+	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
+	auto start_color = pos.side_to_move();
+	auto start_score = eval(pos, *sp1.parameters);
+
+	if (colors) {
+		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score);
+
+		int prev_score = start_score;
+		int nr         = 0;
+		libchess::Position work(positiont1);
+		for(auto & move: pv) {
+			printf(" ");
+
+			work.make_move(move);
+			auto cur_color = work.side_to_move();
+			int  cur_score = eval(work, *sp1.parameters);
+
+			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
+				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
+			else if (start_score == cur_score)
+				my_printf("%s", move.to_str().c_str());
+			else
+				my_printf("\x1b[40;32m%s\x1b[0m", move.to_str().c_str());
+			if (cur_score > prev_score)
+				printf("\x1b[40;32m▲\x1b[0m");
+			else if (cur_score < prev_score)
+				printf("\x1b[40;31m▼\x1b[0m");
+			else
+				printf("-");
+			prev_score = cur_score;
+			if (work.side_to_move() != start_color)
+				printf(" [%.2f] ", -cur_score / 100.);
+			else
+				printf(" [%.2f] ", cur_score / 100.);
+
+			if (++nr == 6)
+				printf("\n    "), nr = 0;
+		}
+	}
+	else {
+		my_printf("PV:");
+		for(auto & move: pv)
+			printf(" %s", move.to_str().c_str());
+	}
+}
+
 bool colors        = false;
 bool default_trace = false;
 int  think_time    = 1000;  // milliseconds
@@ -326,6 +374,9 @@ void tui()
 			clear_flag(sp1.stop);
 			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 			my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
+
+			emit_pv(positiont1, best_move, colors);
+
 			positiont1.make_move(best_move);
 			my_printf("\n");
 
