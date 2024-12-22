@@ -571,7 +571,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
 		return 0;
 
-	int start_alpha       = alpha;
+	bool zero_window      = beta == alpha + 1;
+
+	int  start_alpha      = alpha;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
