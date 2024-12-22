@@ -884,6 +884,12 @@ node_sum_t calculate_search_statistics()
 	return out;
 }
 
+double calculate_EBF(const std::vector<uint64_t> & node_counts)
+{
+        size_t n = node_counts.size();
+        return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
+}
+
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
 {
 	uint64_t t_offset = esp_timer_get_time();
@@ -928,6 +934,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		int alpha_repeat = 0;
 		int beta_repeat  = 0;
 
+		std::vector<uint64_t> node_counts;
+		uint64_t previous_node_count = 0;
+
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 #if defined(linux)
 			sp->md = 0;
@@ -942,6 +951,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				printf("info depth %d score cp %d\n", max_depth, score);
 				break;
 			}
+
+			node_sum_t counts    = calculate_search_statistics();
+			uint64_t cur_n_nodes = counts.nodes + counts.qnodes;
+			node_counts.push_back(cur_n_nodes - previous_node_count);
+			previous_node_count  = cur_n_nodes;
 
 			if (score <= alpha) {
 				if (alpha_repeat >= 3)
@@ -990,7 +1004,6 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #endif
 
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
-				node_sum_t counts     = calculate_search_statistics();
 
 				if (!sp->is_t2) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
@@ -998,18 +1011,23 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
+					double      ebf     = calculate_EBF(node_counts);
+					std::string ebf_str = ebf >= 0 ? std::to_string(ebf) : "";
+					if (ebf_str.empty() == false)
+						ebf_str = "ebf " + ebf_str + " ";
+
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
+						printf("info depth %d score mate %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
-								size_t(counts.nodes + counts.qnodes), thought_ms, uint64_t((counts.nodes + counts.qnodes) * 1000 / use_thought_ms),
+								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.syzygy_query_hits, pv_str.c_str());
 					}
 					else {
-						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
+						printf("info depth %d score cp %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
-								size_t(counts.nodes + counts.qnodes), thought_ms, uint64_t((counts.nodes + counts.qnodes) * 1000 / use_thought_ms),
+								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.syzygy_query_hits, pv_str.c_str());
 					}
 				}
@@ -1028,8 +1046,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				if (max_depth == 127)
 					break;
 
-				if (max_n_nodes.has_value() && counts.nodes + counts.qnodes >= max_n_nodes.value()) {
-					printf("# node limit reached with %zu nodes\n", size_t(counts.nodes + counts.qnodes));
+				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
+					printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
 
