@@ -850,6 +850,39 @@ void timer(const int think_time, end_t *const ei)
 #endif
 }
 
+typedef struct {
+	uint64_t nodes;
+	uint64_t qnodes;
+	uint32_t syzygy_queries;
+	uint32_t syzygy_query_hits;
+} node_sum_t;
+
+node_sum_t calculate_search_statistics()
+{
+	node_sum_t out { };
+
+	out.nodes             = sp1.nodes;
+	out.qnodes            = sp1.qnodes;
+	out.syzygy_queries    = 0;
+	out.syzygy_query_hits = 0;
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	for(auto & sp: sp2) {
+		out.nodes  += sp.nodes;
+		out.qnodes += sp.qnodes;
+	}
+
+	for(auto & sp: sp2) {
+		out.syzygy_queries    += sp.syzygy_queries;
+		out.syzygy_query_hits += sp.syzygy_query_hits;
+	}
+#else
+	out.nodes  += sp2.nodes;
+	out.qnodes += sp2.qnodes;
+#endif
+
+	return out;
+}
 
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
 {
@@ -956,27 +989,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				sp->score = score;
 #endif
 
-				uint64_t thought_ms        = (esp_timer_get_time() - t_offset) / 1000;
-
-				uint64_t nodes             = sp1.nodes;
-				uint64_t qnodes            = sp1.qnodes;
-				uint32_t syzygy_queries    = 0;
-				uint32_t syzygy_query_hits = 0;
-
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-				for(auto & sp: sp2) {
-					nodes += sp.nodes;
-					qnodes += sp.qnodes;
-				}
-
-				for(auto & sp: sp2) {
-					syzygy_queries += sp.syzygy_queries;
-					syzygy_query_hits += sp.syzygy_query_hits;
-				}
-#else
-				nodes += sp2.nodes;
-				qnodes += sp2.qnodes;
-#endif
+				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+				node_sum_t counts     = calculate_search_statistics();
 
 				if (!sp->is_t2) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
@@ -989,12 +1003,14 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
 						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(counts.nodes), thought_ms, uint64_t(counts.nodes * 1000 / use_thought_ms),
+								counts.syzygy_query_hits, pv_str.c_str());
 					}
 					else {
 						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(counts.nodes), thought_ms, uint64_t(counts.nodes * 1000 / use_thought_ms),
+								counts.syzygy_query_hits, pv_str.c_str());
 					}
 				}
 
@@ -1006,22 +1022,25 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					break;
 				}
 
-				printf("# %" PRIu64 " search %" PRIu64 " qs: qs/s=%.3f\n", nodes, qnodes, double(qnodes)/nodes);
-
 				add_alpha = 75;
 				add_beta  = 75;
 
 				if (max_depth == 127)
 					break;
 
-				if (max_n_nodes.has_value() && nodes >= max_n_nodes.value()) {
-					printf("# node limit reached with %zu nodes\n", size_t(nodes));
+				if (max_n_nodes.has_value() && counts.nodes >= max_n_nodes.value()) {
+					printf("# node limit reached with %zu nodes\n", size_t(counts.nodes));
 					break;
 				}
 
 				max_depth++;
 			}
 		}
+
+#if !defined(__ANDROID__)
+		node_sum_t counts = calculate_search_statistics();
+		printf("# %" PRIu64 " search %" PRIu64 " qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
+#endif
 	}
 	else {
 #if !defined(__ANDROID__)
