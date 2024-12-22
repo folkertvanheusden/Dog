@@ -1,3 +1,8 @@
+LMRdepth
+	Score of c22830c-LMRdepth vs 124b473-master: 32 - 90 - 70  [0.349] 192
+	Elo difference: -108.3 +/- 40.1, LOS: 0.0 %, DrawRatio: 36.5 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 LMRnotPV
 	Score of 81de4b3-LMRnotPV vs 124b473-master: 45 - 111 - 67  [0.352] 223
 	Elo difference: -106.0 +/- 39.3, LOS: 0.0 %, DrawRatio: 30.0 %
