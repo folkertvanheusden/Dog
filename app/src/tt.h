@@ -1,5 +1,11 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+
+#include <libchess/Position.h>
+
+
 #define __PRAGMA_PACKED__ __attribute__ ((__packed__))
 
 typedef enum { NOTVALID = 0, EXACT = 1, LOWERBOUND = 2, UPPERBOUND = 3 } tt_entry_flag;
@@ -36,20 +42,24 @@ typedef struct __PRAGMA_PACKED__
 constexpr uint64_t n_entries { 16 * 1024 * 1024 / sizeof(tt_hash_group) };
 #elif defined(linux) || defined(_WIN32)
 constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
-#else
-constexpr uint64_t n_entries { 65536 / sizeof(tt_hash_group) };
 #endif
 
 class tt
 {
 private:
-	tt_hash_group entries[n_entries];
+	tt_hash_group *entries { nullptr };
+	int            age     { 0       };
+#if defined(ESP32)
+#define ESP32_TT_RAM_SIZE 49152
+	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_hash_group) };
+#endif
 
-	int age;
 
 public:
 	tt();
 	~tt();
+
+	void reset();
 
 	void inc_age();
 
