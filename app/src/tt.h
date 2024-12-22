@@ -66,3 +66,7 @@ public:
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
 	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m);
 };
+
+std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move);
+
+extern tt tti;

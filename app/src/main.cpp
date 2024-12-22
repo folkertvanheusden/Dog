@@ -236,8 +236,6 @@ inbuf i;
 std::istream is(&i);
 libchess::UCIService uci_service{"Dog v2.5", "Folkert van Heusden", std::cout, is};
 
-tt tti;
-
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
@@ -815,35 +813,6 @@ uint64_t esp_timer_get_time()
 }
 #endif
 
-std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
-{
-	auto work = pos_in;
-
-	std::vector<libchess::Move> out = { start_move };
-
-	work.make_move(start_move);
-
-	for(int i=0; i<64; i++) {
-		std::optional<tt_entry> te = tti.lookup(work.hash());
-		if (!te.has_value())
-			break;
-
-		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
-
-		if (!work.is_legal_move(cur_move))
-			break;
-
-		out.push_back(cur_move);
-
-		work.make_move(cur_move);
-
-		if (work.is_repeat(3))
-			break;
-	}
-
-	return out;
-}
-
 void timer(const int think_time, end_t *const ei)
 {
 	if (think_time > 0) {
@@ -1372,7 +1341,7 @@ void main_task()
 				for(auto & sp: sp2)
 					sp.qnodes = sp.nodes = 0;
 #else
-				sp.qnodes = sp2.nodes  = 0;
+				sp1.qnodes = sp2.nodes  = 0;
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)

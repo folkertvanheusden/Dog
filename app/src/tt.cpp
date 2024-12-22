@@ -9,6 +9,9 @@
 #include "libchess/Position.h"
 #include "tt.h"
 
+
+tt tti;
+
 tt::tt()
 {
 #if defined(ESP32)
@@ -116,4 +119,33 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	cur -> hash       = hash ^ n.data;
 	cur -> data_.data = n.data;
+}
+
+std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
+{
+	auto work = pos_in;
+
+	std::vector<libchess::Move> out = { start_move };
+
+	work.make_move(start_move);
+
+	for(int i=0; i<64; i++) {
+		std::optional<tt_entry> te = tti.lookup(work.hash());
+		if (!te.has_value())
+			break;
+
+		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
+
+		if (!work.is_legal_move(cur_move))
+			break;
+
+		out.push_back(cur_move);
+
+		work.make_move(cur_move);
+
+		if (work.is_repeat(3))
+			break;
+	}
+
+	return out;
 }
