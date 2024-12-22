@@ -95,3 +95,4 @@ void start_ponder();
 void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
+void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);

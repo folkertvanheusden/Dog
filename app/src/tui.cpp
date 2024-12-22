@@ -105,6 +105,9 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 					else
 						line += "\x1b[40;37m ";
 				}
+				else {
+					line += " ";
+				}
 				line += char(piece.value().color() == libchess::constants::WHITE ? toupper(c) : c) + std::string(" ");
 				if (colors)
 					line += "\x1b[43;30m";
