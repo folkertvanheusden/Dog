@@ -1,3 +1,8 @@
+SPP-IM with altkillers
+	Score of 49e7f86-SPP-IM vs 124b473-master: 94 - 143 - 197  [0.444] 434
+	Elo difference: -39.4 +/- 24.2, LOS: 0.1 %, DrawRatio: 45.4 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 SPP-IM
 	Score of 5c908c5-SPP-IM vs 124b473-master: 78 - 129 - 166  [0.432] 373
 	Elo difference: -47.8 +/- 26.3, LOS: 0.0 %, DrawRatio: 44.5 %
