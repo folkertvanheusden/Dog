@@ -220,6 +220,7 @@ void tui()
 				my_printf("time    set think time, in seconds\n");
 				my_printf("fen     show fen for current position\n");
 				my_printf("eval    show current evaluation score\n");
+				my_printf("tt      show TT entry for current position\n");
 				my_printf("undo    take back last move\n");
 				my_printf("trace   on/off\n");
 				my_printf("colors  on/off\n");
@@ -284,6 +285,21 @@ void tui()
 			else if (parts[0] == "eval") {
 				int score = eval(positiont1, *sp1.parameters);
 				my_printf("evaluation score: %d\n", score);
+			}
+			else if (parts[0] == "tt") {
+				auto te = tti.lookup(positiont1.hash());
+				if (te.has_value() == false)
+					my_printf("None\n");
+				else {
+					const char *const flag_names[] = { "invalid", "exact", "lowerbound", "upperbound" };
+					my_printf("Score: %d (%s)\n", te.value().data_._data.score, flag_names[te.value().data_._data.flags]);
+					my_printf("Depth: %d\n", te.value().data_._data.depth);
+					std::optional<libchess::Move> tt_move;
+					if (te.value().data_._data.m)
+						tt_move = libchess::Move(te.value().data_._data.m);
+					if (tt_move.has_value() && positiont1.is_legal_move(tt_move.value()))
+						my_printf("Move: %s\n", tt_move.value().to_str().c_str());
+				}
 			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
