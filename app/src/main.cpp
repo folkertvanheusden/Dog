@@ -610,6 +610,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
         if (pt.first.has_value()) {
 		if (pt.second.has_value()) { // move stored in TT?
 			*m = pt.second.value();
+			assert(m->value());
 			return pt.first.value();
 		}
 		else if (!is_root_position) {
