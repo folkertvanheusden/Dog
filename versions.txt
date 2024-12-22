@@ -1,3 +1,8 @@
+TTprobeFunc2
+	Score of 5663019-TTprobeFunc2 vs 124b473-master: 41 - 97 - 90  [0.377] 228
+	Elo difference: -87.1 +/- 35.5, LOS: 0.0 %, DrawRatio: 39.5 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 SPP-IM with altkillers
 	Score of 49e7f86-SPP-IM vs 124b473-master: 94 - 143 - 197  [0.444] 434
 	Elo difference: -39.4 +/- 24.2, LOS: 0.1 %, DrawRatio: 45.4 %
