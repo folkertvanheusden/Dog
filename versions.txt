@@ -1,3 +1,8 @@
+LMRnotPV
+	Score of 81de4b3-LMRnotPV vs 124b473-master: 45 - 111 - 67  [0.352] 223
+	Elo difference: -106.0 +/- 39.3, LOS: 0.0 %, DrawRatio: 30.0 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 TTprobeFunc2
 	Score of 5663019-TTprobeFunc2 vs 124b473-master: 41 - 97 - 90  [0.377] 228
 	Elo difference: -87.1 +/- 35.5, LOS: 0.0 %, DrawRatio: 39.5 %
