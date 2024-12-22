@@ -16,7 +16,7 @@ typedef struct
 	const eval_par *parameters;
 	bool      is_t2;
 
-	uint32_t *const history;
+	int16_t *const history;
 
 	uint16_t  md;
 
@@ -38,7 +38,7 @@ uint64_t esp_timer_get_time();
 #endif
 
 constexpr size_t history_size        = 2 * 6 * 64;
-constexpr size_t history_malloc_size = sizeof(uint32_t) * history_size;
+constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
 
 #include "inbuf.h"
 #include "tt.h"
@@ -90,7 +90,7 @@ public:
 
 void clear_flag(end_t *const stop);
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
-void set_new_ponder_position();
+void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);

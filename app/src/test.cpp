@@ -384,7 +384,7 @@ void tests()
 			auto record1 = tti.lookup(99);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
-			my_assert((data1.hash ^ data1.data_.data) == 2);
+			my_assert((data1.hash ^ data1.data_.data) == 99);
 			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("b1c3"));
 			my_assert(data1.data_._data.depth == 3);
 			my_assert(data1.data_._data.score == 4);
@@ -396,11 +396,11 @@ void tests()
 			auto record1 = tti.lookup(99);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
-			my_assert((data1.hash ^ data1.data_.data) == 2);
+			my_assert((data1.hash ^ data1.data_.data) == 99);
 			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("h7h5"));
 			my_assert(data1.data_._data.depth == 3);
 			my_assert(data1.data_._data.score == 7);
-			my_assert(data1.data_._data.flags == UPPERBOUND);
+			my_assert(data1.data_._data.flags == EXACT);
 		}
 
 		printf("Ok\n");

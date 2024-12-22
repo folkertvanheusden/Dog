@@ -65,14 +65,15 @@ bool with_syzygy = false;
 #include "tuners.h"
 
 
-std::atomic_bool ponder_quit  { false };
-int              thread_count = 1;
+std::atomic_bool ponder_quit    { false };
+int              thread_count   { 1     };
+std::atomic_bool ponder_running { false };
 
-void start_ponder();
-void stop_ponder();
+void start_ponder_thread();
+void stop_ponder_thread();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -81,7 +82,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -89,7 +90,11 @@ uint64_t wboard { 0 };
 uint64_t bboard { 0 };
 #endif
 
-bool trace_enabled = true;
+bool trace_enabled = false;
+auto allow_tracing_handler = [](const bool value) {
+	trace_enabled = value;
+	printf("# Tracing %s\n", value ? "enabled" : "disabled");
+};
 void trace(const char *const fmt, ...)
 {
 	if (trace_enabled) {
@@ -141,6 +146,8 @@ void think_timeout(void *arg)
 #define LED_GREEN    (GPIO_NUM_27)
 #define LED_BLUE     (GPIO_NUM_25)
 #define LED_RED      (GPIO_NUM_22)
+
+QueueHandle_t uart_queue;
 
 const esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
@@ -200,9 +207,11 @@ esp_timer_handle_t led_red_timer;
 libchess::Position positiont1 { libchess::constants::STARTPOS_FEN };
 libchess::Position positiont2 { libchess::constants::STARTPOS_FEN };
 
+// for pondering
 std::mutex  search_fen_lock;
 std::string search_fen;
-uint16_t    search_fen_version { 0 };
+uint16_t    search_fen_version { 0     };
+bool        is_ponder          { false };
 
 auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 	positiont1 = libchess::Position { position_parameters.fen() };
@@ -225,7 +234,7 @@ void set_thread_name(std::string name)
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.4", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.5", "Folkert van Heusden", std::cout, is};
 
 tt tti;
 
@@ -233,7 +242,7 @@ auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	stop_ponder();
+	stop_ponder_thread();
 
 	for(auto & stop: stop2)
 		delete stop;
@@ -244,17 +253,20 @@ auto thread_count_handler = [](const int value)  {
 		free(sp.history);
 	sp2.clear();
 
-	for(int i=0; i<thread_count - 1; i++) {
+	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
-	start_ponder();
+	start_ponder_thread();
 #endif
 };
 
 bool allow_ponder         = true;
-auto allow_ponder_handler = [](const bool value) { allow_ponder = value; };
+auto allow_ponder_handler = [](const bool value) {
+	allow_ponder = value;
+	printf("# Ponder %s\n", value ? "enabled" : "disabled");
+};
 
 auto commerial_option_handler = [](const std::string & value) { };
 
@@ -270,6 +282,7 @@ void vApplicationMallocFailedHook()
 
 void vTaskGetRunTimeStats()
 {
+#if !defined(NO_uxTaskGetSystemState)
 	UBaseType_t   uxArraySize       = uxTaskGetNumberOfTasks();
 	TaskStatus_t *pxTaskStatusArray = reinterpret_cast<TaskStatus_t *>(pvPortMalloc(uxArraySize * sizeof(TaskStatus_t)));
 
@@ -296,10 +309,18 @@ void vTaskGetRunTimeStats()
 	}
 
 	vPortFree(pxTaskStatusArray);
+#endif
+}
+
+void show_esp32_info()
+{
+	printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+	printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
+
+	vTaskGetRunTimeStats();
 }
 
 int64_t esp_start_ts = 0;
-
 int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
@@ -308,14 +329,10 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 
 	if (level < 768) {
 		set_flag(sp->stop);
-
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
-		printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
-
-		vTaskGetRunTimeStats();
+		show_esp32_info();
 
 		return 2;
 	}
@@ -330,6 +347,11 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 	return 0;
 }
 #endif
+
+inline int history_index(const libchess::Color & side, const libchess::PieceType & from_type, const libchess::Square & sq)
+{
+	return side * 6 * 64 + from_type * 64 + sq;
+}
 
 sort_movelist_compare::sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp) :
 	p(p),
@@ -378,7 +400,8 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
 	}
 	else {
-		score += sp->history[p->side_to_move() * 6 * 64 + from_type * 64 + move.to_square()] << 8;
+		int index = history_index(p->side_to_move(), from_type, move.to_square());
+		score += sp->history[index] << 8;
 	}
 
 	score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
@@ -406,10 +429,10 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
 		return false;
 
-	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount() +
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()) > 1)
+	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() &&
+		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount()) ||
+		(pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() &&
+		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()))
 		return false;
 
 	return true;
@@ -453,6 +476,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	bool in_check   = pos.in_check();
 	if (!in_check) {
+		// standing pat
 		best_score = eval(pos, *sp->parameters);
 		if (best_score > alpha && best_score >= beta)
 			return best_score;
@@ -512,6 +536,16 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 
 	return best_score;
+}
+
+void update_history(search_pars_t *const sp, const int index, const int bonus)
+{
+	constexpr int max_history = 32760;
+	constexpr int min_history = -max_history;
+	int  clamped_bonus   = std::clamp(bonus, min_history, max_history);
+	int  final_value     = clamped_bonus - sp->history[index] * abs(clamped_bonus) / max_history;
+
+	sp->history[index]  += final_value;
 }
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp, const int thread_nr)
@@ -575,7 +609,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 		}
 	}
-	else if (depth >= 4) {  // IIR
+	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
 	////////
@@ -601,18 +635,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 	}
 #endif
-	if (!is_root_position && depth <= 3 && beta <= 9800) {
+	bool in_check = pos.in_check();
+
+	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (depth == 1 && staticeval - sp->parameters->knight > beta)
-			return beta;
-
-		if (depth == 2 && staticeval - sp->parameters->rook > beta)
-			return beta;
-
-		if (depth == 3 && staticeval - sp->parameters->queen > beta)
-			depth--;
+		if (staticeval - depth * 121 > beta)
+			return (beta + staticeval) / 2;
 	}
 
 #if defined(linux)
@@ -623,8 +653,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 #endif
 
 	///// null move
-	bool in_check = pos.in_check();
-
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
 		pos.make_null_move();
@@ -669,6 +697,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int     n_played   = 0;
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
+	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move { 0 };
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
@@ -713,18 +742,29 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (!pos.is_capture_move(move)) {
-						auto piece_from = pos.piece_on(move.from_square());
-
-						sp->history[pos.side_to_move() * 6 * 64 + piece_from.value().type() * 64 + move.to_square()] += depth * depth;
-					}
-
+					if (!pos.is_capture_move(move))
+						beta_cutoff_move = move;
 					break;
 				}
 
 				alpha = score;
-
 			}
+		}
+	}
+
+	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
+	if (beta_cutoff_move.has_value()) {
+		int bonus = depth * depth;
+		for(auto move : move_list) {
+			if (pos.is_capture_move(move))
+				continue;
+			auto piece_type_from = pos.piece_type_on(move.from_square());
+			int  index           = history_index(pos.side_to_move(), piece_type_from.value(), move.to_square());
+			if (move == beta_cutoff_move.value()) {
+				update_history(sp, index, bonus);
+				break;
+			}
+			update_history(sp, index, -bonus);
 		}
 	}
 
@@ -866,6 +906,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				if (sp->is_t2 == false)
 					printf("# stop flag set\n");
 #endif
+				printf("info depth %d score cp %d\n", max_depth, score);
 				break;
 			}
 
@@ -937,24 +978,23 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				qnodes += sp2.qnodes;
 #endif
 
-				if (!sp->is_t2 && thought_ms > 0) {
+				if (!sp->is_t2) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
-
 					std::string pv_str;
-
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
 
+					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
 						printf("info depth %d score mate %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, mate_moves,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 					else {
 						printf("info depth %d score cp %d nodes %zu time %" PRIu64 " nps %" PRIu64 " tbhits %u pv%s\n",
 								max_depth, score,
-								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / thought_ms), syzygy_query_hits, pv_str.c_str());
+								size_t(nodes), thought_ms, uint64_t(nodes * 1000 / use_thought_ms), syzygy_query_hits, pv_str.c_str());
 					}
 				}
 
@@ -1053,31 +1093,27 @@ void ponder_thread(void *p)
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 			for(auto & sp: sp2)
-				memset(sp.history, 0x00, history_size * sizeof(uint32_t));
+				memset(sp.history, 0x00, history_malloc_size);
 #else
-			memset(sp2.history, 0x00, history_size * sizeof(uint32_t));
+			memset(sp2.history, 0x00, history_malloc_size);
 #endif
 
 #if !defined(__ANDROID__)
-			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, thread_count > 1, search_fen.c_str());
+			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, allow_ponder, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
 		}
 		search_fen_lock.unlock();
 
-		if (valid && thread_count > 1 && allow_ponder) {
+		if (valid && allow_ponder) {
+			ponder_running = true;
 #if !defined(__ANDROID__)
 			trace("# ponder search start\n");
 #endif
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
-			start_blink(led_blue_timer);
-#endif
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID)
-			int n_threads = thread_count - 1;
-
+			int n_threads = is_ponder ? thread_count : (thread_count - 1);
 			trace("# starting %d threads\n", n_threads);
 
 			std::vector<std::thread *>        ths;
@@ -1097,12 +1133,12 @@ void ponder_thread(void *p)
 				delete th;
 			}
 #else
+			start_blink(led_blue_timer);
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
-#endif
-
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_blue_timer, &led_blue);
 #endif
+			trace("# Pondering finished\n");
+			ponder_running = false;
 		}
 		else {
 			// TODO replace this by condition variables
@@ -1123,7 +1159,7 @@ void ponder_thread(void *p)
 #endif
 }
 
-void start_ponder()
+void start_ponder_thread()
 {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	ponder_quit = false;
@@ -1141,7 +1177,7 @@ void start_ponder()
 #endif
 }
 
-void stop_ponder()
+void stop_ponder_thread()
 {
 	trace(" *** STOP PONDER ***\n");
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -1169,11 +1205,15 @@ void pause_ponder()
 	search_fen_lock.unlock();
 }
 
-void set_new_ponder_position()
+void set_new_ponder_position(const bool this_is_ponder)
 {
-	trace("# *** RESTART PONDER ***\n");
+	if (this_is_ponder)
+		trace("# *** RESTART PONDER ***\n");
+	else
+		trace("# *** RESTART LAZY SMP ***\n");
 	search_fen_lock.lock();
 	search_fen = positiont1.fen();
+	is_ponder  = this_is_ponder;
 	search_fen_version++;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	for(auto & sp: sp2)
@@ -1220,6 +1260,15 @@ void main_task()
 
 	auto display_handler = [](std::istringstream&) {
 		positiont1.display();
+	};
+
+	auto status_handler = [](std::istringstream&) {
+		printf("# Ponder %s\n", allow_ponder ? "enabled" : "disabled");
+		printf("# Ponder %srunning\n", ponder_running ? "" : "NOT ");
+		printf("# Tracing %s\n", trace_enabled ? "enabled" : "disabled");
+#if defined(ESP32)
+		show_esp32_info();
+#endif
 	};
 
 	auto help_handler = [](std::istringstream&) {
@@ -1279,8 +1328,8 @@ void main_task()
 				start_blink(led_green_timer);
 #endif
 
-				// handle ponder-thread
-				set_new_ponder_position();
+				// false = lazy smp
+				set_new_ponder_position(false);
 
 				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
 #if !defined(linux) && !defined(_WIN32)
@@ -1379,7 +1428,7 @@ void main_task()
 			}
 
 			// let the ponder thread run as a lazy-smp thread
-			set_new_ponder_position();
+			set_new_ponder_position(false);
 
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
@@ -1423,7 +1472,7 @@ void main_task()
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
 			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
-			set_new_ponder_position();
+			set_new_ponder_position(true);
 			positiont1.unmake_move();
 		}
 		catch(const std::exception& e) {
@@ -1442,6 +1491,8 @@ void main_task()
 
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 	uci_service.register_option(allow_ponder_option);
+	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
+	uci_service.register_option(allow_tracing_option);
 	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
 	uci_service.register_option(commerial_option);
 
@@ -1459,11 +1510,12 @@ void main_task()
 	uci_service.register_handler("perft",      perft_handler, true);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
 	uci_service.register_handler("tui",        tui_handler, true);
+	uci_service.register_handler("status",     status_handler, false);
 	uci_service.register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
-		printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
+		my_printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
+		my_printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -1484,7 +1536,7 @@ void main_task()
 		}
 	}
 
-	stop_ponder();
+	stop_ponder_thread();
 
 	printf("TASK TERMINATED\n");
 }
@@ -1493,9 +1545,9 @@ void hello() {
 #if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
-	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
-	printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
+	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+	my_printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }
 
@@ -1550,13 +1602,14 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	for(int i=0; i<thread_count - 1; i++) {
+	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-
-		sp2.push_back({ nullptr, true, reinterpret_cast<uint32_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
-	start_ponder();
+	start_ponder_thread();
+
+	setvbuf(stdout, nullptr, _IONBF, 0);
 
 	main_task();
 
@@ -1604,9 +1657,26 @@ extern "C" void app_main()
 
 	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
+	// configure UART1 (2nd uart)
+	uart_config_t uart_config = {
+		.baud_rate = 115200,
+		.data_bits = UART_DATA_8_BITS,
+		.parity = UART_PARITY_DISABLE,
+		.stop_bits = UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.rx_flow_ctrl_thresh = 122,
+	};
+	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	constexpr int uart_buffer_size = 1024 * 2;
+	if (uart_is_driver_installed(uart_num))
+		printf("UART ALREADY INSTALLED\n");
+	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+
+	// flash filesystem
 	esp_vfs_spiffs_conf_t conf = {
 		.base_path       = "/spiffs",
-		.partition_label = NULL,
+		.partition_label = nullptr,
 		.max_files       = 5,
 		.format_if_mount_failed = true
 	};
@@ -1625,10 +1695,11 @@ extern "C" void app_main()
 
 	gpio_set_level(LED_INTERNAL, 0);
 
+	start_ponder_thread();
+
 	main_task();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 	start_blink(led_red_timer);
-#endif
+	esp_restart();
 }
 #endif
