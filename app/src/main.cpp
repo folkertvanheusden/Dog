@@ -625,6 +625,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (depth >= 4)  // IIR, Internal Iterative Reductions
 			depth--;
 	}
+	assert(tt_move.has_value() == false || tt_move.value().value() != 0);
 
 	uint64_t hash = pos.hash();
 	////////
@@ -752,8 +753,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		if (score > best_score) {
 			best_score = score;
-
-			*m = move;
+			*m         = move;
 
 			if (score > alpha) {
 				if (score >= beta) {
