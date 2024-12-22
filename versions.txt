@@ -1,3 +1,8 @@
+LMRbetacheck
+	Score of c04c324-LMRbetacheck vs 124b473-master: 34 - 86 - 91  [0.377] 211
+	Elo difference: -87.4 +/- 35.7, LOS: 0.0 %, DrawRatio: 43.1 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 PVS
 	Score of 02b249-PVS vs 124b473-master: 228 - 271 - 413  [0.476] 912
 	Elo difference: -16.4 +/- 16.7, LOS: 2.7 %, DrawRatio: 45.3 %
