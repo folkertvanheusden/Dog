@@ -1,3 +1,8 @@
+PVS
+	Score of 02b249-PVS vs 124b473-master: 228 - 271 - 413  [0.476] 912
+	Elo difference: -16.4 +/- 16.7, LOS: 2.7 %, DrawRatio: 45.3 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 LMRdepth
 	Score of c22830c-LMRdepth vs 124b473-master: 32 - 90 - 70  [0.349] 192
 	Elo difference: -108.3 +/- 40.1, LOS: 0.0 %, DrawRatio: 36.5 %
