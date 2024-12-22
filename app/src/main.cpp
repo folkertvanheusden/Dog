@@ -571,7 +571,7 @@ std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const lib
                                          (flag == UPPERBOUND && work_score <= alpha);
 
                         if (use)
-                                return { work_score, tt_move };  // move in TT is valid
+                                return { work_score, tt_move };
                 }
         }
 
