@@ -548,7 +548,7 @@ void update_history(search_pars_t *const sp, const int index, const int bonus)
 	sp->history[index]  += final_value;
 }
 
-std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const libchess::Position & pos, const int depth, const int max_depth, const int alpha, const int beta)
+std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const libchess::Position & pos, const int8_t depth, const int16_t max_depth, const int16_t alpha, const int16_t beta)
 {
         uint64_t                      hash = pos.hash();
         std::optional<libchess::Move> tt_move { };
@@ -571,7 +571,7 @@ std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const lib
                                          (flag == UPPERBOUND && work_score <= alpha);
 
                         if (use)
-                                return { work_score, tt_move };
+                                return { { work_score }, tt_move };
                 }
         }
 
