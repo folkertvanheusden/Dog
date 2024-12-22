@@ -356,7 +356,7 @@ void tui()
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(positiont1, *sp1.parameters);
-				my_printf("evaluation score: %d\n", score);
+				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt") {
 				auto te = tti.lookup(positiont1.hash());
@@ -364,7 +364,7 @@ void tui()
 					my_printf("None\n");
 				else {
 					const char *const flag_names[] = { "invalid", "exact", "lowerbound", "upperbound" };
-					my_printf("Score: %d (%s)\n", te.value().data_._data.score, flag_names[te.value().data_._data.flags]);
+					my_printf("Score: %.2f (%s)\n", te.value().data_._data.score / 100., flag_names[te.value().data_._data.flags]);
 					my_printf("Depth: %d\n", te.value().data_._data.depth);
 					std::optional<libchess::Move> tt_move;
 					if (te.value().data_._data.m)
@@ -397,7 +397,7 @@ void tui()
 			int            best_score { 0 };
 			clear_flag(sp1.stop);
 			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
-			my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
+			my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
 			emit_pv(positiont1, best_move, colors);
 
