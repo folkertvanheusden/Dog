@@ -130,7 +130,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 	work.make_move(start_move);
 
 	for(int i=0; i<64; i++) {
-		std::optional<tt_entry> te = tti.lookup(work.calculate_hash());
+		std::optional<tt_entry> te = tti.lookup(work.hash());
 		if (!te.has_value())
 			break;
 
