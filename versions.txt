@@ -1,4 +1,9 @@
 master
+	Score of bae0094-master-TEST vs 124b473-master: 456 - 485 - 845  [0.492] 1786
+	Elo difference: -5.6 +/- 11.7, LOS: 17.2 %, DrawRatio: 47.3 %
+	SPRT: llr -2.99 (-101.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
 	Score of f49c612-master vs 124b473-master: 280 - 322 - 475  [0.481] 1077
 	Elo difference: -13.6 +/- 15.5, LOS: 4.3 %, DrawRatio: 44.1 %
 	SPRT: llr -2.96 (-100.7%), lbound -2.94, ubound 2.94 - H0 was accepted
