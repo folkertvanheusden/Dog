@@ -134,7 +134,6 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 
 	while(low < high) {
 		size_t mid = (low + high) / 2;
-		printf("mid: %zu\n", mid);
 
 		if (fseek(fh, mid * sizeof(polyglot_entry), SEEK_SET) == -1) {
 			printf("Seek in book failed: %s\n", strerror(errno));
@@ -145,8 +144,6 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			printf("Problem reading from book: %s\n", strerror(errno));
 			break;
 		}
-
-		printf("hash: %016lx versus %016lx\n", hash, my_NTOHLL(entry.hash));
 
 		if (my_NTOHLL(entry.hash) < hash)
 			low = mid + 1;

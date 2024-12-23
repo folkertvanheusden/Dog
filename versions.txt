@@ -1,3 +1,8 @@
+master (after hashing fixes)
+	Score of 1513523-master vs 124b473-master: 516 - 546 - 834  [0.492] 1896
+	Elo difference: -5.5 +/- 11.7, LOS: 17.9 %, DrawRatio: 44.0 %
+	SPRT: llr -2.94 (-100.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 master
 	Score of bae0094-master-TEST vs 124b473-master: 456 - 485 - 845  [0.492] 1786
 	Elo difference: -5.6 +/- 11.7, LOS: 17.2 %, DrawRatio: 47.3 %
