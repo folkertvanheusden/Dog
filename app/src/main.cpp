@@ -503,7 +503,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp->parameters->pawn : eval_piece(piece_to->type(), *sp->parameters);
 			auto piece_from  = pos.piece_on(move.from_square());
 			int  eval_killer = eval_piece(piece_from->type(), *sp->parameters);
-			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), piece_to->color()))
+			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), !pos.side_to_move()))
 				continue;
 		}
 
@@ -714,11 +714,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		}
 
 		pos.make_move(move);
-
 		int  score            = -10000;
-
 		bool check_after_move = pos.in_check();
-
 		if (check_after_move)
 			goto skip_lmr;
 
@@ -728,7 +725,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		skip_lmr:
 			score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 		}
-
 		pos.unmake_move();
 
 		n_played++;
