@@ -341,7 +341,7 @@ void tui()
 			else if (parts[0] == "fen")
 				my_printf("FEN: %s\n", positiont1.fen().c_str());
 			else if (parts[0] == "hash")
-				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.hash());
+				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.calculate_hash());
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(positiont1, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
@@ -400,7 +400,7 @@ void tui()
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt") {
-				auto te = tti.lookup(positiont1.hash());
+				auto te = tti.lookup(positiont1.calculate_hash());
 				if (te.has_value() == false)
 					my_printf("None\n");
 				else {

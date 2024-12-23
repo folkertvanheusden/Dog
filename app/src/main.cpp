@@ -575,7 +575,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
-	uint64_t       hash        = pos.hash();
+	uint64_t       hash        = pos.calculate_hash();
 	std::optional<tt_entry> te = tti.lookup(hash);
 
         if (te.has_value()) {  // TT hit?
