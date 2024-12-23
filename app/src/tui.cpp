@@ -8,6 +8,7 @@
 
 #include <libchess/Position.h>
 
+#include "book.h"
 #include "eval.h"
 #include "main.h"
 #include "main.h"
@@ -174,6 +175,8 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 		int nr         = 0;
 		libchess::Position work(positiont1);
 		for(auto & move: pv) {
+			if (++nr == 6)
+				printf("\n    "), nr = 0;
 			printf(" ");
 
 			work.make_move(move);
@@ -197,9 +200,6 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 				printf(" [%.2f] ", -cur_score / 100.);
 			else
 				printf(" [%.2f] ", cur_score / 100.);
-
-			if (++nr == 6)
-				printf("\n    "), nr = 0;
 		}
 	}
 	else {
@@ -278,9 +278,9 @@ void load_settings()
 
 void tui()
 {
-	load_settings();
-
 	set_thread_name("TUI");
+
+	load_settings();
 
 	if (do_ponder)
 		set_new_ponder_position(true);
@@ -291,6 +291,12 @@ void tui()
 	i.set_local_echo(true);
 	
 	std::vector<libchess::Move> moves_played;
+
+#if defined(ESP32)
+	polyglot_book pb("/spiffs/dog-book.bin");
+#else
+	polyglot_book pb("dog-book.bin");
+#endif
 
 	for(;;) {
 		display(positiont1, true, colors, moves_played);
@@ -334,6 +340,8 @@ void tui()
 				player.reset();
 			else if (parts[0] == "fen")
 				my_printf("FEN: %s\n", positiont1.fen().c_str());
+			else if (parts[0] == "hash")
+				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.hash());
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(positiont1, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
@@ -428,17 +436,27 @@ void tui()
 				set_new_ponder_position(false);  // lazy smp
 
 			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
-			my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
-			libchess::Move best_move  { 0 };
-			int            best_score { 0 };
-			clear_flag(sp1.stop);
-			std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
-			my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
-			emit_pv(positiont1, best_move, colors);
+			auto move = pb.query(positiont1);
+			if (move.has_value()) {
+				printf("Book move: %s\n", move.value().to_str().c_str());
 
-			positiont1.make_move(best_move);
-			moves_played.push_back(best_move);
+				positiont1.make_move(move.value());
+				moves_played.push_back(move.value());
+			}
+			else {
+				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
+				libchess::Move best_move  { 0 };
+				int            best_score { 0 };
+				clear_flag(sp1.stop);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
+				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+				emit_pv(positiont1, best_move, colors);
+
+				positiont1.make_move(best_move);
+				moves_played.push_back(best_move);
+			}
+
 			my_printf("\n");
 
 			if (do_ponder)

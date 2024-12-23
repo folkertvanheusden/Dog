@@ -7,8 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
-#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Debug)
 
 if (CMAKE_BUILD_TYPE EQUAL RelWithDebInfo)
 	set(MY_DEBUG 1)
@@ -27,6 +27,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 add_executable(
   Dog
+  ../book.cpp
   ../eval.cpp
   ../eval_par.cpp
   ../main.cpp
