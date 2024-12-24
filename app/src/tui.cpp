@@ -293,9 +293,9 @@ void tui()
 	std::vector<libchess::Move> moves_played;
 
 #if defined(ESP32)
-	polyglot_book pb("/spiffs/dog-book.bin");
+	auto *pb = new polyglot_book("/spiffs/dog-book.bin");
 #else
-	polyglot_book pb("dog-book.bin");
+	auto *pb = new polyglot_book("dog-book.bin");
 #endif
 
 	for(;;) {
@@ -437,7 +437,7 @@ void tui()
 
 			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
-			auto move = pb.query(positiont1);
+			auto move = pb->query(positiont1);
 			if (move.has_value()) {
 				printf("Book move: %s\n", move.value().to_str().c_str());
 
@@ -466,6 +466,8 @@ void tui()
 #endif
 		}
 	}
+
+	delete pb;
 
 	i.set_local_echo(false);
 	trace_enabled = true;
