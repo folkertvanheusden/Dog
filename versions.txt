@@ -1,3 +1,8 @@
+PVS
+	Score of 3a2782c-PVS-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 542 - 574 - 807  [0.492] 1923
+	Elo difference: -5.8 +/- 11.8, LOS: 16.9 %, DrawRatio: 42.0 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 master, libchess d2e43e0
 	Score of 6ba4b89-master-LCd2e43e0 vs c4ba323-noIID-LCd2e43e0: 2 - 64 - 9  [0.087] 75
 	Elo difference: -409.1 +/- 124.1, LOS: 0.0 %, DrawRatio: 12.0 %
