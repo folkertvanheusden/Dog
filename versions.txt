@@ -1,3 +1,8 @@
+master, libchess d2e43e0
+	Score of 6ba4b89-master-LCd2e43e0 vs c4ba323-noIID-LCd2e43e0: 2 - 64 - 9  [0.087] 75
+	Elo difference: -409.1 +/- 124.1, LOS: 0.0 %, DrawRatio: 12.0 %
+	SPRT: llr -3.03 (-102.8%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 noIID
 	Score of 10e6cb9-noIID-LCf8a7b99 vs cd99bfb-master: 151 - 90 - 208  [0.568] 449
 	Elo difference: 47.5 +/- 23.6, LOS: 100.0 %, DrawRatio: 46.3 %
