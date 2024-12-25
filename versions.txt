@@ -1,0 +1,89 @@
+master, libchess d2e43e0
+	Score of 6ba4b89-master-LCd2e43e0 vs c4ba323-noIID-LCd2e43e0: 2 - 64 - 9  [0.087] 75
+	Elo difference: -409.1 +/- 124.1, LOS: 0.0 %, DrawRatio: 12.0 %
+	SPRT: llr -3.03 (-102.8%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+noIID
+	Score of 10e6cb9-noIID-LCf8a7b99 vs cd99bfb-master: 151 - 90 - 208  [0.568] 449
+	Elo difference: 47.5 +/- 23.6, LOS: 100.0 %, DrawRatio: 46.3 %
+	SPRT: llr 2.99 (101.4%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+master
+	Score of e5b0ed5-libchess61d27ed vs 124b473-master: 168 - 213 - 326  [0.468] 707
+	Elo difference: -22.1 +/- 18.8, LOS: 1.1 %, DrawRatio: 46.1 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master (after hashing fixes)
+	Score of 1513523-master vs 124b473-master: 516 - 546 - 834  [0.492] 1896
+	Elo difference: -5.5 +/- 11.7, LOS: 17.9 %, DrawRatio: 44.0 %
+	SPRT: llr -2.94 (-100.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of bae0094-master-TEST vs 124b473-master: 456 - 485 - 845  [0.492] 1786
+	Elo difference: -5.6 +/- 11.7, LOS: 17.2 %, DrawRatio: 47.3 %
+	SPRT: llr -2.99 (-101.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of f49c612-master vs 124b473-master: 280 - 322 - 475  [0.481] 1077
+	Elo difference: -13.6 +/- 15.5, LOS: 4.3 %, DrawRatio: 44.1 %
+	SPRT: llr -2.96 (-100.7%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRbetacheck
+	Score of c04c324-LMRbetacheck vs 124b473-master: 34 - 86 - 91  [0.377] 211
+	Elo difference: -87.4 +/- 35.7, LOS: 0.0 %, DrawRatio: 43.1 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+PVS
+	Score of 02b249-PVS vs 124b473-master: 228 - 271 - 413  [0.476] 912
+	Elo difference: -16.4 +/- 16.7, LOS: 2.7 %, DrawRatio: 45.3 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRdepth
+	Score of c22830c-LMRdepth vs 124b473-master: 32 - 90 - 70  [0.349] 192
+	Elo difference: -108.3 +/- 40.1, LOS: 0.0 %, DrawRatio: 36.5 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRnotPV
+	Score of 81de4b3-LMRnotPV vs 124b473-master: 45 - 111 - 67  [0.352] 223
+	Elo difference: -106.0 +/- 39.3, LOS: 0.0 %, DrawRatio: 30.0 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+TTprobeFunc2
+	Score of 5663019-TTprobeFunc2 vs 124b473-master: 41 - 97 - 90  [0.377] 228
+	Elo difference: -87.1 +/- 35.5, LOS: 0.0 %, DrawRatio: 39.5 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+SPP-IM with altkillers
+	Score of 49e7f86-SPP-IM vs 124b473-master: 94 - 143 - 197  [0.444] 434
+	Elo difference: -39.4 +/- 24.2, LOS: 0.1 %, DrawRatio: 45.4 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+SPP-IM
+	Score of 5c908c5-SPP-IM vs 124b473-master: 78 - 129 - 166  [0.432] 373
+	Elo difference: -47.8 +/- 26.3, LOS: 0.0 %, DrawRatio: 44.5 %
+	SPRT: llr -2.98 (-101.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+sort-psq-phase
+	Score of f1428db-sort-psq-phase vs 124b473-master: 525 - 551 - 942  [0.494] 2018
+	Elo difference: -4.5 +/- 11.1, LOS: 21.4 %, DrawRatio: 46.7 %
+	SPRT: llr -2.97 (-100.9%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+ttbeforeqs
+	Score of 5ae1963-ttbeforeqs vs 124b473-master: 868 - 881 - 1356  [0.498] 3105
+	Elo difference: -1.5 +/- 9.2, LOS: 37.8 %, DrawRatio: 43.7 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+insufmatfix
+	Score of 2c6ea2a-insufmatfix vs f8000cc-master: 1166 - 1160 - 1961  [0.501] 4287
+	Elo difference: 0.5 +/- 7.7, LOS: 55.0 %, DrawRatio: 45.7 %
+	SPRT: llr -2.96 (-100.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+PVS
+	Score of 64bf825-PVS vs 124b473-master: 536 - 565 - 869  [0.493] 1970
+	Elo difference: -5.1 +/- 11.5, LOS: 19.1 %, DrawRatio: 44.1 %
+	SPRT: llr -2.95 (-100.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of dorpsgek vs 7ed5608-master: 292 - 212 - 244  [0.553] 748
+	Elo difference: 37.3 +/- 20.5, LOS: 100.0 %, DrawRatio: 32.6 %
+	SPRT: llr 2.98 (101.1%), lbound -2.94, ubound 2.94 - H1 was accepted
