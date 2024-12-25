@@ -1,3 +1,18 @@
+7b75d02497ec64299898adb0a76cf4bf5cbe8493 merged openingbook
+19ffccd433a4c68db224dfc281bbf793716b8992 merged countQSnodes
+2c6ea2a52373107b0a7552e5520644c460ae290c merged insufmatfix
+8e4906eeee0e8fca92b1a259ed6f76f1ef5ae11f merged ESP32uart1
+f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
+54e21e6b3c0baca676dbe3e454de5e639c2b3995 merged killersPromo
+0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
+e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
+
+
+insufmat
+	Score of d796db8-insufmat-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 211 - 254 - 394  [0.475] 859
+	Elo difference: -17.4 +/- 17.1, LOS: 2.3 %, DrawRatio: 45.9 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 PVS
 	Score of 3a2782c-PVS-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 542 - 574 - 807  [0.492] 1923
 	Elo difference: -5.8 +/- 11.8, LOS: 16.9 %, DrawRatio: 42.0 %
