@@ -21,6 +21,7 @@ typedef struct
 	uint16_t  md;
 
 	uint32_t  nodes;
+	uint32_t  qnodes;
 
 	end_t    *stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -95,3 +96,4 @@ void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
 bool is_insufficient_material_draw(const libchess::Position & pos);
+void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
