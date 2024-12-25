@@ -1,3 +1,8 @@
+noIID
+	Score of 10e6cb9-noIID-LCf8a7b99 vs cd99bfb-master: 151 - 90 - 208  [0.568] 449
+	Elo difference: 47.5 +/- 23.6, LOS: 100.0 %, DrawRatio: 46.3 %
+	SPRT: llr 2.99 (101.4%), lbound -2.94, ubound 2.94 - H1 was accepted
+
 master
 	Score of e5b0ed5-libchess61d27ed vs 124b473-master: 168 - 213 - 326  [0.468] 707
 	Elo difference: -22.1 +/- 18.8, LOS: 1.1 %, DrawRatio: 46.1 %
