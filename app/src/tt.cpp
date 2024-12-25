@@ -125,8 +125,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 {
 	auto work = pos_in;
 
-	std::vector<libchess::Move> out = { start_move };
-
+	std::vector<libchess::Move> out { start_move };
 	work.make_move(start_move);
 
 	for(int i=0; i<64; i++) {

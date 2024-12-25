@@ -27,6 +27,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 add_executable(
   Dog
+  ../book.cpp
   ../eval.cpp
   ../eval_par.cpp
   ../main.cpp
