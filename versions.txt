@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+TTprobeFunc2
+	Score of 9004dc2-TTprobeFunc2-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 67 - 127 - 108  [0.401] 302
+	Elo difference: -70.0 +/- 31.7, LOS: 0.0 %, DrawRatio: 35.8 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 insufmat
 	Score of d796db8-insufmat-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 211 - 254 - 394  [0.475] 859
 	Elo difference: -17.4 +/- 17.1, LOS: 2.3 %, DrawRatio: 45.9 %
