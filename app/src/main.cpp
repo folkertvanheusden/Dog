@@ -568,12 +568,18 @@ std::pair<std::optional<int>, std::optional<libchess::Move> > probe_tt(const lib
                                          (flag == LOWERBOUND && work_score >= beta) ||
                                          (flag == UPPERBOUND && work_score <= alpha);
 
-                        if (use)
-                                return { { work_score }, tt_move };
+                        if (use) {
+				if (tt_move.has_value())
+					return { { work_score }, tt_move };
+				return { { work_score }, { } };
+			}
                 }
+
+		if (tt_move.has_value())
+			return { { }, tt_move };
         }
 
-        return { { }, tt_move };
+        return { { }, { } };
 }
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t *const sp, const int thread_nr)
