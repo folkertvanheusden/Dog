@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+master with libchess zobrist fixes
+	Score of 7023956-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 555 - 584 - 880  [0.493] 2019
+	Elo difference: -5.0 +/- 11.4, LOS: 19.5 %, DrawRatio: 43.6 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 TTprobeFunc2
 	Score of 9004dc2-TTprobeFunc2-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 67 - 127 - 108  [0.401] 302
 	Elo difference: -70.0 +/- 31.7, LOS: 0.0 %, DrawRatio: 35.8 %
