@@ -51,6 +51,8 @@ extern libchess::Position positiont1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;
+extern std::vector<search_pars_t> sp2;
+extern bool               with_syzygy;
 
 #if defined(ESP32)
 #include <driver/gpio.h>
@@ -88,6 +90,8 @@ public:
         int move_evaluater(const libchess::Move move) const;
 };
 
+void trace(const char *const fmt, ...);
+void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
 void set_new_ponder_position(const bool is_ponder);
