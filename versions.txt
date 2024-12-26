@@ -8,6 +8,16 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+master
+	Score of 5258d4d-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 677 - 694 - 1231  [0.497] 2602
+	Elo difference: -2.3 +/- 9.7, LOS: 32.3 %, DrawRatio: 47.3 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of 7023956-master-LCbf93a0a-2THR vs faf6b8a-master-LCd2e43e0: 1436 - 1440 - 2642  [0.500] 5518
+	Elo difference: -0.3 +/- 6.6, LOS: 47.0 %, DrawRatio: 47.9 %
+	SPRT: llr -4.61 (-100.3%), lbound -4.6, ubound 4.6 - H0 was accepted
+
 master with libchess zobrist fixes
 	Score of 7023956-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 555 - 584 - 880  [0.493] 2019
 	Elo difference: -5.0 +/- 11.4, LOS: 19.5 %, DrawRatio: 43.6 %
