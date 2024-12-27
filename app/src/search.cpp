@@ -654,9 +654,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 		}
 
 #if !defined(__ANDROID__)
-		auto counts = calculate_search_statistics();
-		printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
-		printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
+		if (!sp->is_t2) {
+			auto counts = calculate_search_statistics();
+			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
+			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
+		}
 #endif
 	}
 	else {
