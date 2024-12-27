@@ -335,6 +335,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
+		sp->cs->n_null_move++;
+
 		pos.make_null_move();
 		libchess::Move ignore;
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
@@ -343,8 +345,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 if (nmscore >= beta) {
 			libchess::Move ignore2;
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
-			if (verification >= beta)
+			if (verification >= beta) {
+				sp->cs->n_null_move_hit++;
 				return beta;
+			}
                 }
 	}
 	///////////////
@@ -666,6 +670,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
+			printf("# null move succeeded: %.2f%%\n", counts.n_null_move_hit * 100. / double(counts.n_null_move));
 		}
 #endif
 	}
