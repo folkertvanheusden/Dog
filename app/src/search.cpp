@@ -193,8 +193,11 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			best_score = score;
 
 			if (score > alpha) {
-				if (score >= beta)
+				if (score >= beta) {
+					sp->cs->n_qmoves_cutoff += n_played;
+					sp->cs->nmc_qnodes++;
 					break;
+				}
 
 				alpha = score;
 
@@ -426,6 +429,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 			update_history(sp, index, -bonus);
 		}
+
+		sp->cs->n_moves_cutoff += n_played;
+		sp->cs->nmc_nodes++;
 	}
 
 	if (n_played == 0) {
@@ -659,6 +665,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			auto counts = calculate_search_statistics();
 			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
+			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
 		}
 #endif
 	}
