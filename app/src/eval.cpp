@@ -47,8 +47,17 @@ int count_protection(const libchess::Position & pos)
 		auto sq    = occupancy.forward_bitscan();
 		occupancy.forward_popbit();
 
-		auto color = pos.color_of(sq);
-		scores[color.value()] += pos.attackers_to(sq, color.value());  // under attack by own color is protection
+		auto color = pos.color_of(sq).value();
+		printf("piece: %s %s\n", sq.to_str().c_str(), color == libchess::constants::WHITE ? "white" : "black");
+		auto temp = pos.attackers_to(sq, color);
+		while (temp) {
+			auto sq    = temp.forward_bitscan();
+			temp.forward_popbit();
+			printf("\t%s\n", sq.to_str().c_str());
+		}
+
+		// FIXME attackers_to looks for opponents, sometimes ignoring color
+		scores[color.value()] += pos.attackers_to(sq, color).popcount();  // under attack by own color is protection
 	}
 
 	return scores[libchess::constants::WHITE] - scores[libchess::constants::BLACK];

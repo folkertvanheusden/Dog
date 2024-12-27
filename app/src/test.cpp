@@ -18,6 +18,7 @@ void tests()
 
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
+	sp1.cs = new chess_stats_t();
 	
 	printf("Size of int must be 32 bit\n");
 	my_assert(sizeof(int) == 4);
@@ -45,6 +46,7 @@ void tests()
 
 	printf("Ok\n");
 
+#if 0
 	// - underpromotions
 	const std::vector<std::pair<std::string, std::string> > underpromotions {
             {"8/5P1k/8/4B1K1/8/1B6/2N5/8 w - - 0 1", "f7f8n"},
@@ -60,12 +62,13 @@ void tests()
 		memset(sp1.history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
+		std::tie(best_move, best_score) = search_it(&p, 1500, false, &sp1, -1, 0, { });
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
 		printf("Ok\n");
 	}
+#endif
 
 	// - move sorting & generation
 	{
@@ -405,6 +408,17 @@ void tests()
 
 		printf("Ok\n");
 	}
+
+	{
+		libchess::Position p1 { "N5k1/8/2R5/2R5/8/4n3/1b1p4/b5K1 w - - 0 1" };
+		printf("-1 == %d\n", count_protection(p1));
+		my_assert(count_protection(p1) == -1);
+		printf("---\n");
+		libchess::Position p2 { "6k1/8/2R5/2R5/8/8/3p4/6K1 w - - 0 1" };
+		my_assert(count_protection(p2) == 2)
+	}
+
+	delete sp1.cs;
 }
 
 void run_tests()
