@@ -391,7 +391,7 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.king_shield;
 
 	if (pos.side_to_move() != libchess::constants::WHITE)
-		return -score;
+		score = -score;
 
-	return score;
+	return score + parameters.tune_tempo_bonus;
 }

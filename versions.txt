@@ -49,6 +49,11 @@ insufmatfix
 
 ---
 
+tempo (fix)
+        Score of Dog-f07de7f-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 513 - 432 - 777  [0.524] 1722
+        Elo difference: 16.4 +/- 12.1, LOS: 99.6 %, DrawRatio: 45.1 %
+        SPRT: llr 2.95 (100.3%), lbound -2.94, ubound 2.94 - H1 was accepted
+
 master
 	Score of 5258d4d-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 677 - 694 - 1231  [0.497] 2602
 	Elo difference: -2.3 +/- 9.7, LOS: 32.3 %, DrawRatio: 47.3 %
