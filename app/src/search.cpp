@@ -546,7 +546,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				if (sp->is_t2 == false)
 					printf("# stop flag set\n");
 #endif
-				printf("info depth %d score cp %d\n", max_depth, score);
+				if (sp->is_t2 == false)
+					printf("info depth %d score cp %d\n", max_depth, score);
 				break;
 			}
 
