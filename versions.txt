@@ -7,6 +7,42 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+tempo
+	Score of Dog-412a7e4-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 368 - 404 - 633  [0.487] 1405
+	Elo difference: -8.9 +/- 13.5, LOS: 9.8 %, DrawRatio: 45.1 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-5258d4d-master-LCbf93a0a vs Dog-22a052f-v2.5c-LCd2e43e0: 1037 - 1038 - 1749  [0.500] 3824
+	Elo difference: -0.1 +/- 8.1, LOS: 49.1 %, DrawRatio: 45.7 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-5258d4d-master-LCbf93a0a vs Dog-6ba4b89-master-LC6b61930: 727 - 745 - 1213  [0.497] 2685
+	Elo difference: -2.3 +/- 9.7, LOS: 31.9 %, DrawRatio: 45.2 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-6ba4b89-master-LC6b61930 vs Dog-363e95d-master-LC61d27ed: 968 - 972 - 1647  [0.499] 3587
+	Elo difference: -0.4 +/- 8.4, LOS: 46.4 %, DrawRatio: 45.9 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-363e95d-master-LC61d27ed vs Dog-7b75d02-master-LC6b61930: 470 - 500 - 828  [0.492] 1798
+	Elo difference: -5.8 +/- 11.8, LOS: 16.8 %, DrawRatio: 46.1 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-7b75d02-master-LC6b61930 vs Dog-2c6ea2a-insufmatfix-LCd2e43e0: 1016 - 1021 - 1627  [0.499] 3664
+	Elo difference: -0.5 +/- 8.4, LOS: 45.6 %, DrawRatio: 44.4 %
+	SPRT: llr -2.99 (-101.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+insufmatfix
+	Score of Dog-2c6ea2a-insufmatfix-LCd2e43e0 vs Dog-bae0094-master-LCd2e43e0: 634 - 659 - 995  [0.495] 2288
+	Elo difference: -3.8 +/- 10.7, LOS: 24.3 %, DrawRatio: 43.5 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+---
 
 master
 	Score of 5258d4d-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 677 - 694 - 1231  [0.497] 2602
