@@ -7,6 +7,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+tempo (fix)
+	Score of Dog-f07de7f-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 513 - 432 - 777  [0.524] 1722
+	Elo difference: 16.4 +/- 12.1, LOS: 99.6 %, DrawRatio: 45.1 %
+	SPRT: llr 2.95 (100.3%), lbound -2.94, ubound 2.94 - H1 was accepted
+
 tempo
 	Score of Dog-412a7e4-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 368 - 404 - 633  [0.487] 1405
 	Elo difference: -8.9 +/- 13.5, LOS: 9.8 %, DrawRatio: 45.1 %
