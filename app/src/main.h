@@ -11,6 +11,19 @@ typedef struct {
 	std::condition_variable cv;
 } end_t;
 
+typedef struct {
+	uint32_t  nodes;
+	uint32_t  qnodes;
+
+	uint32_t  tt_query;
+	uint32_t  tt_hit;
+	uint32_t  tt_store;
+	uint32_t  tt_invalid;
+
+	uint64_t  syzygy_queries;
+	uint64_t  syzygy_query_hits;
+} chess_stats_t;
+
 typedef struct
 {
 	const eval_par *parameters;
@@ -18,16 +31,12 @@ typedef struct
 
 	int16_t *const history;
 
-	uint16_t  md;
+	chess_stats_t *cs;
 
-	uint32_t  nodes;
-	uint32_t  qnodes;
+	uint16_t  md;
 
 	end_t    *stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	uint64_t  syzygy_queries;
-	uint64_t  syzygy_query_hits;
-
 	char      move[5];
 	int       score;
 #endif
@@ -100,3 +109,6 @@ void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
+void reset_search_statistics();
+chess_stats_t calculate_search_statistics();
+void sum_stats(const chess_stats_t *const source, chess_stats_t *const target);

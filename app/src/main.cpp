@@ -74,7 +74,7 @@ void start_ponder_thread();
 void stop_ponder_thread();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -83,7 +83,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -254,7 +254,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
@@ -521,6 +521,47 @@ void set_new_ponder_position(const bool this_is_ponder)
 	search_fen_lock.unlock();
 }
 
+void reset_stats(chess_stats_t *const cs)
+{
+	memset(cs, 0x00, sizeof(chess_stats_t));
+}
+
+void sum_stats(const chess_stats_t *const source, chess_stats_t *const target)
+{
+	target->nodes    += source->nodes;
+	target->qnodes   += source->qnodes;
+
+        target->tt_query += source->tt_query;
+        target->tt_hit   += source->tt_hit;
+        target->tt_store += source->tt_store;
+}
+
+void reset_search_statistics()
+{
+	reset_stats(sp1.cs);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+        for(auto & sp: sp2)
+                reset_stats(sp.cs);
+#else
+        reset_stats(sp2.cs);
+#endif
+}
+
+chess_stats_t calculate_search_statistics()
+{
+        chess_stats_t out { };
+
+        sum_stats(sp1.cs, &out);
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+        for(auto & sp: sp2)
+                sum_stats(sp.cs, &out);
+#else
+        sum_stats(sp2.cs, &out);
+#endif
+
+        return out;
+}
+
 void main_task()
 {
 	std::ios_base::sync_with_stdio(true);
@@ -536,6 +577,10 @@ void main_task()
 	if (!sp2.history)
 		printf("Malloc of sp2-history failed\n");
 #endif
+
+	sp1.cs = new chess_stats_t();
+	for(auto & sp: sp2)
+		sp.cs = new chess_stats_t();
 
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
@@ -607,17 +652,8 @@ void main_task()
 
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
-
 				tti.inc_age();
-
-				sp1.nodes  = 0;
-				sp1.qnodes  = 0;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-				for(auto & sp: sp2)
-					sp.qnodes = sp.nodes = 0;
-#else
-				sp1.qnodes = sp2.nodes  = 0;
-#endif
+				reset_search_statistics();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 				sp1.md     = 1;
@@ -654,19 +690,12 @@ void main_task()
 
 		try {
 			clear_flag(sp1.stop);
-
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			esp_start_ts = start_ts;
 			sp1.md       = 1;
 			sp2.md       = 1;
-			sp2.nodes    = 0;
-			sp2.qnodes   = 0;
-#else
-			for(auto & sp: sp2)
-				sp.qnodes = sp.nodes = 0;
 #endif
-			sp1.qnodes = sp1.nodes = 0;
-
+			reset_search_statistics();
 			tti.inc_age();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -734,12 +763,12 @@ void main_task()
 			// probe the Syzygy endgame table base
 #if defined(linux) || defined(_WIN32)
 			if (with_syzygy) {
-				sp1.syzygy_queries++;
+				sp1.cs->syzygy_queries++;
 
 				auto probe_result = probe_fathom_root(positiont1);
 
 				if (probe_result.has_value()) {
-					sp1.syzygy_query_hits++;
+					sp1.cs->syzygy_query_hits++;
 
 					best_move  = probe_result.value().first;
 					best_score = probe_result.value().second;
@@ -901,7 +930,7 @@ int main(int argc, char *argv[])
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
