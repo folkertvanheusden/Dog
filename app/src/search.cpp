@@ -384,6 +384,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				new_depth = (depth - 1) * 2 / 3;
 			else
 				new_depth = depth - 2;
+
+			sp->cs->n_lmr++;
 		}
 
 		pos.make_move(move);
@@ -411,6 +413,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				if (score >= beta) {
 					if (!pos.is_capture_move(move))
 						beta_cutoff_move = move;
+					sp->cs->n_lmr_hit += is_lmr;
 					break;
 				}
 
@@ -670,7 +673,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
-			printf("# null move succeeded: %.2f%%\n", counts.n_null_move_hit * 100. / double(counts.n_null_move));
+			printf("# null move co: %.2f%%, LMR co: %.2f%%\n", counts.n_null_move_hit * 100. / double(counts.n_null_move), counts.n_lmr_hit * 100.0 / double(counts.n_lmr));
 		}
 #endif
 	}
