@@ -38,6 +38,22 @@ int game_phase(const int counts[2][6], const eval_par & parameters)
         return (phase * 256 + (total_phase / 2)) / total_phase;
 }
 
+int count_protection(const libchess::Position & pos)
+{
+	int scores[2] = { 0, 0 };
+
+	libchess::Bitboard occupancy = pos.occupancy_bb();
+	while (occupancy) {
+		auto sq    = occupancy.forward_bitscan();
+		occupancy.forward_popbit();
+
+		auto color = pos.color_of(sq);
+		scores[color.value()] += pos.attackers_to(sq, color.value());  // under attack by own color is protection
+	}
+
+	return scores[libchess::constants::WHITE] - scores[libchess::constants::BLACK];
+}
+
 #if 0
 int count_mobility(libchess::Position & pos)
 {
@@ -389,6 +405,8 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 	// score -= (count_king_attacks(pos, libchess::constants::WHITE) - count_king_attacks(pos, libchess::constants::BLACK)) * parameters.king_attacks;
 
 	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.king_shield;
+
+	score += count_protection(pos) * parameters.tune_protection;
 
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		score = -score;
