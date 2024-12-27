@@ -22,8 +22,9 @@ void tune(std::string file)
 			eval_par cur(params);
 
 			search_pars_t sp { &cur, false, history };
-			sp.stop = new end_t();
+			sp.stop       = new end_t();
 			sp.stop->flag = false;
+			sp.cs         = new chess_stats_t();
 
 #pragma omp parallel for
 			for(auto &p: positions) {
@@ -34,6 +35,7 @@ void tune(std::string file)
 				p.set_result(score);
 			}
 
+			delete sp.cs;
 			delete sp.stop;
 		}};
 
