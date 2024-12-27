@@ -335,6 +335,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
+		sp->cs->n_null_move++;
+
 		pos.make_null_move();
 		libchess::Move ignore;
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, thread_nr);
@@ -343,8 +345,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 if (nmscore >= beta) {
 			libchess::Move ignore2;
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
-			if (verification >= beta)
+			if (verification >= beta) {
+				sp->cs->n_null_move_hit++;
 				return beta;
+			}
                 }
 	}
 	///////////////
@@ -370,22 +374,24 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
 
+                bool is_lmr = false;
+
                 pos.make_move(move);
                 int score = -10000;
                 if (n_played == 0)
                         score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
                 else {
-                        bool is_lmr    = false;
-                        int  new_depth = depth - 1;
+                        int new_depth = depth - 1;
 
                         if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
                                 is_lmr = true;
+				sp->cs->n_lmr++;
 
-                                if (n_played >= lmr_start + 2)
-                                        new_depth = (depth - 1) * 2 / 3;
-                                else
-                                        new_depth = depth - 2;
-                        }
+				if (n_played >= lmr_start + 2)
+					new_depth = (depth - 1) * 2 / 3;
+				else
+					new_depth = depth - 2;
+			}
 
                         score = -search(pos, new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 
@@ -408,6 +414,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				if (score >= beta) {
 					if (!pos.is_capture_move(move))
 						beta_cutoff_move = move;
+					sp->cs->n_lmr_hit += is_lmr;
 					break;
 				}
 
@@ -667,6 +674,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
+			printf("# null move co: %.2f%%, LMR co: %.2f%%\n", counts.n_null_move_hit * 100. / double(counts.n_null_move), counts.n_lmr_hit * 100.0 / double(counts.n_lmr));
 		}
 #endif
 	}
