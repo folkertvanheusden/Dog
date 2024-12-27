@@ -48,7 +48,7 @@ int count_protection(const libchess::Position & pos)
 		occupancy.forward_popbit();
 
 		auto color = pos.color_of(sq);
-		scores[color] += attackers_to(sq, color);  // under attack by own color is protection
+		scores[color.value()] += pos.attackers_to(sq, color.value());  // under attack by own color is protection
 	}
 
 	return scores[libchess::constants::WHITE] - scores[libchess::constants::BLACK];
@@ -406,7 +406,7 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 
 	score += (king_shield(pos, libchess::constants::WHITE) - king_shield(pos, libchess::constants::BLACK)) * parameters.king_shield;
 
-	score += count_protection(pos) * parameters.protection;
+	score += count_protection(pos) * parameters.tune_protection;
 
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		score = -score;
