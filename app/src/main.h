@@ -11,6 +11,24 @@ typedef struct {
 	std::condition_variable cv;
 } end_t;
 
+typedef struct {
+	uint32_t  nodes;
+	uint32_t  qnodes;
+
+	uint32_t  tt_query;
+	uint32_t  tt_hit;
+	uint32_t  tt_store;
+	uint32_t  tt_invalid;
+
+	uint64_t  n_moves_cutoff;
+	uint64_t  nmc_nodes;
+	uint64_t  n_qmoves_cutoff;
+	uint64_t  nmc_qnodes;
+
+	uint64_t  syzygy_queries;
+	uint64_t  syzygy_query_hits;
+} chess_stats_t;
+
 typedef struct
 {
 	const eval_par *parameters;
@@ -18,16 +36,12 @@ typedef struct
 
 	int16_t *const history;
 
-	uint16_t  md;
+	chess_stats_t *cs;
 
-	uint32_t  nodes;
-	uint32_t  qnodes;
+	uint16_t  md;
 
 	end_t    *stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	uint64_t  syzygy_queries;
-	uint64_t  syzygy_query_hits;
-
 	char      move[5];
 	int       score;
 #endif
@@ -51,6 +65,8 @@ extern libchess::Position positiont1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;
+extern std::vector<search_pars_t> sp2;
+extern bool               with_syzygy;
 
 #if defined(ESP32)
 #include <driver/gpio.h>
@@ -88,6 +104,8 @@ public:
         int move_evaluater(const libchess::Move move) const;
 };
 
+void trace(const char *const fmt, ...);
+void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
 void set_new_ponder_position(const bool is_ponder);
@@ -96,3 +114,6 @@ void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
+void reset_search_statistics();
+chess_stats_t calculate_search_statistics();
+void sum_stats(const chess_stats_t *const source, chess_stats_t *const target);

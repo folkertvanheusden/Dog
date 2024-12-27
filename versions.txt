@@ -1,3 +1,94 @@
+7b75d02497ec64299898adb0a76cf4bf5cbe8493 merged openingbook
+19ffccd433a4c68db224dfc281bbf793716b8992 merged countQSnodes
+2c6ea2a52373107b0a7552e5520644c460ae290c merged insufmatfix
+8e4906eeee0e8fca92b1a259ed6f76f1ef5ae11f merged ESP32uart1
+f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
+54e21e6b3c0baca676dbe3e454de5e639c2b3995 merged killersPromo
+0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
+e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
+
+stats
+	Score of Dog-f106599-stats-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 616 - 529 - 899  [0.521] 2044
+	Elo difference: 14.8 +/- 11.3, LOS: 99.5 %, DrawRatio: 44.0 %
+	SPRT: llr 2.96 (100.6%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+tempo (fix)
+	Score of Dog-f07de7f-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 513 - 432 - 777  [0.524] 1722
+	Elo difference: 16.4 +/- 12.1, LOS: 99.6 %, DrawRatio: 45.1 %
+	SPRT: llr 2.95 (100.3%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+tempo
+	Score of Dog-412a7e4-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 368 - 404 - 633  [0.487] 1405
+	Elo difference: -8.9 +/- 13.5, LOS: 9.8 %, DrawRatio: 45.1 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-5258d4d-master-LCbf93a0a vs Dog-22a052f-v2.5c-LCd2e43e0: 1037 - 1038 - 1749  [0.500] 3824
+	Elo difference: -0.1 +/- 8.1, LOS: 49.1 %, DrawRatio: 45.7 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-5258d4d-master-LCbf93a0a vs Dog-6ba4b89-master-LC6b61930: 727 - 745 - 1213  [0.497] 2685
+	Elo difference: -2.3 +/- 9.7, LOS: 31.9 %, DrawRatio: 45.2 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-6ba4b89-master-LC6b61930 vs Dog-363e95d-master-LC61d27ed: 968 - 972 - 1647  [0.499] 3587
+	Elo difference: -0.4 +/- 8.4, LOS: 46.4 %, DrawRatio: 45.9 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-363e95d-master-LC61d27ed vs Dog-7b75d02-master-LC6b61930: 470 - 500 - 828  [0.492] 1798
+	Elo difference: -5.8 +/- 11.8, LOS: 16.8 %, DrawRatio: 46.1 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-7b75d02-master-LC6b61930 vs Dog-2c6ea2a-insufmatfix-LCd2e43e0: 1016 - 1021 - 1627  [0.499] 3664
+	Elo difference: -0.5 +/- 8.4, LOS: 45.6 %, DrawRatio: 44.4 %
+	SPRT: llr -2.99 (-101.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+insufmatfix
+	Score of Dog-2c6ea2a-insufmatfix-LCd2e43e0 vs Dog-bae0094-master-LCd2e43e0: 634 - 659 - 995  [0.495] 2288
+	Elo difference: -3.8 +/- 10.7, LOS: 24.3 %, DrawRatio: 43.5 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+---
+
+tempo (fix)
+        Score of Dog-f07de7f-tempo-LCbf93a0a vs Dog-5258d4d-master-LCbf93a0a: 513 - 432 - 777  [0.524] 1722
+        Elo difference: 16.4 +/- 12.1, LOS: 99.6 %, DrawRatio: 45.1 %
+        SPRT: llr 2.95 (100.3%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+master
+	Score of 5258d4d-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 677 - 694 - 1231  [0.497] 2602
+	Elo difference: -2.3 +/- 9.7, LOS: 32.3 %, DrawRatio: 47.3 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of 7023956-master-LCbf93a0a-2THR vs faf6b8a-master-LCd2e43e0: 1436 - 1440 - 2642  [0.500] 5518
+	Elo difference: -0.3 +/- 6.6, LOS: 47.0 %, DrawRatio: 47.9 %
+	SPRT: llr -4.61 (-100.3%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+master with libchess zobrist fixes
+	Score of 7023956-master-LCbf93a0a vs faf6b8a-master-LCd2e43e0: 555 - 584 - 880  [0.493] 2019
+	Elo difference: -5.0 +/- 11.4, LOS: 19.5 %, DrawRatio: 43.6 %
+	SPRT: llr -2.96 (-100.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+TTprobeFunc2
+	Score of 9004dc2-TTprobeFunc2-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 67 - 127 - 108  [0.401] 302
+	Elo difference: -70.0 +/- 31.7, LOS: 0.0 %, DrawRatio: 35.8 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+insufmat
+	Score of d796db8-insufmat-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 211 - 254 - 394  [0.475] 859
+	Elo difference: -17.4 +/- 17.1, LOS: 2.3 %, DrawRatio: 45.9 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+PVS
+	Score of 3a2782c-PVS-LCd2e43e0 vs faf6b8a-master-LCd2e43e0: 542 - 574 - 807  [0.492] 1923
+	Elo difference: -5.8 +/- 11.8, LOS: 16.9 %, DrawRatio: 42.0 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 master, libchess d2e43e0
 	Score of 6ba4b89-master-LCd2e43e0 vs c4ba323-noIID-LCd2e43e0: 2 - 64 - 9  [0.087] 75
 	Elo difference: -409.1 +/- 124.1, LOS: 0.0 %, DrawRatio: 12.0 %
