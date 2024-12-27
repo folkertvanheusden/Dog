@@ -393,5 +393,5 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 	if (pos.side_to_move() != libchess::constants::WHITE)
 		return -score;
 
-	return score;
+	return score + parameters.tune_tempo_bonus;
 }
