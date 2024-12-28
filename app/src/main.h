@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "eval_par.h"
+#include "stats.h"
 
 
 typedef struct {
@@ -18,20 +19,22 @@ typedef struct
 
 	int16_t *const history;
 
-	uint16_t  md;
+	chess_stats *cs;
 
-	uint32_t  nodes;
-	uint32_t  qnodes;
+	uint16_t  md;
 
 	end_t    *stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	uint64_t  syzygy_queries;
-	uint64_t  syzygy_query_hits;
-
 	char      move[5];
 	int       score;
 #endif
 } search_pars_t;
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+extern std::vector<search_pars_t> sp2;
+#else
+extern search_pars_t sp2;
+#endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 uint64_t esp_timer_get_time();
@@ -51,6 +54,7 @@ extern libchess::Position positiont1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;
+extern bool               with_syzygy;
 
 #if defined(ESP32)
 #include <driver/gpio.h>
@@ -69,8 +73,13 @@ extern esp_timer_handle_t led_green_timer;
 extern esp_timer_handle_t led_blue_timer;
 extern esp_timer_handle_t led_red_timer;
 
+extern esp_timer_handle_t think_timeout_timer;
+
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
+
+int check_min_stack_size(const int nr, search_pars_t *const sp);
+void vTaskGetRunTimeStats();
 #endif
 
 class sort_movelist_compare
@@ -88,8 +97,9 @@ public:
         int move_evaluater(const libchess::Move move) const;
 };
 
+void trace(const char *const fmt, ...);
+void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
 void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();
@@ -97,3 +107,4 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 void set_thread_name(std::string name);
 bool is_insufficient_material_draw(const libchess::Position & pos);
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
+chess_stats calculate_search_statistics();

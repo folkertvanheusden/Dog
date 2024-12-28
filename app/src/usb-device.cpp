@@ -120,7 +120,6 @@ void usb_disp(const std::string & device)
 
 		for(;;) {
 			int rc = poll(fds, 1, 0);
-
 			if (rc != 1)
 				break;
 
