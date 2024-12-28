@@ -247,8 +247,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	sp->cs->nodes++;
 
 	bool is_root_position = max_depth == depth;
-	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos)))
+	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos))) {
+		sp->cs->n_draws++;
 		return 0;
+	}
 
 	int start_alpha       = alpha;
 
@@ -673,7 +675,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #if !defined(__ANDROID__)
 		if (!sp->is_t2) {
 			auto counts = calculate_search_statistics();
-			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
+			printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes, counts.n_draws * 100. / counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
 			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.n_null_move_hit * 100. / counts.n_null_move, counts.n_lmr_hit * 100.0 / counts.n_lmr, counts.n_static_eval_hit * 100. / counts.n_static_eval);

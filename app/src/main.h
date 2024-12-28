@@ -15,6 +15,8 @@ typedef struct {
 	uint32_t  nodes;
 	uint32_t  qnodes;
 
+	uint32_t  n_draws;
+
 	uint32_t  tt_query;
 	uint32_t  tt_hit;
 	uint32_t  tt_store;

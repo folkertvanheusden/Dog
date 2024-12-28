@@ -530,6 +530,7 @@ void sum_stats(const chess_stats_t *const source, chess_stats_t *const target)
 {
 	target->nodes    += source->nodes;
 	target->qnodes   += source->qnodes;
+	target->n_draws  += source->n_draws;
 
         target->tt_query += source->tt_query;
         target->tt_hit   += source->tt_hit;
