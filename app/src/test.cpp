@@ -59,6 +59,7 @@ void tests()
 
 		clear_flag(sp1.stop);
 		memset(sp1.history, 0x00, history_malloc_size);
+		sp1.cs = new chess_stats();
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
@@ -467,7 +468,6 @@ void tests()
 		}
 
 		// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
-		// TODO
 
 		// tests from https://github.com/toanth/motors/blob/main/gears/src/games/chess.rs#L1564-L1610
 		// insufficient
