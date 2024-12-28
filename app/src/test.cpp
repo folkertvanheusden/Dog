@@ -468,7 +468,6 @@ void tests()
 		}
 
 		// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
-		// TODO
 
 		// tests from https://github.com/toanth/motors/blob/main/gears/src/games/chess.rs#L1564-L1610
 		// insufficient
