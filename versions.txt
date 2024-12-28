@@ -7,6 +7,25 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+tt-storeNEG
+	Score of Dog-f4a20c5-tt-storeNEG-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 450 - 476 - 893  [0.493] 1819
+	Elo difference: -5.0 +/- 11.4, LOS: 19.6 %, DrawRatio: 49.1 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+tt-store
+	Score of Dog-6d6deb0-tt-store-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 158 - 198 - 365  [0.472] 721
+	Elo difference: -19.3 +/- 17.8, LOS: 1.7 %, DrawRatio: 50.6 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+TTprobeFunc2
+	Score of Dog-59adcdb-insufmat-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 86 - 135 - 186  [0.440] 407
+	Elo difference: -42.0 +/- 24.9, LOS: 0.0 %, DrawRatio: 45.7 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+insufmat
+	Score of Dog-6422d2d-insufmat-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 190 - 235 - 349  [0.471] 774
+	Elo difference: -20.2 +/- 18.1, LOS: 1.5 %, DrawRatio: 45.1 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
 
 insufmat
 	Score of Dog-812c942-insufmat-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 212 - 256 - 382  [0.474] 850
