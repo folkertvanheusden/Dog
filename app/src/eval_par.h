@@ -92,6 +92,8 @@ public:
 		}
 	};
 
+	int tune_tempo_bonus { TUNE_TEMPO_BONUS };
+
 	eval_par();
 	eval_par(const std::vector<libchess::TunableParameter> & params);
 	~eval_par();
@@ -159,6 +161,7 @@ public:
 		{ "tune_pp_scores_eg_5", &pp_scores_eg_5 },
 		{ "tune_pp_scores_eg_6", &pp_scores_eg_6 },
 		{ "tune_pp_scores_eg_7", &pp_scores_eg_7 },
+		{ "tune_tempo_bonus", &tune_tempo_bonus },
 	};
 
 	std::vector<libchess::TunableParameter> get_tunable_parameters() const;

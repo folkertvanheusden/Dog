@@ -34,6 +34,8 @@ add_executable(
   ../max.cpp
   ../max-ascii.cpp
   ../psq.cpp
+  ../search.cpp
+  ../stats.cpp
   ../str.cpp
   ../syzygy.cpp
   ../test.cpp
