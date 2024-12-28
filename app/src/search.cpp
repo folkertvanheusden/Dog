@@ -311,7 +311,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp->cs->data.tt_store++;
 
 				int score = syzygy_score.value();
-				tti.store(hash, EXACT, depth, score, libchess::Move(0));
+				int csd        = max_depth - depth;
+				int work_score = abs(score) > 9800 ? (score < 0 ? score - csd : score + csd) : score;
+				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
 				return score;
 			}
 		}
@@ -454,15 +456,18 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 
 	if (sp->stop->flag == false) {
-		tt_entry_flag flag = EXACT;
+		sp->cs->data.tt_store++;
 
+		tt_entry_flag flag = EXACT;
 		if (best_score <= start_alpha)
 			flag = UPPERBOUND;
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		sp->cs->data.tt_store++;
-		tti.store(hash, flag, depth, best_score, 
+		int csd        = max_depth - depth;
+		int work_score = abs(best_score) > 9800 ? (best_score < 0 ? best_score - csd : best_score + csd) : best_score;
+
+		tti.store(hash, flag, depth, work_score,
 				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
 	}
 
