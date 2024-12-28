@@ -765,7 +765,6 @@ void main_task()
 				sp1.cs->data.syzygy_queries++;
 
 				auto probe_result = probe_fathom_root(positiont1);
-
 				if (probe_result.has_value()) {
 					sp1.cs->data.syzygy_query_hits++;
 
