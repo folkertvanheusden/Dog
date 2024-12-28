@@ -977,10 +977,13 @@ int main(int argc, char *argv[])
 		stop2.erase(stop2.begin());
 	}
 
-	for(size_t i=0; i<sp2.size(); i++)
+	for(size_t i=0; i<sp2.size(); i++) {
 		free(sp2.at(i).history);
+		delete sp2.at(i).cs;
+	}
 
 	free(sp1.history);
+	delete sp1.cs;
 
 	return 0;
 }
