@@ -810,7 +810,7 @@ void main_task()
 
 	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
 	uci_service.register_option(thread_count_option);
-	libchess::UCISpinOption hash_size_option("Hash", thread_count, 1, 262144, hash_size_handler);
+	libchess::UCISpinOption hash_size_option("Hash", thread_count, 1, 1024, hash_size_handler);
 	uci_service.register_option(hash_size_option);
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 	uci_service.register_option(allow_ponder_option);
