@@ -318,11 +318,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	bool in_check = pos.in_check();
 
 	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
+		sp->cs->n_static_eval++;
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
-		if (staticeval - depth * 121 > beta)
+		if (staticeval - depth * 121 > beta) {
+			sp->cs->n_static_eval_hit++;
 			return (beta + staticeval) / 2;
+		}
 	}
 
 #if defined(linux)
@@ -673,7 +676,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			printf("# %u search %u qs: qs/s=%.3f\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes);
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
-			printf("# null move co: %.2f%%, LMR co: %.2f%%\n", counts.n_null_move_hit * 100. / double(counts.n_null_move), counts.n_lmr_hit * 100.0 / double(counts.n_lmr));
+			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.n_null_move_hit * 100. / counts.n_null_move, counts.n_lmr_hit * 100.0 / counts.n_lmr, counts.n_static_eval_hit * 100. / counts.n_static_eval);
 		}
 #endif
 	}

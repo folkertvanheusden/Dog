@@ -541,6 +541,9 @@ void sum_stats(const chess_stats_t *const source, chess_stats_t *const target)
 	target->n_lmr     += source->n_lmr;
 	target->n_lmr_hit += source->n_lmr_hit;
 
+	target->n_static_eval     += source->n_static_eval;
+	target->n_static_eval_hit += source->n_static_eval_hit;
+
 	target->n_moves_cutoff  += source->n_moves_cutoff;
 	target->nmc_nodes       += source->nmc_nodes;
 	target->n_qmoves_cutoff += source->n_qmoves_cutoff;

@@ -26,6 +26,9 @@ typedef struct {
 	uint32_t  n_lmr;
 	uint32_t  n_lmr_hit;
 
+	uint32_t  n_static_eval;
+	uint32_t  n_static_eval_hit;
+
 	uint64_t  n_moves_cutoff;
 	uint64_t  nmc_nodes;
 	uint64_t  n_qmoves_cutoff;
