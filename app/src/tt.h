@@ -38,12 +38,6 @@ typedef struct __PRAGMA_PACKED__
         tt_entry entries[N_TE_PER_HASH_GROUP];
 } tt_hash_group;
 
-#if defined(__ANDROID__)
-constexpr uint64_t n_entries { 16 * 1024 * 1024 / sizeof(tt_hash_group) };
-#elif defined(linux) || defined(_WIN32)
-constexpr uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
-#endif
-
 class tt
 {
 private:
@@ -52,14 +46,19 @@ private:
 #if defined(ESP32)
 #define ESP32_TT_RAM_SIZE 49152
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_hash_group) };
+#elif defined(__ANDROID__)
+	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_hash_group) };
+#elif defined(linux) || defined(_WIN32)
+	uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_hash_group) };
 #endif
-
+	void allocate();
 
 public:
 	tt();
 	~tt();
 
 	void reset();
+	void set_size(const uint64_t s);
 
 	void inc_age();
 

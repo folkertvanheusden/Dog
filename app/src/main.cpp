@@ -262,7 +262,7 @@ auto thread_count_handler = [](const int value)  {
 };
 
 auto hash_size_handler = [](const int value)  {
-// TODO
+	tti.set_size(uint64_t(value) * 1024 * 1024);
 };
 
 bool allow_ponder         = true;

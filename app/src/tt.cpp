@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <cinttypes>
 #include <cstdlib>
 #include <cstring>
 
@@ -14,6 +15,17 @@ tt tti;
 
 tt::tt()
 {
+	allocate();
+	reset();
+}
+
+tt::~tt()
+{
+	free(entries);
+}
+
+void tt::allocate()
+{
 #if defined(ESP32)
 	size_t psram_size = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 	if (psram_size > ESP32_TT_RAM_SIZE) {
@@ -22,18 +34,20 @@ tt::tt()
 		entries = reinterpret_cast<tt_hash_group *>(heap_caps_malloc(n_entries * sizeof(tt_hash_group), MALLOC_CAP_SPIRAM));
 	}
 	else {
-		printf("Not PSRAM\n");
+		printf("No PSRAM\n");
 		entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
 	}
 #else
 	entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
 #endif
-	reset();
 }
 
-tt::~tt()
+void tt::set_size(const uint64_t s)
 {
+	n_entries = s / sizeof(tt_hash_group);
 	free(entries);
+	allocate();
+	printf("# Newly allocated node count: %" PRIu64 "\n", n_entries);
 }
 
 void tt::reset()
