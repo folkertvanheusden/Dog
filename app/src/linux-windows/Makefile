@@ -1,2 +1,2 @@
 all:
-	mkdir build ; cd build ; cmake .. ; make ; mv Dog ${EXE}
+	mkdir build ; cd build ; git submodule init ; git submodule update ; cmake .. ; make ; mv Dog ${EXE}
