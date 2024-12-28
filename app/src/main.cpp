@@ -324,7 +324,7 @@ int check_min_stack_size(const int nr, search_pars_t *const sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->cs->data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
 		set_flag(sp->stop);
@@ -566,8 +566,12 @@ void main_task()
 #endif
 
 	sp1.cs = new chess_stats();
+#if defined(ESP32)
+	sp2.cs = new chess_stats();
+#else
 	for(auto & sp: sp2)
 		sp.cs = new chess_stats();
+#endif
 
 	chess_stats global_cs;
 

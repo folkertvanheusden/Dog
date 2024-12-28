@@ -31,6 +31,12 @@ typedef struct
 } search_pars_t;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+extern std::vector<search_pars_t> sp2;
+#else
+extern search_pars_t sp2;
+#endif
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 uint64_t esp_timer_get_time();
 #endif
 
@@ -48,7 +54,6 @@ extern libchess::Position positiont1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;
-extern std::vector<search_pars_t> sp2;
 extern bool               with_syzygy;
 
 #if defined(ESP32)
@@ -68,8 +73,13 @@ extern esp_timer_handle_t led_green_timer;
 extern esp_timer_handle_t led_blue_timer;
 extern esp_timer_handle_t led_red_timer;
 
+extern esp_timer_handle_t think_timeout_timer;
+
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
+
+int check_min_stack_size(const int nr, search_pars_t *const sp);
+void vTaskGetRunTimeStats();
 #endif
 
 class sort_movelist_compare

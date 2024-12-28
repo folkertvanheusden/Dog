@@ -234,7 +234,11 @@ void write_settings()
 	auto home = get_cfg_dir();
 	if (home.has_value() == false)
 		return;
+#if defined(_WIN32)
+	mkdir(home.value().c_str());
+#else
 	mkdir(home.value().c_str(), 0700);
+#endif
 
 	FILE *fh = fopen((home.value() + "/settings.dat").c_str(), "w");
 #endif
