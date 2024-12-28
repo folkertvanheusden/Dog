@@ -506,7 +506,7 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats_t *const cs)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -601,6 +601,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				}
 			}
 			else {
+				if (alpha != -32767) {
+					cs->alpha_distance += abs(score - alpha);
+					cs->n_alpha_distances++;
+				}
+				if (beta != 32767) {
+					cs->beta_distance  += abs(beta - score);
+					cs->n_beta_distances++;
+				}
+
 				alpha_repeat = beta_repeat = 0;
 
 				alpha = score - add_alpha;
@@ -679,6 +688,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
 			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.n_null_move_hit * 100. / counts.n_null_move, counts.n_lmr_hit * 100.0 / counts.n_lmr, counts.n_static_eval_hit * 100. / counts.n_static_eval);
+			printf("# avg a/b distance: %.2f/%.2f\n", cs->alpha_distance / double(cs->n_alpha_distances), cs->beta_distance / double(cs->n_beta_distances));
+			sum_stats(&counts, cs);
 		}
 #endif
 	}

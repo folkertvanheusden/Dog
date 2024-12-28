@@ -17,6 +17,11 @@ typedef struct {
 
 	uint32_t  n_draws;
 
+	uint32_t  alpha_distance;
+	uint32_t  beta_distance;
+	int       n_alpha_distances;
+	int       n_beta_distances;
+
 	uint32_t  tt_query;
 	uint32_t  tt_hit;
 	uint32_t  tt_store;
@@ -118,7 +123,6 @@ public:
 void trace(const char *const fmt, ...);
 void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes);
 void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();

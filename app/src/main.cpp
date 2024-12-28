@@ -418,9 +418,10 @@ void ponder_thread(void *p)
 
 			for(int i=0; i<n_threads; i++) {
 				ths.push_back(new std::thread([i, node_limit] {
+					chess_stats_t cs { };
 					auto *p = new libchess::Position(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit);
+					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit, &cs);
 					delete p;
                                 }));
 			}
@@ -431,7 +432,8 @@ void ponder_thread(void *p)
 			}
 #else
 			start_blink(led_blue_timer);
-			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { });
+			chess_stats_t cs { };
+			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { }, &cs);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			trace("# Pondering finished\n");
@@ -597,6 +599,8 @@ void main_task()
 	for(auto & sp: sp2)
 		sp.cs = new chess_stats_t();
 
+	chess_stats_t global_cs { };
+
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
 		printf("# eval: %d\n", score);
@@ -646,9 +650,10 @@ void main_task()
 		perft(positiont1, std::stoi(temp));
 	};
 
-	auto ucinewgame_handler = [](std::istringstream&) {
+	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
 		memset(sp1.history, 0x00, history_malloc_size);
 		tti.reset();
+		memset(&global_cs, 0x00, sizeof global_cs);
 		printf("# --- New game ---\n");
 	};
 
@@ -679,7 +684,8 @@ void main_task()
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { });
+				chess_stats_t cs { };
+				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { }, &cs);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -700,7 +706,7 @@ void main_task()
 		}
 	};
 
-	auto go_handler = [](const libchess::UCIGoParameters & go_parameters) {
+	auto go_handler = [&global_cs](const libchess::UCIGoParameters & go_parameters) {
 		uint64_t start_ts = esp_timer_get_time();
 
 		try {
@@ -796,7 +802,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes());
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), &global_cs);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());

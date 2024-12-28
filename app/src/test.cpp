@@ -4,6 +4,7 @@
 
 #include "eval.h"
 #include "main.h"
+#include "search.h"
 
 
 void tests()
@@ -60,7 +61,8 @@ void tests()
 		memset(sp1.history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { });
+		chess_stats_t  cs         {   };
+		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { }, &cs);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
