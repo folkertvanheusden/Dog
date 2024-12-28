@@ -905,10 +905,10 @@ void help()
 {
 	print_max();
 
-	printf("-t x   thread count\n");
-	printf("-U     run unit tests\n");
-	printf("-s x   set path to Syzygy\n");
-	printf("-u x   USB display device\n");
+	printf("-t x  thread count\n");
+	printf("-U    run unit tests\n");
+	printf("-s x  set path to Syzygy\n");
+	printf("-u x  USB display device\n");
 }
 
 int main(int argc, char *argv[])
