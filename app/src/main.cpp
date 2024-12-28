@@ -881,8 +881,8 @@ void run_bench()
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	chess_stats    cs;
-	libchess::Move best_move  { 0     };
-	int            best_score { 0     };
+	libchess::Move best_move  { 0 };
+	int            best_score { 0 };
 	sp1.is_t2 = false;
 
 	uint64_t start_ts = esp_timer_get_time();
