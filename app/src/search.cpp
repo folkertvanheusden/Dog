@@ -422,11 +422,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (pos.is_capture_move(move)) {
+					if (!pos.is_capture_move(move)) {
 						sp->killers[d][0] = sp->killers[d][1];
 						sp->killers[d][1] = move;
-					}
-					else {
 						beta_cutoff_move = move;
 					}
 					sp->cs->data.n_lmr_hit += is_lmr;
