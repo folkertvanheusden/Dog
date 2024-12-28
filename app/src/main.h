@@ -2,6 +2,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <libchess/Position.h>
 
 #include "eval_par.h"
 #include "stats.h"
@@ -28,6 +29,7 @@ typedef struct
 	char      move[5];
 	int       score;
 #endif
+	libchess::Move killers[64][2];
 } search_pars_t;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)

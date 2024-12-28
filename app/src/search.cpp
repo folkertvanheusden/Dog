@@ -367,8 +367,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
-	if (m->value() && pos.is_capture_move(*m))
-		smc.add_first_move(*m);
+	if (sp->killers[d][1].value())
+		smc.add_first_move(sp->killers[d][1]);
+	if (sp->killers[d][0].value() && sp->killers[d][1].value() != sp->killers[d][0].value())
+		smc.add_first_move(sp->killers[d][0]);
+        if (m->value() != sp->killers[d][0].value() && m->value() != sp->killers[d][1].value())
+                smc.add_first_move(*m);
 
 	sort_movelist(move_list, smc);
 
@@ -418,8 +422,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (!pos.is_capture_move(move))
+					if (pos.is_capture_move(move)) {
+						sp->killers[d][0] = sp->killers[d][1];
+						sp->killers[d][1] = move;
+					}
+					else {
 						beta_cutoff_move = move;
+					}
 					sp->cs->data.n_lmr_hit += is_lmr;
 					break;
 				}
