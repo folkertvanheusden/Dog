@@ -71,11 +71,11 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		}
 
 		if (from_type != libchess::constants::KING)
-			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
+			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) * 256;
 	}
 	else {
 		int index = history_index(p->side_to_move(), from_type, move.to_square());
-		score += sp->history[index] << 8;
+		score += sp->history[index] * 256;
 	}
 
 	score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
