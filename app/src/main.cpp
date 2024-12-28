@@ -261,6 +261,10 @@ auto thread_count_handler = [](const int value)  {
 #endif
 };
 
+auto hash_size_handler = [](const int value)  {
+// TODO
+};
+
 bool allow_ponder         = true;
 auto allow_ponder_handler = [](const bool value) {
 	allow_ponder = value;
@@ -805,11 +809,10 @@ void main_task()
 		}
 	};
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
 	uci_service.register_option(thread_count_option);
-#endif
-
+	libchess::UCISpinOption hash_size_option("Hash", thread_count, 1, 262144, hash_size_handler);
+	uci_service.register_option(hash_size_option);
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 	uci_service.register_option(allow_ponder_option);
 	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
