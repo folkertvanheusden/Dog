@@ -59,6 +59,7 @@ void tests()
 
 		clear_flag(sp1.stop);
 		memset(sp1.history, 0x00, history_malloc_size);
+		sp1.cs = new chess_stats();
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
