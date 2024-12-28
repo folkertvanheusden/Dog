@@ -4,46 +4,13 @@
 #include <cstdint>
 
 #include "eval_par.h"
+#include "stats.h"
 
 
 typedef struct {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
 } end_t;
-
-typedef struct {
-	uint32_t  nodes;
-	uint32_t  qnodes;
-
-	uint32_t  n_draws;
-
-	uint32_t  alpha_distance;
-	uint32_t  beta_distance;
-	int       n_alpha_distances;
-	int       n_beta_distances;
-
-	uint32_t  tt_query;
-	uint32_t  tt_hit;
-	uint32_t  tt_store;
-	uint32_t  tt_invalid;
-
-	uint32_t  n_null_move;
-	uint32_t  n_null_move_hit;
-
-	uint32_t  n_lmr;
-	uint32_t  n_lmr_hit;
-
-	uint32_t  n_static_eval;
-	uint32_t  n_static_eval_hit;
-
-	uint64_t  n_moves_cutoff;
-	uint64_t  nmc_nodes;
-	uint64_t  n_qmoves_cutoff;
-	uint64_t  nmc_qnodes;
-
-	uint64_t  syzygy_queries;
-	uint64_t  syzygy_query_hits;
-} chess_stats_t;
 
 typedef struct
 {
@@ -52,7 +19,7 @@ typedef struct
 
 	int16_t *const history;
 
-	chess_stats_t *cs;
+	chess_stats *cs;
 
 	uint16_t  md;
 
@@ -129,6 +96,4 @@ void pause_ponder();
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
-void reset_search_statistics();
-chess_stats_t calculate_search_statistics();
-void sum_stats(const chess_stats_t *const source, chess_stats_t *const target);
+chess_stats calculate_search_statistics();

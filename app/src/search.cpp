@@ -141,7 +141,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
-	sp->cs->qnodes++;
+	sp->cs->data.qnodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
@@ -194,8 +194,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 			if (score > alpha) {
 				if (score >= beta) {
-					sp->cs->n_qmoves_cutoff += n_played;
-					sp->cs->nmc_qnodes++;
+					sp->cs->data.n_qmoves_cutoff += n_played;
+					sp->cs->data.nmc_qnodes++;
 					break;
 				}
 
@@ -244,11 +244,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		sp->md = d;
 	}
 
-	sp->cs->nodes++;
+	sp->cs->data.nodes++;
 
 	bool is_root_position = max_depth == depth;
 	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos))) {
-		sp->cs->n_draws++;
+		sp->cs->data.n_draws++;
 		return 0;
 	}
 
@@ -258,15 +258,15 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	std::optional<libchess::Move> tt_move { };
 	uint64_t       hash        = pos.hash();
 	std::optional<tt_entry> te = tti.lookup(hash);
-	sp->cs->tt_query++;
+	sp->cs->data.tt_query++;
 
         if (te.has_value()) {  // TT hit?
-		sp->cs->tt_hit++;
+		sp->cs->data.tt_hit++;
 		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
 		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			sp->cs->tt_invalid++;
+			sp->cs->data.tt_invalid++;
 			tt_move.reset();  // move stored in TT is not valid - TT-collision
 		}
 		else if (te.value().data_._data.depth >= depth) {
@@ -303,12 +303,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		// syzygy count?
 		if (counts <= TB_LARGEST) {
-			sp->cs->syzygy_queries++;
+			sp->cs->data.syzygy_queries++;
 			std::optional<int> syzygy_score = probe_fathom_nonroot(pos);
 
 			if (syzygy_score.has_value()) {
-				sp->cs->syzygy_query_hits++;
-				sp->cs->tt_store++;
+				sp->cs->data.syzygy_query_hits++;
+				sp->cs->data.tt_store++;
 
 				int score = syzygy_score.value();
 				tti.store(hash, EXACT, depth, score, libchess::Move(0));
@@ -320,12 +320,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	bool in_check = pos.in_check();
 
 	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
-		sp->cs->n_static_eval++;
+		sp->cs->data.n_static_eval++;
 		int staticeval = eval(pos, *sp->parameters);
 
 		// static null pruning (reverse futility pruning)
 		if (staticeval - depth * 121 > beta) {
-			sp->cs->n_static_eval_hit++;
+			sp->cs->data.n_static_eval_hit++;
 			return (beta + staticeval) / 2;
 		}
 	}
@@ -340,7 +340,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
-		sp->cs->n_null_move++;
+		sp->cs->data.n_null_move++;
 
 		pos.make_null_move();
 		libchess::Move ignore;
@@ -351,7 +351,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			libchess::Move ignore2;
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
 			if (verification >= beta) {
-				sp->cs->n_null_move_hit++;
+				sp->cs->data.n_null_move_hit++;
 				return beta;
 			}
                 }
@@ -390,7 +390,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
                         if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
                                 is_lmr = true;
-				sp->cs->n_lmr++;
+				sp->cs->data.n_lmr++;
 
 				if (n_played >= lmr_start + 2)
 					new_depth = (depth - 1) * 2 / 3;
@@ -418,7 +418,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				if (score >= beta) {
 					if (!pos.is_capture_move(move))
 						beta_cutoff_move = move;
-					sp->cs->n_lmr_hit += is_lmr;
+					sp->cs->data.n_lmr_hit += is_lmr;
 					break;
 				}
 
@@ -442,8 +442,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			update_history(sp, index, -bonus);
 		}
 
-		sp->cs->n_moves_cutoff += n_played;
-		sp->cs->nmc_nodes++;
+		sp->cs->data.n_moves_cutoff += n_played;
+		sp->cs->data.nmc_nodes++;
 	}
 
 	if (n_played == 0) {
@@ -461,7 +461,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		sp->cs->tt_store++;
+		sp->cs->data.tt_store++;
 		tti.store(hash, flag, depth, best_score, 
 				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
 	}
@@ -506,7 +506,7 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats_t *const cs)
+std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats *const cs)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -570,7 +570,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			}
 
 			auto     counts      = calculate_search_statistics();
-			uint64_t cur_n_nodes = counts.nodes + counts.qnodes;
+			uint64_t cur_n_nodes = counts.data.nodes + counts.data.qnodes;
 			node_counts.push_back(cur_n_nodes - previous_node_count);
 			previous_node_count  = cur_n_nodes;
 
@@ -602,12 +602,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 			}
 			else {
 				if (alpha != -32767) {
-					cs->alpha_distance += abs(score - alpha);
-					cs->n_alpha_distances++;
+					cs->data.alpha_distance += abs(score - alpha);
+					cs->data.n_alpha_distances++;
 				}
 				if (beta != 32767) {
-					cs->beta_distance  += abs(beta - score);
-					cs->n_beta_distances++;
+					cs->data.beta_distance  += abs(beta - score);
+					cs->data.n_beta_distances++;
 				}
 
 				alpha_repeat = beta_repeat = 0;
@@ -648,13 +648,13 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 						printf("info depth %d score mate %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, mate_moves,
 								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.syzygy_query_hits, pv_str.c_str());
+								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 					else {
 						printf("info depth %d score cp %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, score,
 								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.syzygy_query_hits, pv_str.c_str());
+								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 				}
 
@@ -684,12 +684,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #if !defined(__ANDROID__)
 		if (!sp->is_t2) {
 			auto counts = calculate_search_statistics();
-			printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%\n", counts.nodes, counts.qnodes, double(counts.qnodes)/counts.nodes, counts.n_draws * 100. / counts.nodes);
-			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.tt_hit * 100. / counts.tt_query, counts.tt_query / double(counts.tt_store), counts.syzygy_query_hits * 100. / counts.syzygy_queries);
-			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.n_moves_cutoff / double(counts.nmc_nodes), counts.n_qmoves_cutoff / double(counts.nmc_qnodes));
-			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.n_null_move_hit * 100. / counts.n_null_move, counts.n_lmr_hit * 100.0 / counts.n_lmr, counts.n_static_eval_hit * 100. / counts.n_static_eval);
-			printf("# avg a/b distance: %.2f/%.2f\n", cs->alpha_distance / double(cs->n_alpha_distances), cs->beta_distance / double(cs->n_beta_distances));
-			sum_stats(&counts, cs);
+			printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes);
+			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
+			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
+			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
+			cs->add(&counts);
+			printf("# avg a/b distance: %.2f/%.2f\n", cs->data.alpha_distance / double(cs->data.n_alpha_distances), cs->data.beta_distance / double(cs->data.n_beta_distances));
 		}
 #endif
 	}

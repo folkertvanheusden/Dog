@@ -24,7 +24,7 @@ void tune(std::string file)
 			search_pars_t sp { &cur, false, history };
 			sp.stop       = new end_t();
 			sp.stop->flag = false;
-			sp.cs         = new chess_stats_t();
+			sp.cs         = new chess_stats();
 
 #pragma omp parallel for
 			for(auto &p: positions) {

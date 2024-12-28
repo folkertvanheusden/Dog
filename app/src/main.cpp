@@ -418,7 +418,7 @@ void ponder_thread(void *p)
 
 			for(int i=0; i<n_threads; i++) {
 				ths.push_back(new std::thread([i, node_limit] {
-					chess_stats_t cs { };
+					chess_stats cs;
 					auto *p = new libchess::Position(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
 					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit, &cs);
@@ -432,7 +432,7 @@ void ponder_thread(void *p)
 			}
 #else
 			start_blink(led_blue_timer);
-			chess_stats_t cs { };
+			chess_stats cs;
 			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { }, &cs);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
@@ -523,57 +523,27 @@ void set_new_ponder_position(const bool this_is_ponder)
 	search_fen_lock.unlock();
 }
 
-void reset_stats(chess_stats_t *const cs)
-{
-	memset(cs, 0x00, sizeof(chess_stats_t));
-}
-
-void sum_stats(const chess_stats_t *const source, chess_stats_t *const target)
-{
-	target->nodes    += source->nodes;
-	target->qnodes   += source->qnodes;
-	target->n_draws  += source->n_draws;
-
-        target->tt_query += source->tt_query;
-        target->tt_hit   += source->tt_hit;
-        target->tt_store += source->tt_store;
-
-	target->n_null_move     += source->n_null_move;
-	target->n_null_move_hit += source->n_null_move_hit;
-
-	target->n_lmr     += source->n_lmr;
-	target->n_lmr_hit += source->n_lmr_hit;
-
-	target->n_static_eval     += source->n_static_eval;
-	target->n_static_eval_hit += source->n_static_eval_hit;
-
-	target->n_moves_cutoff  += source->n_moves_cutoff;
-	target->nmc_nodes       += source->nmc_nodes;
-	target->n_qmoves_cutoff += source->n_qmoves_cutoff;
-	target->nmc_qnodes      += source->nmc_qnodes;
-}
-
 void reset_search_statistics()
 {
-	reset_stats(sp1.cs);
+	sp1.cs->reset();
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
         for(auto & sp: sp2)
-                reset_stats(sp.cs);
+                sp.cs->reset();
 #else
-        reset_stats(sp2.cs);
+        sp2.cs->reset();
 #endif
 }
 
-chess_stats_t calculate_search_statistics()
+chess_stats calculate_search_statistics()
 {
-        chess_stats_t out { };
+        chess_stats out { };
 
-        sum_stats(sp1.cs, &out);
+	out.add(sp1.cs);
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
         for(auto & sp: sp2)
-                sum_stats(sp.cs, &out);
+		out.add(sp.cs);
 #else
-        sum_stats(sp2.cs, &out);
+	out.add(sp2.cs);
 #endif
 
         return out;
@@ -595,11 +565,11 @@ void main_task()
 		printf("Malloc of sp2-history failed\n");
 #endif
 
-	sp1.cs = new chess_stats_t();
+	sp1.cs = new chess_stats();
 	for(auto & sp: sp2)
-		sp.cs = new chess_stats_t();
+		sp.cs = new chess_stats();
 
-	chess_stats_t global_cs { };
+	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
 		int score = eval(positiont1, *sp1.parameters);
@@ -653,7 +623,7 @@ void main_task()
 	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
 		memset(sp1.history, 0x00, history_malloc_size);
 		tti.reset();
-		memset(&global_cs, 0x00, sizeof global_cs);
+		global_cs.reset();
 		printf("# --- New game ---\n");
 	};
 
@@ -684,7 +654,7 @@ void main_task()
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				chess_stats_t cs { };
+				chess_stats cs;
 				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { }, &cs);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
@@ -784,12 +754,12 @@ void main_task()
 			// probe the Syzygy endgame table base
 #if defined(linux) || defined(_WIN32)
 			if (with_syzygy) {
-				sp1.cs->syzygy_queries++;
+				sp1.cs->data.syzygy_queries++;
 
 				auto probe_result = probe_fathom_root(positiont1);
 
 				if (probe_result.has_value()) {
-					sp1.cs->syzygy_query_hits++;
+					sp1.cs->data.syzygy_query_hits++;
 
 					best_move  = probe_result.value().first;
 					best_score = probe_result.value().second;
