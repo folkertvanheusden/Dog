@@ -886,7 +886,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(&positiont1, 2500, true, &sp1, -1, 0, { }, &cs);
+	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, &sp1, 15, 0, { }, &cs);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
