@@ -73,7 +73,7 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
-void display(const libchess::Position & p, const bool large, const bool colors, const std::optional<std::vector<libchess::Move> > & moves)
+void display(const libchess::Position & p, const bool large, const bool colors, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
 {
 	if (!large) {
 		p.display();
@@ -152,11 +152,45 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 		size_t half  = (nrefm + 1) / 2;
 		if (half > lines.size())
 			skip = (half - lines.size()) * 2;
-		for(size_t i=skip, line_nr = 0; i<nrefm; i += 2, line_nr++) {
-			lines.at(line_nr) += "  " + std::to_string(i / 2 + 1) + ". " + refm.at(i + 0).to_str();
+		size_t line_nr = 0;
+		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
+			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + refm.at(i + 0).to_str();
 			if (nrefm - i >= 2)
-				lines.at(line_nr) += " " + refm.at(i + 1).to_str();
+				add += " " + refm.at(i + 1).to_str();
+			if (add.size())
+				add += std::string(17 - add.size(), ' ');
+			lines.at(line_nr) += add;
 		}
+		while(line_nr < lines.size())
+			lines.at(line_nr++) += std::string(17, ' ');
+	}
+
+	// scores
+	int16_t max = -32768;
+	int16_t min =  32767;
+	for(auto & v: scores) {
+		max = std::max(max, v);
+		min = std::min(min, v);
+	}
+
+	if (max != min) {
+		constexpr int width  = 25;
+		constexpr int height = 8;
+		char matrix[height][width] { };
+		memset(matrix, ' ', sizeof matrix);
+
+		int    extent   = max - min;
+		size_t n_values = scores.size();
+		size_t start    = 0;
+		if (n_values > width)
+			start = n_values - width;
+		for(size_t idx=start; idx<n_values; idx++) {
+			int y = (scores[idx] - min) * (height - 1) / extent;
+			int x = idx - start;
+			matrix[y][x] = '+';
+		}
+		for(int y=0; y<height; y++)
+			lines.at(y) += std::string(matrix[y], width);
 	}
 
 	for(auto & line: lines)
@@ -295,6 +329,7 @@ void tui()
 	trace_enabled = default_trace;
 	i.set_local_echo(true);
 	
+	std::vector<int16_t>        scores;
 	std::vector<libchess::Move> moves_played;
 
 #if defined(ESP32)
@@ -304,7 +339,7 @@ void tui()
 #endif
 
 	for(;;) {
-		display(positiont1, true, colors, moves_played);
+		display(positiont1, true, colors, moves_played, scores);
 
 		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == positiont1.side_to_move()) || finished) {
@@ -354,6 +389,7 @@ void tui()
 				tti.reset();
 				positiont1 = libchess::Position(libchess::constants::STARTPOS_FEN);
 				moves_played.clear();
+				scores.clear();
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
@@ -399,6 +435,7 @@ void tui()
 				positiont1.unmake_move();
 				player = positiont1.side_to_move();
 				moves_played.pop_back();
+				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(positiont1, *sp1.parameters);
@@ -422,10 +459,16 @@ void tui()
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else {
-				auto move = *libchess::Move::from(parts[0]);
-				if (positiont1.is_legal_move(move)) {
-					positiont1.make_move(move);
-					moves_played.push_back(move);
+				auto move = libchess::Move::from(parts[0]);
+				if (move.has_value()) {
+					if (positiont1.is_legal_move(move.value())) {
+						positiont1.make_move(move.value());
+						moves_played.push_back(move.value());
+						scores.push_back(eval(positiont1, *sp1.parameters));
+					}
+					else {
+						my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+					}
 				}
 				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
@@ -448,6 +491,7 @@ void tui()
 
 				positiont1.make_move(move.value());
 				moves_played.push_back(move.value());
+				scores.push_back(eval(positiont1, *sp1.parameters));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
@@ -461,6 +505,7 @@ void tui()
 
 				positiont1.make_move(best_move);
 				moves_played.push_back(best_move);
+				scores.push_back(eval(positiont1, *sp1.parameters));
 			}
 
 			my_printf("\n");
