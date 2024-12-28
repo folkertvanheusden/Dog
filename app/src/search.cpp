@@ -650,15 +650,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+						printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, mate_moves,
-								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 					else {
-						printf("info depth %d score cp %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+						printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, score,
-								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 				}
