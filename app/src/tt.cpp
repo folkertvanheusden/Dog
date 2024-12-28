@@ -148,3 +148,21 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 	return out;
 }
+
+int eval_to_tt(const int eval, const int ply)
+{
+	if (eval > 9800)
+		return eval + ply;
+	if (eval < -9800)
+		return eval - ply;
+	return eval;
+}
+
+int eval_from_tt(const int eval, const int ply)
+{
+	if (eval > 9800)
+		return eval - ply;
+	if (eval < -9800)
+		return eval + ply;
+	return eval;
+}

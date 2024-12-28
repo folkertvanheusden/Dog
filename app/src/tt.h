@@ -68,5 +68,7 @@ public:
 };
 
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move);
+int eval_to_tt  (const int eval, const int ply);
+int eval_from_tt(const int eval, const int ply);
 
 extern tt tti;
