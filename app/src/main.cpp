@@ -875,6 +875,32 @@ void hello() {
 #endif
 }
 
+void run_bench()
+{
+	sp1.cs         = new chess_stats();
+	sp1.parameters = &default_parameters;
+	memset(sp1.history, 0x00, history_malloc_size);
+
+	chess_stats    cs;
+	libchess::Move best_move  { 0 };
+	int            best_score { 0 };
+	sp1.is_t2      = false;
+
+	uint64_t start_ts = esp_timer_get_time();
+	std::tie(best_move, best_score) = search_it(&positiont1, 2500, true, &sp1, -1, 0, { }, &cs);
+	uint64_t end_ts   = esp_timer_get_time();
+
+	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
+	uint64_t t_diff     = end_ts - start_ts;
+
+	printf("===========================\n");
+	printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+	printf("Nodes searched  : %" PRIu64 "\n", node_count);
+	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+
+	delete sp1.cs;
+}
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void help()
 {
@@ -895,6 +921,12 @@ int main(int argc, char *argv[])
 	hello();
 
 #if !defined(__ANDROID__)
+	// for openbench
+	if (argc == 2 && strcmp(argv[1], "bench") == 0) {
+		run_bench();
+		return 0;
+	}
+
 	int c = -1;
 	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
 		if (c == 'T') {
