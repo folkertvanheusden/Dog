@@ -204,7 +204,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 	auto start_score = eval(pos, *sp1.parameters);
 
 	if (colors) {
-		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score);
+		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
 
 		int prev_score = start_score;
 		int nr         = 0;
@@ -242,6 +242,20 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 		for(auto & move: pv)
 			printf(" %s", move.to_str().c_str());
 	}
+}
+
+void show_movelist(const libchess::Position & pos)
+{
+	bool first = true;
+	auto moves = pos.legal_move_list();
+	for(auto & move: moves) {
+		if (first)
+			first = false;
+		else
+			my_printf(" ");
+		my_printf("%s", move.to_str().c_str());
+	}
+	my_printf("\n");
 }
 
 bool colors        = false;
@@ -366,6 +380,7 @@ void tui()
 				my_printf("time    set think time, in seconds\n");
 				my_printf("fen     show fen for current position\n");
 				my_printf("eval    show current evaluation score\n");
+				my_printf("moves   show valid moves\n");
 				my_printf("tt      show TT entry for current position\n");
 				my_printf("undo    take back last move\n");
 				my_printf("auto    auto play until the end\n");
@@ -401,6 +416,8 @@ void tui()
 				think_time = std::stod(parts[1]) * 1000;
 				write_settings();
 			}
+			else if (parts[0] == "moves")
+				show_movelist(positiont1);
 			else if (parts[0] == "trace") {
 				if (parts.size() == 2)
 					trace_enabled = parts[1] == "on";

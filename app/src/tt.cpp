@@ -148,14 +148,11 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 			break;
 
 		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
-
 		if (!work.is_legal_move(cur_move))
 			break;
 
 		out.push_back(cur_move);
-
 		work.make_move(cur_move);
-
 		if (work.is_repeat(3))
 			break;
 	}
