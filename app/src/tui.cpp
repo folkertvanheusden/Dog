@@ -258,6 +258,23 @@ void show_movelist(const libchess::Position & pos)
 	my_printf("\n");
 }
 
+void tt_lookup()
+{
+	auto te = tti.lookup(positiont1.hash());
+	if (te.has_value() == false)
+		my_printf("None\n");
+	else {
+		const char *const flag_names[] = { "invalid", "exact", "lowerbound", "upperbound" };
+		my_printf("Score: %.2f (%s)\n", te.value().data_._data.score / 100., flag_names[te.value().data_._data.flags]);
+		my_printf("Depth: %d\n", te.value().data_._data.depth);
+		std::optional<libchess::Move> tt_move;
+		if (te.value().data_._data.m)
+			tt_move = libchess::Move(te.value().data_._data.m);
+		if (tt_move.has_value() && positiont1.is_legal_move(tt_move.value()))
+			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
+	}
+}
+
 bool colors        = false;
 bool default_trace = false;
 int  think_time    = 1000;  // milliseconds
@@ -459,19 +476,7 @@ void tui()
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt") {
-				auto te = tti.lookup(positiont1.hash());
-				if (te.has_value() == false)
-					my_printf("None\n");
-				else {
-					const char *const flag_names[] = { "invalid", "exact", "lowerbound", "upperbound" };
-					my_printf("Score: %.2f (%s)\n", te.value().data_._data.score / 100., flag_names[te.value().data_._data.flags]);
-					my_printf("Depth: %d\n", te.value().data_._data.depth);
-					std::optional<libchess::Move> tt_move;
-					if (te.value().data_._data.m)
-						tt_move = libchess::Move(te.value().data_._data.m);
-					if (tt_move.has_value() && positiont1.is_legal_move(tt_move.value()))
-						my_printf("Move: %s\n", tt_move.value().to_str().c_str());
-				}
+				tt_lookup();
 			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
