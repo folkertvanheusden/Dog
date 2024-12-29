@@ -15,6 +15,9 @@ if (CMAKE_BUILD_TYPE EQUAL RelWithDebInfo)
 elseif (CMAKE_BUILD_TYPE EQUAL Debug)
 	set(MY_DEBUG 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline -O0")
+elseif (CMAKE_BUILD_TYPE EQUAL DebugAsan)
+	set(MY_DEBUG 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline -O0 -fsanitize=address,undefined")
 else()
 	set(MY_DEBUG 0)
 endif()
@@ -52,7 +55,11 @@ add_executable(
 include(FindPkgConfig)
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX)
+if (CMAKE_BUILD_TYPE EQUAL DebugAsan)
+	target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX -fsanitize=address,undefined)
+else()
+	target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 
