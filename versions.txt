@@ -7,6 +7,31 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+SPP bigger margin
+	Score of Dog-5cb051e-SPP-LCb6c9d04 vs Dog-a6e4323-master-LCb6c9d04: 87 - 139 - 172  [0.435] 398
+	Elo difference: -45.7 +/- 25.8, LOS: 0.0 %, DrawRatio: 43.2 %
+	SPRT: llr -2.97 (-100.9%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+SPP margin
+	Score of Dog-cc2cc0a-SPP-LCb6c9d04 vs Dog-a6e4323-master-LCb6c9d04: 16 - 65 - 61  [0.327] 142
+	Elo difference: -125.0 +/- 43.8, LOS: 0.0 %, DrawRatio: 43.0 %
+	SPRT: llr -2.95 (-100.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+SPP
+	Score of Dog-a7e89b0-SPP-LCb6c9d04 vs Dog-a6e4323-master-LCb6c9d04: 11 - 67 - 37  [0.257] 115
+	Elo difference: -184.9 +/- 56.0, LOS: 0.0 %, DrawRatio: 32.2 %
+	SPRT: llr -2.96 (-100.5%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master versus v2.5c
+	Score of Dog-a6e4323-master-LCb6c9d04 vs Dog-22a052f-v2.5c-LCd2e43e0: 483 - 404 - 755  [0.524] 1642
+	Elo difference: 16.7 +/- 12.3, LOS: 99.6 %, DrawRatio: 46.0 %
+	SPRT: llr 2.96 (100.4%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+master (Debug build)
+	Score of Dog-ec3bdb9-master-LCb6c9d04 vs Dog-22a052f-v2.5c-LCd2e43e0: 0 - 47 - 4  [0.039] 51
+	Elo difference: -555.7 +/- 307.7, LOS: 0.0 %, DrawRatio: 7.8 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 killermoves2:
 	Score of Dog-7571173-killermoves2-LCb6c9d04 vs Dog-5950744-PVS-LCb6c9d04: 142 - 193 - 242  [0.456] 577
 	Elo difference: -30.8 +/- 21.6, LOS: 0.3 %, DrawRatio: 41.9 %
