@@ -346,6 +346,23 @@ void load_settings()
 	fclose(fh);
 }
 
+static void help()
+{
+	my_printf("quit    stop the tui\n");
+	my_printf("new     restart game\n");
+	my_printf("player  select player (\"white\" or \"black\")\n");
+	my_printf("time    set think time, in seconds\n");
+	my_printf("fen     show fen for current position\n");
+	my_printf("eval    show current evaluation score\n");
+	my_printf("moves   show valid moves\n");
+	my_printf("tt      show TT entry for current position\n");
+	my_printf("undo    take back last move\n");
+	my_printf("auto    auto play until the end\n");
+	my_printf("trace   on/off\n");
+	my_printf("colors  on/off\n");
+	my_printf("perft   run \"perft\" for the given depth\n");
+}
+
 void tui()
 {
 	set_thread_name("TUI");
@@ -390,24 +407,10 @@ void tui()
 				continue;
 
 			auto parts = split(line, " ");
-			if (parts[0] == "help") {
-				my_printf("quit    stop the tui\n");
-				my_printf("new     restart game\n");
-				my_printf("player  select player (\"white\" or \"black\")\n");
-				my_printf("time    set think time, in seconds\n");
-				my_printf("fen     show fen for current position\n");
-				my_printf("eval    show current evaluation score\n");
-				my_printf("moves   show valid moves\n");
-				my_printf("tt      show TT entry for current position\n");
-				my_printf("undo    take back last move\n");
-				my_printf("auto    auto play until the end\n");
-				my_printf("trace   on/off\n");
-				my_printf("colors  on/off\n");
-				my_printf("perft   run \"perft\" for the given depth\n");
-			}
-			else if (parts[0] == "quit") {
+			if (parts[0] == "help")
+				help();
+			else if (parts[0] == "quit")
 				break;
-			}
 			else if (parts[0] == "auto")
 				player.reset();
 			else if (parts[0] == "fen")
@@ -475,26 +478,23 @@ void tui()
 				int score = eval(positiont1, *sp1.parameters);
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
-			else if (parts[0] == "tt") {
+			else if (parts[0] == "tt")
 				tt_lookup();
-			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else {
-				auto move = libchess::Move::from(parts[0]);
+				bool valid = false;
+				auto move  = libchess::Move::from(parts[0]);
 				if (move.has_value()) {
 					if (positiont1.is_legal_move(move.value())) {
 						positiont1.make_move(move.value());
 						moves_played.push_back(move.value());
 						scores.push_back(eval(positiont1, *sp1.parameters));
-					}
-					else {
-						my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+						valid = true;
 					}
 				}
-				else {
+				if (!valid)
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
-				}
 			}
 		}
 		else {
