@@ -508,7 +508,7 @@ void tui()
 			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
 			auto move = pb->query(positiont1);
-			if (move.has_value() && positiont1.is_legal_move(move.value())) {
+			if (move.has_value()) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				positiont1.make_move(move.value());
