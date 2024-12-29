@@ -84,9 +84,12 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	libchess::Move::Type type { libchess::Move::Type::NONE };
 
-	if (promotion_type)
+	if (promotion_type) {
 		type = is_capture ? libchess::Move::Type::CAPTURE_PROMOTION : libchess::Move::Type::PROMOTION;
-	else if (is_capture)
+		return libchess::Move(sq_from, sq_to, promote_to, type);
+	}
+
+	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
 	else if ((sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) ||
 		 (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8))) {
@@ -96,7 +99,7 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
 
-	return libchess::Move(sq_from, sq_to, promote_to, type);
+	return libchess::Move(sq_from, sq_to, type);
 }
 
 void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> *const moves_out)
@@ -123,7 +126,7 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 		if (p.is_legal_move(move))
 			moves_out->push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
 		else
-			printf("Book: hash collision!\n");
+			printf("Book: hash collision! (%s)\n", move.to_str().c_str());
 	}
 }
 
