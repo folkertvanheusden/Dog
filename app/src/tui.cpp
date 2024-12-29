@@ -211,8 +211,8 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 		libchess::Position work(positiont1);
 		for(auto & move: pv) {
 			if (++nr == 6)
-				printf("\n    "), nr = 0;
-			printf(" ");
+				my_printf("\n    "), nr = 0;
+			my_printf(" ");
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
@@ -225,22 +225,22 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 			else
 				my_printf("\x1b[40;32m%s\x1b[0m", move.to_str().c_str());
 			if (cur_score > prev_score)
-				printf("\x1b[40;32m▲\x1b[0m");
+				my_printf("\x1b[40;32m▲\x1b[0m");
 			else if (cur_score < prev_score)
-				printf("\x1b[40;31m▼\x1b[0m");
+				my_printf("\x1b[40;31m▼\x1b[0m");
 			else
-				printf("-");
+				my_printf("-");
 			prev_score = cur_score;
 			if (work.side_to_move() != start_color)
-				printf(" [%.2f] ", -cur_score / 100.);
+				my_printf(" [%.2f] ", -cur_score / 100.);
 			else
-				printf(" [%.2f] ", cur_score / 100.);
+				my_printf(" [%.2f] ", cur_score / 100.);
 		}
 	}
 	else {
 		my_printf("PV:");
 		for(auto & move: pv)
-			printf(" %s", move.to_str().c_str());
+			my_printf(" %s", move.to_str().c_str());
 	}
 }
 
@@ -508,10 +508,11 @@ void tui()
 			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
 			auto move = pb->query(positiont1);
-			if (move.has_value()) {
-				printf("Book move: %s\n", move.value().to_str().c_str());
+			if (move.has_value() && positiont1.is_legal_move(move.value())) {
+				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				positiont1.make_move(move.value());
+				positiont1.display();
 				moves_played.push_back(move.value());
 				scores.push_back(eval(positiont1, *sp1.parameters));
 			}
