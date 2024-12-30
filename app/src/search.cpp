@@ -385,7 +385,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 int  score  = -10000;
 
                 pos.make_move(move);
-                if (n_played == 0)
+                if (n_played == 0 || pos.in_check())
                         score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
                 else {
                         int new_depth = depth - 1;
