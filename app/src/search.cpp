@@ -390,17 +390,15 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 else {
                         int new_depth = depth - 1;
 
-                        if (n_played >= lmr_start) {
+                        if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
                                 is_lmr = true;
-				sp->cs->data.n_lmr++;
+                                sp->cs->data.n_lmr++;
 
-				if (n_played >= lmr_start + 2)
-					new_depth = std::max(0, depth - 4);
-				else if (pos.is_capture_move(move) || pos.is_promotion_move(move))
-					new_depth = std::max(0, depth - 2);
-				else
-					new_depth = std::max(0, depth - 3);
-			}
+                                if (n_played >= lmr_start + 2)
+                                        new_depth = std::max(0, depth - 4);
+                                else
+                                        new_depth = depth - 2;
+                        }
 
                         score = -search(pos, new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 
