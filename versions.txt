@@ -7,6 +7,12 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+
+LMRrevisited
+	Score of Dog-ff673de-LMRrevisited-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 0 - 38 - 7  [0.078] 45
+	Elo difference: -429.6 +/- 153.9, LOS: 0.0 %, DrawRatio: 15.6 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 SPP bigger margin
 	Score of Dog-5cb051e-SPP-LCb6c9d04 vs Dog-a6e4323-master-LCb6c9d04: 87 - 139 - 172  [0.435] 398
 	Elo difference: -45.7 +/- 25.8, LOS: 0.0 %, DrawRatio: 43.2 %
