@@ -8,6 +8,31 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+LMRrevisitedB
+	Score of Dog-55955b8-LMRrevisitedB-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 322 - 358 - 608  [0.486] 1288
+	Elo difference: -9.7 +/- 13.8, LOS: 8.4 %, DrawRatio: 47.2 %
+	SPRT: llr -2.98 (-101.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisitedB
+	Score of Dog-d358c88-LMRrevisitedB-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 481 - 510 - 841  [0.492] 1832
+	Elo difference: -5.5 +/- 11.7, LOS: 17.8 %, DrawRatio: 45.9 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisited2
+	Score of Dog-4364d4f-LMRrevisited2-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 413 - 446 - 734  [0.490] 1593
+	Elo difference: -7.2 +/- 12.5, LOS: 13.0 %, DrawRatio: 46.1 %
+	SPRT: llr -2.99 (-101.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+incheckPVS
+	Score of Dog-b663bdd-incheckPVS-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 432 - 465 - 747  [0.490] 1644
+	Elo difference: -7.0 +/- 12.4, LOS: 13.5 %, DrawRatio: 45.4 %
+	SPRT: llr -2.99 (-101.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisited[1]
+	Score of Dog-71e5096-LMRrevisited-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 2007 - 1878 - 3125  [0.509] 7010
+	Elo difference: 6.4 +/- 6.0, LOS: 98.1 %, DrawRatio: 44.6 %
+	SPRT: llr 1.46 (49.6%), lbound -2.94, ubound 2.94
+
 LMRrevisited
 	Score of Dog-ff673de-LMRrevisited-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 0 - 38 - 7  [0.078] 45
 	Elo difference: -429.6 +/- 153.9, LOS: 0.0 %, DrawRatio: 15.6 %
