@@ -136,11 +136,16 @@ void tests()
 		printf("eval_piece test\n");
 
 		my_assert(default_parameters.eval_piece(libchess::constants::PAWN  ) == TUNE_PAWN  );
+		my_assert(default_parameters.eval_piece(libchess::constants::PAWN  ) == default_parameters.pawn  );
 		my_assert(default_parameters.eval_piece(libchess::constants::BISHOP) == TUNE_BISHOP);
+		my_assert(default_parameters.eval_piece(libchess::constants::BISHOP) == default_parameters.bishop);
 		my_assert(default_parameters.eval_piece(libchess::constants::QUEEN ) == TUNE_QUEEN );
+		my_assert(default_parameters.eval_piece(libchess::constants::QUEEN ) == default_parameters.queen );
 		my_assert(default_parameters.eval_piece(libchess::constants::KING  ) == 10000      );
 		my_assert(default_parameters.eval_piece(libchess::constants::ROOK  ) == TUNE_ROOK  );
+		my_assert(default_parameters.eval_piece(libchess::constants::ROOK  ) == default_parameters.rook  );
 		my_assert(default_parameters.eval_piece(libchess::constants::KNIGHT) == TUNE_KNIGHT);
+		my_assert(default_parameters.eval_piece(libchess::constants::KNIGHT) == default_parameters.knight);
 
 		printf("Ok\n");
 	}
