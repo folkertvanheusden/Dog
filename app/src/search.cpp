@@ -364,7 +364,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
         // IID //
         libchess::Move iid_move { 0 };
-        if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2) {
+        if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2 && alpha != beta - 1) {
                 if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp, thread_nr)) > 9800)
                         extension |= 1;
         }
