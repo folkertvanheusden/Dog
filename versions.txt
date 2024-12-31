@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+LMRrevisited5 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -315.25 +- 47.64 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -2.46 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 282 W: 14 L: 217 D: 51
+	Penta | [81, 41, 19, 0, 0]
+	https://pyronomy.pythonanywhere.com/test/743/
+
 LMRrevisited4 versus be8e29e25944ce4933707265b997edae9d8e371f
 	Elo   | -23.92 +- 13.34 (95%)
 	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
