@@ -373,7 +373,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	sort_movelist(move_list, smc);
 
 	int     n_played   = 0;
-	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
+	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999 && alpha == beta - 1;
 
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move { 0 };
