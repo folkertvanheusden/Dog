@@ -428,10 +428,9 @@ void ponder_thread(void *p)
 			for(int i=0; i<n_threads; i++) {
 				ths.push_back(new std::thread([i, node_limit] {
 					chess_stats cs;
-					auto *p = new libchess::Position(positiont2.fen());
+					libchess::Position p(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
 					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs);
-					delete p;
                                 }));
 			}
 
@@ -659,7 +658,7 @@ void main_task()
 				set_new_ponder_position(false);
 
 				chess_stats cs;
-				auto best_move = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, cs);
+				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -775,7 +774,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -880,7 +879,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, sp1, 10, 0, { }, cs);
+	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;

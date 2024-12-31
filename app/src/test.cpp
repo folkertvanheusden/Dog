@@ -61,7 +61,7 @@ void tests()
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
-		std::tie(best_move, best_score) = search_it(&p, 100, false, sp1, -1, 0, { }, cs);
+		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, cs);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 

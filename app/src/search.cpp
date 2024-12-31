@@ -510,7 +510,7 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs)
+std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -533,7 +533,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 
 	int16_t best_score = 0;
 
-	auto move_list = pos->legal_move_list();
+	auto move_list = pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
 	if (move_list.size() > 1) {
@@ -561,7 +561,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 #if defined(linux)
 			sp.md = 0;
 #endif
-			int score = search(*pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
+			int score = search(pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
 
 			if (sp.stop->flag) {
 #if !defined(__ANDROID__)
@@ -636,7 +636,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (!sp.is_t2) {
-					std::vector<libchess::Move> pv = get_pv_from_tt(*pos, best_move);
+					std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 					std::string pv_str;
 					for(auto & move : pv)
 						pv_str += " " + move.to_str();
@@ -699,7 +699,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 	}
 	else {
 #if !defined(__ANDROID__)
-		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos->fen().c_str());
+		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
 #endif
 	}
 
