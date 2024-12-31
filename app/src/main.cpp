@@ -248,13 +248,15 @@ auto thread_count_handler = [](const int value)  {
 
 	stop2.clear();
 
-	for(auto & sp: sp2)
+	for(auto & sp: sp2) {
 		free(sp.history);
+		delete sp.cs;
+	}
 	sp2.clear();
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new chess_stats(), 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
