@@ -359,7 +359,17 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                 }
 	}
 	///////////////
-	
+
+        int     extension  = 0;
+
+        // IID //
+        libchess::Move iid_move { 0 };
+        if (null_move_depth == 0 && tt_move.has_value() == false && depth >= 2) {
+                if (abs(search(pos, depth - 2, alpha, beta, null_move_depth, max_depth, &iid_move, sp, thread_nr)) > 9800)
+                        extension |= 1;
+        }
+        /////////
+
 	int                best_score = -32767;
 	libchess::MoveList move_list  = pos.pseudo_legal_move_list();
 
@@ -386,27 +396,27 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
                 pos.make_move(move);
                 if (n_played == 0)
-                        score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+                        score = -search(pos, depth + extension - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
                 else {
-                        int new_depth = depth - 1;
+                        int new_depth = depth + extension - 1;
 
                         if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
                                 is_lmr = true;
 				sp->cs->data.n_lmr++;
 
 				if (n_played >= lmr_start + 2)
-					new_depth = (depth - 1) * 2 / 3;
+					new_depth = (depth + extension - 1) * 2 / 3;
 				else
-					new_depth = depth - 2;
+					new_depth = depth + extension - 2;
 			}
 
                         score = -search(pos, new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 
                         if (is_lmr && score > alpha)
-                                score = -search(pos, depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+                                score = -search(pos, depth + extension -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
 
                         if (score > alpha && score < beta)
-                                score = -search(pos, depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
+                                score = -search(pos, depth + extension - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
                 }
                 pos.unmake_move();
 
