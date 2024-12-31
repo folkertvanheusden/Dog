@@ -17,15 +17,15 @@ void tune(std::string file)
 	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
 	printf("%zu parameters\n", tunable_parameters.size());
 
+	chess_stats cs;
 	int16_t history[history_size] { 0 };
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
-		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
+		[&history, &cs](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			search_pars_t sp { cur, false, history };
+			search_pars_t sp { cur, false, history, cs };
 			sp.stop       = new end_t();
 			sp.stop->flag = false;
-			sp.cs         = new chess_stats();
 
 #pragma omp parallel for
 			for(auto &p: positions) {
@@ -36,7 +36,6 @@ void tune(std::string file)
 				p.set_result(score);
 			}
 
-			delete sp.cs;
 			delete sp.stop;
 		}};
 

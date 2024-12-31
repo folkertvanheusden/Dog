@@ -19,7 +19,7 @@ typedef struct
 
 	int16_t *const history;
 
-	chess_stats *cs;
+	chess_stats & cs;
 
 	uint16_t  md;
 

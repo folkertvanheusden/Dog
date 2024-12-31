@@ -555,7 +555,7 @@ void tui()
 				int            best_score { 0 };
 				chess_stats    cs;
 				clear_flag(sp1.stop);
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, &cs);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, cs);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(positiont1, best_move, colors);
 

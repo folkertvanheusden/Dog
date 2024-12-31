@@ -74,16 +74,19 @@ void start_ponder_thread();
 void stop_ponder_thread();
 
 end_t         stop1 { false };
-search_pars_t sp1   { default_parameters, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop1 };
+chess_stats  *sp1cs = new chess_stats();
+search_pars_t sp1   { default_parameters, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp1cs, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
 std::vector<end_t *>       stop2;
+std::vector<chess_stats *> sp2cs;
 
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { default_parameters, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop2 };
+chess_stats  *sp2cs = new chess_stats();
+search_pars_t sp2   { default_parameters, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp2cs, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -248,15 +251,18 @@ auto thread_count_handler = [](const int value)  {
 
 	stop2.clear();
 
-	for(auto & sp: sp2) {
+	for(auto & sp: sp2)
 		free(sp.history);
-		delete sp.cs;
-	}
 	sp2.clear();
+
+	for(auto & cs: sp2cs)
+		delete cs;
+	sp2cs.clear();
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new chess_stats(), 0, stop2.at(i) });
+		sp2cs.push_back(new chess_stats());
+		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp2cs.at(i), 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
@@ -424,7 +430,7 @@ void ponder_thread(void *p)
 					chess_stats cs;
 					auto *p = new libchess::Position(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, &cs);
+					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs);
 					delete p;
                                 }));
 			}
@@ -436,7 +442,7 @@ void ponder_thread(void *p)
 #else
 			start_blink(led_blue_timer);
 			chess_stats cs;
-			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { }, &cs);
+			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { }, cs);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			trace("# Pondering finished\n");
@@ -528,12 +534,12 @@ void set_new_ponder_position(const bool this_is_ponder)
 
 void reset_search_statistics()
 {
-	sp1.cs->reset();
+	sp1.cs.reset();
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
         for(auto & sp: sp2)
-                sp.cs->reset();
+                sp.cs.reset();
 #else
-        sp2.cs->reset();
+        sp2.cs.reset();
 #endif
 }
 
@@ -560,19 +566,11 @@ void main_task()
 	if (!sp1.history)
 		printf("Malloc of sp1-history failed\n");
 
-	sp1.is_t2      = false;
+	sp1.is_t2 = false;
 	memset(sp1.history, 0x00, history_malloc_size);
 #if defined(ESP32)
 	if (!sp2.history)
 		printf("Malloc of sp2-history failed\n");
-#endif
-
-	sp1.cs = new chess_stats();
-#if defined(ESP32)
-	sp2.cs = new chess_stats();
-#else
-	for(auto & sp: sp2)
-		sp.cs = new chess_stats();
 #endif
 
 	chess_stats global_cs;
@@ -661,7 +659,7 @@ void main_task()
 				set_new_ponder_position(false);
 
 				chess_stats cs;
-				auto best_move = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, &cs);
+				auto best_move = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, cs);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -760,11 +758,11 @@ void main_task()
 			// probe the Syzygy endgame table base
 #if defined(linux) || defined(_WIN32)
 			if (with_syzygy) {
-				sp1.cs->data.syzygy_queries++;
+				sp1.cs.data.syzygy_queries++;
 
 				auto probe_result = probe_fathom_root(positiont1);
 				if (probe_result.has_value()) {
-					sp1.cs->data.syzygy_query_hits++;
+					sp1.cs.data.syzygy_query_hits++;
 
 					best_move  = probe_result.value().first;
 					best_score = probe_result.value().second;
@@ -777,7 +775,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), &global_cs);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -874,7 +872,6 @@ void hello() {
 
 void run_bench()
 {
-	sp1.cs = new chess_stats();
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	chess_stats    cs;
@@ -883,7 +880,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, sp1, 10, 0, { }, &cs);
+	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, sp1, 10, 0, { }, cs);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
@@ -893,8 +890,6 @@ void run_bench()
 	printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
 	printf("Nodes searched  : %" PRIu64 "\n", node_count);
 	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
-
-	delete sp1.cs;
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -956,7 +951,8 @@ int main(int argc, char *argv[])
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
+		sp2cs.push_back(new chess_stats());
+		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp2cs.at(i), 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
@@ -974,13 +970,14 @@ int main(int argc, char *argv[])
 		stop2.erase(stop2.begin());
 	}
 
+	delete sp1cs;
+
 	for(size_t i=0; i<sp2.size(); i++) {
 		free(sp2.at(i).history);
-		delete sp2.at(i).cs;
+		delete sp2cs.at(i);
 	}
 
 	free(sp1.history);
-	delete sp1.cs;
 
 	return 0;
 }
