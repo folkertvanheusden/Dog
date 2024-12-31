@@ -5,6 +5,7 @@
 #include <map>
 #include <numeric>
 #include <string>
+#include <libchess/Position.h>
 
 #include "my_tuner.h"
 #include "tune.h"
@@ -165,6 +166,9 @@ public:
 	};
 
 	std::vector<libchess::TunableParameter> get_tunable_parameters() const;
+
+	int piece_values[6] { TUNE_PAWN, TUNE_KNIGHT, TUNE_BISHOP, TUNE_ROOK, TUNE_QUEEN, 10000 };
+	int eval_piece(const libchess::PieceType piece) const;
 
 	void set_eval(const std::string & name, int value);
 };

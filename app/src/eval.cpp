@@ -6,12 +6,6 @@
 #include "eval.h"
 #include "psq.h"
 
-int eval_piece(const libchess::PieceType piece, const eval_par & parameters)
-{
-	int values[] = { parameters.pawn, parameters.knight, parameters.bishop, parameters.rook, parameters.queen, 10000 };
-
-	return values[piece];
-}
 
 int game_phase(const int counts[2][6], const eval_par & parameters)
 {
@@ -315,8 +309,8 @@ int eval(const libchess::Position & pos, const eval_par & parameters)
 
 	// material
 	for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-		score += eval_piece(type, parameters) * counts[libchess::constants::WHITE][type];
-		score -= eval_piece(type, parameters) * counts[libchess::constants::BLACK][type];
+		score += parameters.eval_piece(type) * counts[libchess::constants::WHITE][type];
+		score -= parameters.eval_piece(type) * counts[libchess::constants::BLACK][type];
 	}
 
 	int whiteYmax[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
