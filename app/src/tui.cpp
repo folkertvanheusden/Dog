@@ -201,7 +201,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
-	auto start_score = eval(pos, *sp1.parameters);
+	auto start_score = eval(pos, sp1.parameters);
 
 	if (colors) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
@@ -216,7 +216,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = eval(work, *sp1.parameters);
+			int  cur_score = eval(work, sp1.parameters);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
@@ -508,7 +508,7 @@ void tui()
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int score = eval(positiont1, *sp1.parameters);
+				int score = eval(positiont1, sp1.parameters);
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt")
@@ -522,7 +522,7 @@ void tui()
 					if (positiont1.is_legal_move(move.value())) {
 						positiont1.make_move(move.value());
 						moves_played.push_back(move.value());
-						scores.push_back(eval(positiont1, *sp1.parameters));
+						scores.push_back(eval(positiont1, sp1.parameters));
 						valid = true;
 					}
 				}
@@ -547,7 +547,7 @@ void tui()
 				positiont1.make_move(move.value());
 				positiont1.display();
 				moves_played.push_back(move.value());
-				scores.push_back(eval(positiont1, *sp1.parameters));
+				scores.push_back(eval(positiont1, sp1.parameters));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
@@ -555,13 +555,13 @@ void tui()
 				int            best_score { 0 };
 				chess_stats    cs;
 				clear_flag(sp1.stop);
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { }, &cs);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, &cs);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(positiont1, best_move, colors);
 
 				positiont1.make_move(best_move);
 				moves_played.push_back(best_move);
-				scores.push_back(eval(positiont1, *sp1.parameters));
+				scores.push_back(eval(positiont1, sp1.parameters));
 			}
 
 			my_printf("\n");

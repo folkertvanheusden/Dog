@@ -5,6 +5,7 @@
 #include "eval.h"
 #include "main.h"
 #include "my_tuner.h"
+#include "search.h"
 
 
 #if defined(linux) || defined(_WIN32)
@@ -21,7 +22,7 @@ void tune(std::string file)
 		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			search_pars_t sp { &cur, false, history };
+			search_pars_t sp { cur, false, history };
 			sp.stop       = new end_t();
 			sp.stop->flag = false;
 			sp.cs         = new chess_stats();
@@ -29,7 +30,7 @@ void tune(std::string file)
 #pragma omp parallel for
 			for(auto &p: positions) {
 				auto & pos = p.position();
-				int score = qs(pos, -32767, 32767, 0, &sp, 0);
+				int score = qs(pos, -32767, 32767, 0, sp, 0);
 				if (pos.side_to_move() != libchess::constants::WHITE)
 					score = -score;
 				p.set_result(score);

@@ -14,7 +14,7 @@ typedef struct {
 
 typedef struct
 {
-	const eval_par *parameters;
+	const eval_par & parameters;
 	bool      is_t2;
 
 	int16_t *const history;
@@ -85,14 +85,13 @@ void vTaskGetRunTimeStats();
 class sort_movelist_compare
 {
 private:
-        libchess::Position       *const p  { nullptr };
-	const eval_par           *const ep { nullptr };
-	const search_pars_t      *const sp { nullptr };
-        std::vector<libchess::Move>     first_moves;
+        const libchess::Position  & p;
+	const search_pars_t       & sp;
+        std::vector<libchess::Move> first_moves;
         std::optional<libchess::Square> previous_move_target;
 
 public:
-        sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp);
+        sort_movelist_compare(const libchess::Position & p, const search_pars_t & sp);
         void add_first_move(const libchess::Move move);
         int move_evaluater(const libchess::Move move) const;
 };
@@ -103,7 +102,6 @@ void clear_flag(end_t *const stop);
 void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
 chess_stats calculate_search_statistics();

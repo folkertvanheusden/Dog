@@ -74,7 +74,7 @@ void start_ponder_thread();
 void stop_ponder_thread();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop1 };
+search_pars_t sp1   { default_parameters, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -83,7 +83,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop2 };
+search_pars_t sp2   { default_parameters, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -256,7 +256,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new chess_stats(), 0, stop2.at(i) });
+		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new chess_stats(), 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
@@ -367,12 +367,9 @@ void ponder_thread(void *p)
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
-	for(auto & sp: sp2) {
-		sp.parameters = &default_parameters;
+	for(auto & sp: sp2)
 		sp.is_t2 = true;
-	}
 #else
-	sp2.parameters = &default_parameters;
 	sp2.is_t2 = true;
 #endif
 
@@ -427,7 +424,7 @@ void ponder_thread(void *p)
 					chess_stats cs;
 					auto *p = new libchess::Position(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, &sp2.at(i), -1, i, node_limit, &cs);
+					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, &cs);
 					delete p;
                                 }));
 			}
@@ -563,7 +560,6 @@ void main_task()
 	if (!sp1.history)
 		printf("Malloc of sp1-history failed\n");
 
-	sp1.parameters = &default_parameters;
 	sp1.is_t2      = false;
 	memset(sp1.history, 0x00, history_malloc_size);
 #if defined(ESP32)
@@ -582,7 +578,7 @@ void main_task()
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
-		int score = eval(positiont1, *sp1.parameters);
+		int score = eval(positiont1, sp1.parameters);
 		printf("# eval: %d\n", score);
 	};
 
@@ -665,7 +661,7 @@ void main_task()
 				set_new_ponder_position(false);
 
 				chess_stats cs;
-				auto best_move = search_it(&positiont1, think_time, true, &sp1, -1, 0, { }, &cs);
+				auto best_move = search_it(&positiont1, think_time, true, sp1, -1, 0, { }, &cs);
 #if !defined(linux) && !defined(_WIN32)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -781,7 +777,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, &sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), &global_cs);
+				std::tie(best_move, best_score) = search_it(&positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), &global_cs);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -878,8 +874,7 @@ void hello() {
 
 void run_bench()
 {
-	sp1.cs         = new chess_stats();
-	sp1.parameters = &default_parameters;
+	sp1.cs = new chess_stats();
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	chess_stats    cs;
@@ -888,7 +883,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, &sp1, 10, 0, { }, &cs);
+	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, sp1, 10, 0, { }, &cs);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
@@ -961,7 +956,7 @@ int main(int argc, char *argv[])
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
+		sp2.push_back({ default_parameters, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();

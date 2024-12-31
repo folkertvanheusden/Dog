@@ -17,7 +17,6 @@ void tests()
 
 	set_thread_name("TESTS");
 
-	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
 	sp1.cs    = new chess_stats();
 	
@@ -63,7 +62,7 @@ void tests()
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
-		std::tie(best_move, best_score) = search_it(&p, 100, false, &sp1, -1, 0, { }, &cs);
+		std::tie(best_move, best_score) = search_it(&p, 100, false, sp1, -1, 0, { }, &cs);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -80,7 +79,7 @@ void tests()
 
 		libchess::MoveList move_list = p.pseudo_legal_move_list();
 		my_assert(move_list.size() == 7);
-		sort_movelist_compare smc(&p, &sp1);
+		sort_movelist_compare smc(p, sp1);
 		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 
 		int prev_v = 32767;
