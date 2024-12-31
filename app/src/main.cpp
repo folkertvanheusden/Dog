@@ -248,17 +248,23 @@ auto thread_count_handler = [](const int value)  {
 
 	stop2.clear();
 
-	for(auto & sp: sp2)
+	for(auto & sp: sp2) {
 		free(sp.history);
+		delete sp.cs;
+	}
 	sp2.clear();
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), nullptr, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new chess_stats(), 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
 #endif
+};
+
+auto hash_size_handler = [](const int value)  {
+	tti.set_size(uint64_t(value) * 1024 * 1024);
 };
 
 bool allow_ponder         = true;
@@ -761,7 +767,6 @@ void main_task()
 				sp1.cs->data.syzygy_queries++;
 
 				auto probe_result = probe_fathom_root(positiont1);
-
 				if (probe_result.has_value()) {
 					sp1.cs->data.syzygy_query_hits++;
 
@@ -805,11 +810,10 @@ void main_task()
 		}
 	};
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	libchess::UCISpinOption thread_count_option("Threads", thread_count, 1, 65536, thread_count_handler);
 	uci_service.register_option(thread_count_option);
-#endif
-
+	libchess::UCISpinOption hash_size_option("Hash", thread_count, 1, 1024, hash_size_handler);
+	uci_service.register_option(hash_size_option);
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
 	uci_service.register_option(allow_ponder_option);
 	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
@@ -872,15 +876,41 @@ void hello() {
 #endif
 }
 
+void run_bench()
+{
+	sp1.cs         = new chess_stats();
+	sp1.parameters = &default_parameters;
+	memset(sp1.history, 0x00, history_malloc_size);
+
+	chess_stats    cs;
+	libchess::Move best_move  { 0 };
+	int            best_score { 0 };
+	sp1.is_t2      = false;
+
+	uint64_t start_ts = esp_timer_get_time();
+	std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, &sp1, 10, 0, { }, &cs);
+	uint64_t end_ts   = esp_timer_get_time();
+
+	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
+	uint64_t t_diff     = end_ts - start_ts;
+
+	printf("===========================\n");
+	printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+	printf("Nodes searched  : %" PRIu64 "\n", node_count);
+	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+
+	delete sp1.cs;
+}
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void help()
 {
 	print_max();
 
-	printf("-t x   thread count\n");
-	printf("-U     run unit tests\n");
-	printf("-s x   set path to Syzygy\n");
-	printf("-u x   USB display device\n");
+	printf("-t x  thread count\n");
+	printf("-U    run unit tests\n");
+	printf("-s x  set path to Syzygy\n");
+	printf("-u x  USB display device\n");
 }
 
 int main(int argc, char *argv[])
@@ -892,6 +922,12 @@ int main(int argc, char *argv[])
 	hello();
 
 #if !defined(__ANDROID__)
+	// for openbench
+	if (argc == 2 && strcmp(argv[1], "bench") == 0) {
+		run_bench();
+		return 0;
+	}
+
 	int c = -1;
 	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
 		if (c == 'T') {
@@ -943,10 +979,13 @@ int main(int argc, char *argv[])
 		stop2.erase(stop2.begin());
 	}
 
-	for(size_t i=0; i<sp2.size(); i++)
+	for(size_t i=0; i<sp2.size(); i++) {
 		free(sp2.at(i).history);
+		delete sp2.at(i).cs;
+	}
 
 	free(sp1.history);
+	delete sp1.cs;
 
 	return 0;
 }

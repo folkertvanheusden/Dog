@@ -19,6 +19,7 @@ void tests()
 
 	sp1.parameters = &default_parameters;
 	sp1.is_t2 = false;
+	sp1.cs    = new chess_stats();
 	
 	printf("Size of int must be 32 bit\n");
 	my_assert(sizeof(int) == 4);

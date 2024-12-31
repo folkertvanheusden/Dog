@@ -5,6 +5,7 @@
 
 chess_stats::chess_stats()
 {
+	reset();
 }
 
 chess_stats::~chess_stats()

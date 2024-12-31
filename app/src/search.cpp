@@ -71,11 +71,11 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		}
 
 		if (from_type != libchess::constants::KING)
-			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) << 8;
+			score += (eval_piece(libchess::constants::QUEEN, *ep) - eval_piece(from_type, *ep)) * 256;
 	}
 	else {
 		int index = history_index(p->side_to_move(), from_type, move.to_square());
-		score += sp->history[index] << 8;
+		score += sp->history[index] * 256;
 	}
 
 	score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
@@ -332,7 +332,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		else if (te.value().data_._data.depth >= depth) {
 			int csd        = max_depth - depth;
 			int score      = te.value().data_._data.score;
-			int work_score = abs(score) > 9800 ? (score < 0 ? score + csd : score - csd) : score;
+			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
                         bool use       = flag == EXACT ||
                                         (flag == LOWERBOUND && work_score >= beta) ||
@@ -370,8 +370,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp->cs->data.syzygy_query_hits++;
 				sp->cs->data.tt_store++;
 
-				int score = syzygy_score.value();
-				tti.store(hash, EXACT, depth, score, libchess::Move(0));
+				int score      = syzygy_score.value();
+				int csd        = max_depth - depth;
+				int work_score = eval_to_tt(score, csd);
+				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
 				return score;
 			}
 		}
@@ -514,15 +516,18 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 
 	if (sp->stop->flag == false) {
-		tt_entry_flag flag = EXACT;
+		sp->cs->data.tt_store++;
 
+		tt_entry_flag flag = EXACT;
 		if (best_score <= start_alpha)
 			flag = UPPERBOUND;
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		sp->cs->data.tt_store++;
-		tti.store(hash, flag, depth, best_score, 
+		int csd        = max_depth - depth;
+		int work_score = eval_to_tt(best_score, csd);
+
+		tti.store(hash, flag, depth, work_score,
 				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
 	}
 
@@ -705,15 +710,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position *const pos, const in
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 					if (abs(score) > 9800) {
 						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+						printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, mate_moves,
-								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 					else {
-						printf("info depth %d score cp %d nodes %zu %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+						printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 								max_depth, score,
-								size_t(cur_n_nodes), ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.data.syzygy_query_hits, pv_str.c_str());
 					}
 				}
