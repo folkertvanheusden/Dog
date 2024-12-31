@@ -73,7 +73,7 @@ void start_ponder_thread();
 void stop_ponder_thread();
 
 end_t         stop1 { false };
-search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, &stop1 };
+search_pars_t sp1   { nullptr, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop1 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 std::vector<search_pars_t> sp2;
@@ -82,7 +82,7 @@ std::vector<end_t *>       stop2;
 std::thread *usb_disp_thread = nullptr;
 #else
 end_t         stop2 { false };
-search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, &stop2 };
+search_pars_t sp2   { nullptr, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, &stop2 };
 #endif
 
 #if defined(linux)
@@ -253,7 +253,7 @@ auto thread_count_handler = [](const int value)  {
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();
@@ -463,7 +463,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	if (qsdepth >= 127)
 		return eval(pos, *sp->parameters);
 
-	sp->nodes++;
+	sp->qnodes++;
 
 	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
@@ -1539,6 +1539,28 @@ void hello() {
 #endif
 }
 
+void run_bench()
+{
+        sp1.parameters = &default_parameters;
+        memset(sp1.history, 0x00, history_malloc_size);
+
+        libchess::Move best_move  { 0 };
+        int            best_score { 0 };
+        sp1.is_t2      = false;
+
+        uint64_t start_ts = esp_timer_get_time();
+        std::tie(best_move, best_score) = search_it(&positiont1, 1<<31, true, &sp1, 10, 0, { });
+        uint64_t end_ts   = esp_timer_get_time();
+
+        uint64_t node_count = sp1.nodes + sp1.qnodes;
+        uint64_t t_diff     = end_ts - start_ts;
+
+        printf("===========================\n");
+        printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+        printf("Nodes searched  : %" PRIu64 "\n", node_count);
+        printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+}
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 void help()
 {
@@ -1559,6 +1581,12 @@ int main(int argc, char *argv[])
 	hello();
 
 #if !defined(__ANDROID__)
+         // for openbench
+        if (argc == 2 && strcmp(argv[1], "bench") == 0) {
+                run_bench();
+                return 0;
+        }
+
 	int c = -1;
 	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
 		if (c == 'T') {
@@ -1592,7 +1620,7 @@ int main(int argc, char *argv[])
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
-		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, stop2.at(i) });
+		sp2.push_back({ nullptr, true, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), 0, 0, 0, stop2.at(i) });
 	}
 
 	start_ponder_thread();

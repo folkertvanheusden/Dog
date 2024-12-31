@@ -20,6 +20,7 @@ typedef struct
 
 	uint16_t  md;
 
+	uint32_t  qnodes;
 	uint32_t  nodes;
 
 	end_t    *stop;
