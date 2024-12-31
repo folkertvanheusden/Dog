@@ -391,8 +391,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                         int new_depth = depth - 1;
 
                         if (n_played >= lmr_start && !pos.is_capture_move(move) && !pos.is_promotion_move(move)) {
-                                is_lmr = true;
 				sp->cs->data.n_lmr++;
+
+                                is_lmr = true;
 
 				constexpr double lmr_mul  = 0.5;
 				constexpr double lmr_base = 1.0;
