@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+LMRrevisited4 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -23.92 +- 13.34 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -2.26 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1702 W: 491 L: 608 D: 603
+	Penta | [102, 232, 272, 171, 74]
+	https://pyronomy.pythonanywhere.com/test/739/
+
 LMRrevisited3
 	Score of Dog-efedb39-LMRrevisited3-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 4745 - 4557 - 7701  [0.506] 17003
 	Elo difference: 3.8 +/- 3.9, LOS: 97.4 %, DrawRatio: 45.3 %
