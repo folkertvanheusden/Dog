@@ -56,7 +56,7 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	if (p.is_promotion_move(move)) {
 		to_type = *move.promotion_piece_type();
 
-		score  += eval_piece(to_type, sp.parameters) << 18;
+		score  += sp.parameters.eval_piece(to_type) << 18;
 	}
 
 	if (p.is_capture_move(move)) {
@@ -66,11 +66,11 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 			auto piece_to = p.piece_on(move.to_square());
 
 			// victim
-			score += eval_piece(piece_to->type(), sp.parameters) << 18;
+			score += sp.parameters.eval_piece(piece_to->type()) << 18;
 		}
 
 		if (from_type != libchess::constants::KING)
-			score += (eval_piece(libchess::constants::QUEEN, sp.parameters) - eval_piece(from_type, sp.parameters)) * 256;
+			score += (sp.parameters.eval_piece(libchess::constants::QUEEN) - sp.parameters.eval_piece(from_type)) * 256;
 	}
 	else {
 		int index = history_index(p.side_to_move(), from_type, move.to_square());
@@ -175,9 +175,9 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, const search_
 
 		if (!in_check && pos.is_capture_move(move)) {
 			auto piece_to    = pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp.parameters.pawn : eval_piece(piece_to->type(), sp.parameters);
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp.parameters.pawn : sp.parameters.eval_piece(piece_to->type());
 			auto piece_from  = pos.piece_on(move.from_square());
-			int  eval_killer = eval_piece(piece_from->type(), sp.parameters);
+			int  eval_killer = sp.parameters.eval_piece(piece_from->type());
 			if (eval_killer > eval_target && pos.attackers_to(move.to_square(), !pos.side_to_move()))
 				continue;
 		}
