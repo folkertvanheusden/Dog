@@ -398,7 +398,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				constexpr double lmr_mul  = 0.5;
 				constexpr double lmr_base = 1.0;
 				int reduction = log(depth) * log(n_played + 1) * lmr_mul + lmr_base;
-				new_depth = std::max(depth - reduction, 0);
+				new_depth = std::max(depth - reduction, 1);
 			}
 
                         score = -search(pos, new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, thread_nr);
