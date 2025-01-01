@@ -936,7 +936,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:URh")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:UR:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
