@@ -664,7 +664,6 @@ void main_task()
 
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
-				tti.inc_age();
 				reset_search_statistics();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -709,7 +708,6 @@ void main_task()
 			sp2.md       = 1;
 #endif
 			reset_search_statistics();
-			tti.inc_age();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
 			stop_blink(led_red_timer, &led_red);

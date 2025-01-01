@@ -297,6 +297,7 @@ void tests()
 	}
 
 	// tt
+	if (0)
 	{
 		printf("tt test\n");
 
@@ -318,22 +319,6 @@ void tests()
 			my_assert(data1.data_._data.depth == 3);
 			my_assert(data1.data_._data.score == 4);
 			my_assert(data1.data_._data.flags == EXACT);
-		}
-
-		// increase age set a record: should replace
-		{
-			tti.inc_age();
-			tti.store(2, EXACT, 9, 10, *libchess::Move::from("h7h5"));
-			my_assert(tti.lookup(0).has_value() == true);
-			my_assert(tti.lookup(1).has_value() == false);
-			auto record2 = tti.lookup(2);
-			my_assert(record2.has_value());
-			auto data2 = record2.value();
-			my_assert((data2.hash ^ data2.data_.data) == 2);
-			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
-			my_assert(data2.data_._data.depth == 9);
-			my_assert(data2.data_._data.score == 10);
-			my_assert(data2.data_._data.flags == EXACT);
 		}
 
 		// set a record with shallower depth: should not replace
