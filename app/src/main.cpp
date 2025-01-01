@@ -94,6 +94,9 @@ uint64_t wboard { 0 };
 uint64_t bboard { 0 };
 #endif
 
+#if defined(linux) || defined(_WIN32)
+std::string trace_file;
+#endif
 bool trace_enabled = false;
 auto allow_tracing_handler = [](const bool value) {
 	trace_enabled = value;
@@ -107,6 +110,19 @@ void trace(const char *const fmt, ...)
 		vprintf(fmt, ap);
 		va_end(ap);
 	}
+#if defined(linux) || defined(_WIN32)
+	if (trace_file.empty() == false) {
+		FILE *fh = fopen(trace_file.c_str(), "a+");
+		if (fh) {
+			va_list ap { };
+			va_start(ap, fmt);
+			vfprintf(fh, fmt, ap);
+			va_end(ap);
+
+			fclose(fh);
+		}
+	}
+#endif
 }
 
 void set_flag(end_t *const stop)
@@ -718,21 +734,21 @@ void main_task()
 			int think_time     = 0;
 			int think_time_opp = 0;
 
-			bool is_absolute_time  = false;
-			bool time_limit_hit    = false;
-			bool is_white          = positiont1.side_to_move() == libchess::constants::WHITE;
+			bool is_absolute_time = false;
+			bool time_limit_hit   = false;
+			bool is_white         = positiont1.side_to_move() == libchess::constants::WHITE;
 			if (movetime.has_value()) {
 				think_time       = movetime.value();
 				is_absolute_time = true;
 			}
 			else {
-				int  cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
-				int  time_inc     = is_white ? w_inc  : b_inc;
-				int  time_inc_opp = is_white ? b_inc  : w_inc;
-				int  ms           = is_white ? w_time : b_time;
-				int  ms_opponent  = is_white ? b_time : w_time;
+				int cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
+				int time_inc     = is_white ? w_inc  : b_inc;
+				int time_inc_opp = is_white ? b_inc  : w_inc;
+				int ms           = is_white ? w_time : b_time;
+				int ms_opponent  = is_white ? b_time : w_time;
 
-				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+				think_time     = (ms          + (cur_n_moves - 1) * time_inc    ) / double(cur_n_moves + 7);
 				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
 
 				if (think_time_opp < think_time)
@@ -744,7 +760,7 @@ void main_task()
 					time_limit_hit = true;
 				}
 
-				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves());
+				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves(), game_phase(positiont1, default_parameters), moves_to_go);
 			}
 
 			// let the ponder thread run as a lazy-smp thread
@@ -897,9 +913,11 @@ void help()
 	print_max();
 
 	printf("-t x  thread count\n");
-	printf("-U    run unit tests\n");
 	printf("-s x  set path to Syzygy\n");
 	printf("-u x  USB display device\n");
+	printf("-T x  tune using epd file\n");
+	printf("-R x  trace to file\n");
+	printf("-U    run unit tests\n");
 }
 
 int main(int argc, char *argv[])
@@ -918,7 +936,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:Uh")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:URh")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -940,6 +958,8 @@ int main(int argc, char *argv[])
 		else if (c == 'u')
 			usb_disp_thread = new std::thread(usb_disp, optarg);
 #endif
+		else if (c == 'R')
+			trace_file = optarg;
 		else {
 			help();
 
