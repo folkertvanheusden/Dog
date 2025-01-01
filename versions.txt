@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+ttalwaysreplace1slot
+	Score of Dog-d496bdb-ttalwaysreplace1slot-LCb6c9d04 vs Dog-7136cf9-master-LCb6c9d04: 506 - 425 - 753  [0.524] 1684
+	Elo difference: 16.7 +/- 12.3, LOS: 99.6 %, DrawRatio: 44.7 %
+	SPRT: llr 2.96 (100.6%), lbound -2.94, ubound 2.94 - H1 was accepted
+
 TC
 	Score of Dog-b3fdd57-TC-LCb6c9d04 vs Dog-ace6200-awaywithpointers-LCb6c9d04: 359 - 394 - 648  [0.488] 1401
 	Elo difference: -8.7 +/- 13.3, LOS: 10.1 %, DrawRatio: 46.3 %
