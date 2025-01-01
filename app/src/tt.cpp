@@ -150,6 +150,15 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	cur -> data_.data = n.data;
 }
 
+int tt::get_per_mille_filled()
+{
+	int count = 0;
+	for(int i=0; i<1000; i++)
+		count += entries[i].entries[0].hash != 0;
+
+	return count;
+}
+
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
 {
 	auto work = pos_in;

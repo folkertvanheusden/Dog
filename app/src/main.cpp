@@ -760,7 +760,7 @@ void main_task()
 					time_limit_hit = true;
 				}
 
-				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves(), game_phase(positiont1, default_parameters), moves_to_go);
+				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves(), game_phase(positiont1, default_parameters), moves_to_go, tti.get_per_mille_filled());
 			}
 
 			// let the ponder thread run as a lazy-smp thread
