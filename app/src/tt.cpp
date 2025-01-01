@@ -108,6 +108,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 				e[i].hash = hash ^ e[i].data_.data;
 				return;
 			}
+
 			if (f != EXACT && e[i].data_._data.depth == d) {
 				e[i].data_._data.age = age;
 				e[i].hash = hash ^ e[i].data_.data;
@@ -119,22 +120,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 			break;
 		}
 
-		if (e[i].data_._data.age != age)
-			use_sub_index = i;
-		else if (e[i].data_._data.depth < min_depth) {
-			min_depth = e[i].data_._data.depth;
-			min_depth_index = i;
-		}
-	}
-
-	if (use_sub_index == -1) {
-		use_sub_index = min_depth_index;
-
-		if (use_sub_index == -1) {
-			use_sub_index = 0;
-
-			printf("# ERROR: sub_index < 0\n");
-		}
+		use_sub_index = i;
 	}
 
 	tt_entry *const cur = &e[use_sub_index];
