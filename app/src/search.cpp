@@ -125,7 +125,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, const search_pars_t & sp, const int thread_nr)
+int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t & sp, const int thread_nr)
 {
 	if (sp.stop->flag)
 		return 0;

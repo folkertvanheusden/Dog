@@ -332,14 +332,14 @@ void show_esp32_info()
 }
 
 int64_t esp_start_ts = 0;
-int check_min_stack_size(const int nr, search_pars_t *const sp)
+int check_min_stack_size(const int nr, const search_pars_t & sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp->md, sp->cs->data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
-		set_flag(sp->stop);
+		set_flag(sp.stop);
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
@@ -441,7 +441,7 @@ void ponder_thread(void *p)
 #else
 			start_blink(led_blue_timer);
 			chess_stats cs;
-			search_it(&positiont2, 2147483647, true, &sp2, -1, 0, { }, cs);
+			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			trace("# Pondering finished\n");

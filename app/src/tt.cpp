@@ -61,15 +61,24 @@ void tt::inc_age()
 }
 
 // see https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+#if defined(ESP32)
+static inline uint32_t fastrange32(uint32_t word, uint32_t p)
+{
+	return (uint64_t(word) * uint64_t(p)) >> 32;
+}
+#define fastrange fastrange32
+#else
 typedef unsigned __int128 uint128_t;
 inline uint64_t fastrange64(uint64_t word, uint64_t p)
 {
 	return (uint128_t(word) * uint128_t(p)) >> 64;
 }
+#define fastrange fastrange64
+#endif
 
 std::optional<tt_entry> tt::lookup(const uint64_t hash)
 {
-	uint64_t        index = fastrange64(hash, n_entries);
+	uint64_t        index = fastrange(hash, n_entries);
 	tt_entry *const e     = entries[index].entries;
 	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
 		tt_entry & cur = e[i];
@@ -86,7 +95,7 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
-	uint64_t index           = fastrange64(hash, n_entries);
+	uint64_t index           = fastrange(hash, n_entries);
 	int      use_sub_index   =  -1;
 	int      min_depth       = 999;
 	int      min_depth_index =  -1;
