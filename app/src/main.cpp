@@ -968,6 +968,9 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	if (trace_file.empty() == false)
+		trace("# tracing to file enabled\n");
+
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());
 		sp2cs.push_back(new chess_stats());
