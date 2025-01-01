@@ -500,7 +500,7 @@ void timer(const int think_time, end_t *const ei)
 	set_flag(ei);
 
 #if !defined(__ANDROID__)
-	trace("# time is up; set stop flag\n");
+	my_trace("# time is up; set stop flag\n");
 #endif
 }
 
@@ -715,7 +715,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #else
 		esp_timer_stop(think_timeout_timer);
 
-		trace("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		my_trace("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 
 		vTaskGetRunTimeStats();
 #endif

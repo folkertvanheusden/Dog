@@ -95,14 +95,14 @@ uint64_t bboard { 0 };
 #endif
 
 #if defined(linux) || defined(_WIN32)
-std::string trace_file;
+std::string my_trace_file;
 #endif
 bool trace_enabled = false;
 auto allow_tracing_handler = [](const bool value) {
 	trace_enabled = value;
 	printf("# Tracing %s\n", value ? "enabled" : "disabled");
 };
-void trace(const char *const fmt, ...)
+void my_trace(const char *const fmt, ...)
 {
 	if (trace_enabled) {
 		va_list ap { };
@@ -111,8 +111,8 @@ void trace(const char *const fmt, ...)
 		va_end(ap);
 	}
 #if defined(linux) || defined(_WIN32)
-	if (trace_file.empty() == false) {
-		FILE *fh = fopen(trace_file.c_str(), "a+");
+	if (my_trace_file.empty() == false) {
+		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
 			va_list ap { };
 			va_start(ap, fmt);
@@ -140,7 +140,7 @@ auto stop_handler = []()
 {
 	set_flag(sp1.stop);
 #if !defined(__ANDROID__)
-	trace("# stop_handler invoked\n");
+	my_trace("# stop_handler invoked\n");
 #endif
 };
 
@@ -322,13 +322,13 @@ void vTaskGetRunTimeStats()
 			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
 
 			if (ulStatsAsPercentage > 0UL) {
-				trace("# %s\t%u%%\t%u\n",
+				my_trace("# %s\t%u%%\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
 						ulStatsAsPercentage,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
 			else {
-				trace("# %s\t%u\n",
+				my_trace("# %s\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
 						pxTaskStatusArray[x].usStackHighWaterMark);
 			}
@@ -352,7 +352,7 @@ int check_min_stack_size(const int nr, const search_pars_t & sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
-	trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
+	my_trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
 		set_flag(sp.stop);
@@ -385,7 +385,7 @@ void ponder_thread(void *p)
 {
 	set_thread_name("PT");
 #if !defined(__ANDROID__)
-	trace("# pondering started\n");
+	my_trace("# pondering started\n");
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
@@ -421,7 +421,7 @@ void ponder_thread(void *p)
 #endif
 
 #if !defined(__ANDROID__)
-			trace("# new ponder position (val: %d/ena: %d): %s\n", valid, allow_ponder, search_fen.c_str());
+			my_trace("# new ponder position (val: %d/ena: %d): %s\n", valid, allow_ponder, search_fen.c_str());
 #endif
 
 			prev_search_fen_version = search_fen_version;
@@ -431,12 +431,12 @@ void ponder_thread(void *p)
 		if (valid && allow_ponder) {
 			ponder_running = true;
 #if !defined(__ANDROID__)
-			trace("# ponder search start\n");
+			my_trace("# ponder search start\n");
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID)
 			int n_threads = is_ponder ? thread_count : (thread_count - 1);
-			trace("# starting %d threads\n", n_threads);
+			my_trace("# starting %d threads\n", n_threads);
 
 			std::vector<std::thread *>        ths;
 			std::optional<uint64_t>           node_limit;
@@ -460,7 +460,7 @@ void ponder_thread(void *p)
 			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
-			trace("# Pondering finished\n");
+			my_trace("# Pondering finished\n");
 			ponder_running = false;
 		}
 		else {
@@ -474,7 +474,7 @@ void ponder_thread(void *p)
 	}
 
 #if !defined(__ANDROID__)
-	trace("# pondering thread stopping\n");
+	my_trace("# pondering thread stopping\n");
 #endif
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
@@ -502,7 +502,7 @@ void start_ponder_thread()
 
 void stop_ponder_thread()
 {
-	trace(" *** STOP PONDER ***\n");
+	my_trace(" *** STOP PONDER ***\n");
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (ponder_thread_handle) {
 		ponder_quit = true;
@@ -521,7 +521,7 @@ void stop_ponder_thread()
 
 void pause_ponder()
 {
-	trace("# *** PAUSE PONDER ***\n");
+	my_trace("# *** PAUSE PONDER ***\n");
 	search_fen_lock.lock();
 	search_fen.clear();
 	search_fen_version++;
@@ -531,9 +531,9 @@ void pause_ponder()
 void set_new_ponder_position(const bool this_is_ponder)
 {
 	if (this_is_ponder)
-		trace("# *** RESTART PONDER ***\n");
+		my_trace("# *** RESTART PONDER ***\n");
 	else
-		trace("# *** RESTART LAZY SMP ***\n");
+		my_trace("# *** RESTART LAZY SMP ***\n");
 	search_fen_lock.lock();
 	search_fen = positiont1.fen();
 	is_ponder  = this_is_ponder;
@@ -760,7 +760,7 @@ void main_task()
 					time_limit_hit = true;
 				}
 
-				trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves(), game_phase(positiont1, default_parameters), moves_to_go, tti.get_per_mille_filled());
+				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, positiont1.fullmoves(), positiont1.halfmoves(), game_phase(positiont1, default_parameters), moves_to_go, tti.get_per_mille_filled());
 			}
 
 			// let the ponder thread run as a lazy-smp thread
@@ -783,7 +783,7 @@ void main_task()
 					best_score = probe_result.value().second;
 					has_best   = true;
 
-					trace("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
+					my_trace("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
 				}
 			}
 #endif
@@ -806,7 +806,7 @@ void main_task()
 			// set ponder positition
 			positiont1.make_move(best_move);
 			uint64_t end_ts = esp_timer_get_time();
-			trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
+			my_trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 			set_new_ponder_position(true);
 			positiont1.unmake_move();
 		}
@@ -916,7 +916,7 @@ void help()
 	printf("-s x  set path to Syzygy\n");
 	printf("-u x  USB display device\n");
 	printf("-T x  tune using epd file\n");
-	printf("-R x  trace to file\n");
+	printf("-R x  my_trace to file\n");
 	printf("-U    run unit tests\n");
 }
 
@@ -959,7 +959,7 @@ int main(int argc, char *argv[])
 			usb_disp_thread = new std::thread(usb_disp, optarg);
 #endif
 		else if (c == 'R')
-			trace_file = optarg;
+			my_trace_file = optarg;
 		else {
 			help();
 
@@ -968,8 +968,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	if (trace_file.empty() == false)
-		trace("# tracing to file enabled\n");
+	if (my_trace_file.empty() == false)
+		my_trace("# tracing to file enabled\n");
 
 	for(int i=0; i<thread_count; i++) {
 		stop2.push_back(new end_t());

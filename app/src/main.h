@@ -96,7 +96,7 @@ public:
         int move_evaluater(const libchess::Move move) const;
 };
 
-void trace(const char *const fmt, ...);
+void my_trace(const char *const fmt, ...);
 void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 void set_new_ponder_position(const bool is_ponder);
