@@ -17,13 +17,6 @@ eval_par::eval_par(const std::vector<libchess::TunableParameter> & params)
 
 	if (*m.find("tune_psq_div")->second == 0)
 		*m.find("tune_psq_div")->second = 1;
-
-	piece_values[0] = *m.find("tune_pawn"  )->second;
-	piece_values[1] = *m.find("tune_knight")->second;
-	piece_values[2] = *m.find("tune_bishop")->second;
-	piece_values[3] = *m.find("tune_rook"  )->second;
-	piece_values[4] = *m.find("tune_queen" )->second;
-	piece_values[5] = 10000;
 }
 
 eval_par::~eval_par()
@@ -45,11 +38,6 @@ void eval_par::set_eval(const std::string & name, int value)
 	auto it = m.find(name);
 
 	*it->second = value;
-}
-
-int eval_par::eval_piece(const libchess::PieceType piece) const
-{
-	return piece_values[piece];
 }
 
 eval_par default_parameters;

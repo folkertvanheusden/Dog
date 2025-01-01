@@ -1,5 +1,6 @@
 #include "eval_par.h"
 
+int eval_piece(const libchess::PieceType piece, const eval_par & parameters);
 int eval(const libchess::Position & pos, const eval_par & parameters);
 
 // exported for testing
