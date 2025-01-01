@@ -121,6 +121,9 @@ void my_trace(const char *const fmt, ...)
 
 			fclose(fh);
 		}
+		else {
+			fprintf(stderr, "Cannot access %s: %s\n", my_trace_file.c_str(), strerror(errno));
+		}
 	}
 #endif
 }
