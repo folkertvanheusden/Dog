@@ -47,6 +47,7 @@ void tt::set_size(const uint64_t s)
 	n_entries = s / sizeof(tt_entry);
 	free(entries);
 	allocate();
+	reset();
 	printf("# Newly allocated node count: %" PRIu64 "\n", n_entries);
 }
 
