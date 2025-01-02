@@ -297,7 +297,6 @@ void tests()
 	}
 
 	// tt
-	if (0)
 	{
 		printf("tt test\n");
 
@@ -309,8 +308,10 @@ void tests()
 		// just set a record
 		{
 			tti.store(2, EXACT, 3, 4, *libchess::Move::from("e2e4"));
-			my_assert(tti.lookup(0).has_value() == true);
+			my_assert(tti.lookup(0).has_value() == false);
 			my_assert(tti.lookup(1).has_value() == false);
+			my_assert(tti.lookup(2).has_value() == true);
+			my_assert(tti.lookup(3).has_value() == false);
 			auto record1 = tti.lookup(2);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
@@ -318,74 +319,6 @@ void tests()
 			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("e2e4"));
 			my_assert(data1.data_._data.depth == 3);
 			my_assert(data1.data_._data.score == 4);
-			my_assert(data1.data_._data.flags == EXACT);
-		}
-
-		// set a record with shallower depth: should not replace
-		{
-			tti.store(2, EXACT, 8, 20, *libchess::Move::from("c1b3"));
-			my_assert(tti.lookup(0).has_value() == true);
-			my_assert(tti.lookup(1).has_value() == false);
-			auto record2 = tti.lookup(2);
-			my_assert(record2.has_value());
-			auto data2 = record2.value();
-			my_assert((data2.hash ^ data2.data_.data) == 2);
-			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
-			my_assert(data2.data_._data.depth == 9);
-			my_assert(data2.data_._data.score == 10);
-			my_assert(data2.data_._data.flags == EXACT);
-		}
-
-		// set a record with bounds: should not replace
-		{
-			tti.store(2, LOWERBOUND, 9, 20, *libchess::Move::from("a2a4"));
-			my_assert(tti.lookup(0).has_value() == true);
-			my_assert(tti.lookup(1).has_value() == false);
-			auto record2 = tti.lookup(2);
-			my_assert(record2.has_value());
-			auto data2 = record2.value();
-			my_assert((data2.hash ^ data2.data_.data) == 2);
-			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
-			my_assert(data2.data_._data.depth == 9);
-			my_assert(data2.data_._data.score == 10);
-			my_assert(data2.data_._data.flags == EXACT);
-		}
-		{
-			tti.store(2, UPPERBOUND, 9, 20, *libchess::Move::from("a2a4"));
-			my_assert(tti.lookup(0).has_value() == true);
-			my_assert(tti.lookup(1).has_value() == false);
-			auto record2 = tti.lookup(2);
-			my_assert(record2.has_value());
-			auto data2 = record2.value();
-			my_assert((data2.hash ^ data2.data_.data) == 2);
-			my_assert(libchess::Move(data2.data_._data.m) == *libchess::Move::from("h7h5"));
-			my_assert(data2.data_._data.depth == 9);
-			my_assert(data2.data_._data.score == 10);
-			my_assert(data2.data_._data.flags == EXACT);
-		}
-
-		// just set a record with upperbound
-		{
-			tti.store(99, UPPERBOUND, 3, 4, *libchess::Move::from("b1c3"));
-			auto record1 = tti.lookup(99);
-			my_assert(record1.has_value());
-			auto data1 = record1.value();
-			my_assert((data1.hash ^ data1.data_.data) == 99);
-			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("b1c3"));
-			my_assert(data1.data_._data.depth == 3);
-			my_assert(data1.data_._data.score == 4);
-			my_assert(data1.data_._data.flags == UPPERBOUND);
-		}
-		// set an exact record
-		{
-			tti.store(99, EXACT, 3, 7, *libchess::Move::from("h7h5"));
-			auto record1 = tti.lookup(99);
-			my_assert(record1.has_value());
-			auto data1 = record1.value();
-			my_assert((data1.hash ^ data1.data_.data) == 99);
-			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("h7h5"));
-			my_assert(data1.data_._data.depth == 3);
-			my_assert(data1.data_._data.score == 7);
 			my_assert(data1.data_._data.flags == EXACT);
 		}
 

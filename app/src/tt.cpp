@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
@@ -15,6 +15,7 @@ tt tti;
 
 tt::tt()
 {
+	assert(sizeof(tt_entry) == 16);
 	allocate();
 	reset();
 }
