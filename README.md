@@ -34,12 +34,6 @@ To build it for windows (using mingw-w64):
 	cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
 	make
 
-If you want to move the Dog.exe binary to an other windows system, then do not forget to copy the following files as well:
-* libgcc_s_seh-1.dll
-* libgomp-1.dll
-* libstdc++-6.dll
-* libwinpthread-1.dll
-
 The Linux/windows versions contain a Dog in ansi-art visible when you run it with '-h'.
 
 On windows this only works if you enable ansi-code processing in the registry (and restart cmd.exe):
