@@ -260,7 +260,7 @@ void show_movelist(const libchess::Position & pos)
 
 void tt_lookup()
 {
-	auto te = tti.lookup(positiont1.hash());
+	auto te = tti.lookup(positiont1.calculate_hash());
 	if (te.has_value() == false)
 		my_printf("None\n");
 	else {
@@ -447,7 +447,7 @@ void tui()
 					my_printf("Invalid FEN\n");
 			}
 			else if (parts[0] == "hash")
-				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.hash());
+				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.calculate_hash());
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(positiont1, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
