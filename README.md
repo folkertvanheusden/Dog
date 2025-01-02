@@ -1,9 +1,9 @@
 Dog was written by Folkert van Heusden.
-It is (strongly) based on the chess program Micah (altought slightly different evaluation and different threading (lazy limited smp)).
+It is based on the chess program Micah with different evaluation and different threading (lazy smp).
 Licensed under the MIT license.
 
 
-Don't forget to clone with "--recursive"!
+Clone the git repo with the "--recursive" flag!
 
 
 To build the program and upload it to a wemos32 mini:
@@ -18,7 +18,7 @@ Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be instal
 
 The program also has a integrated text-interface. For that just run it and enter "tui".
 
-To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 19 (needs libomp-19-dev)):
+To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14):
 
 	cd app/src/linux-windows
 	mkdir build
