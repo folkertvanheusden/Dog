@@ -701,6 +701,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #if !defined(__ANDROID__)
 		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
 #endif
+		best_score = eval(pos, sp.parameters);
 	}
 
 	if (!sp.is_t2) {
