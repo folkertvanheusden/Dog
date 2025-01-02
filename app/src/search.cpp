@@ -246,7 +246,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	sp.cs.data.nodes++;
 
 	bool is_root_position = max_depth == depth;
-	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos))) {
+	bool is_draw = pos.is_repeat() || is_insufficient_material_draw(pos);
+	if (!is_root_position && is_draw) {
 		sp.cs.data.n_draws++;
 		return 0;
 	}
@@ -294,6 +295,11 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		depth--;
 	}
 	////////
+
+	if (is_draw) {
+		sp.cs.data.n_draws++;
+		return 0;
+	}
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
 	if (with_syzygy && sp.is_t2) {
