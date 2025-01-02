@@ -557,6 +557,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		std::vector<uint64_t> node_counts;
 		uint64_t previous_node_count = 0;
 
+		std::vector<std::pair<libchess::Move, int16_t> > iterations;
+
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 #if defined(linux)
 			sp.md = 0;
@@ -659,6 +661,21 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 								max_depth, score,
 								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 								counts.data.syzygy_query_hits, pv_str.c_str());
+					}
+				}
+
+				iterations.push_back({ best_move, best_score });
+				size_t n_iterations = iterations.size();
+				if (n_iterations >= 3) {
+					bool moves_same = iterations.at(n_iterations - 3).first == iterations.at(n_iterations - 2).first &&
+							  iterations.at(n_iterations - 3).first == iterations.at(n_iterations - 1).first;
+					bool scores_same = iterations.at(n_iterations - 3).second == iterations.at(n_iterations - 2).second &&
+							   iterations.at(n_iterations - 3).second == iterations.at(n_iterations - 1).second;
+					if (moves_same && scores_same && thought_ms >= uint64_t(search_time / 4) && search_time > 0 && is_absolute_time == false) {
+#if !defined(__ANDROID__)
+						printf("# stable score/moves\n");
+#endif
+						break;
 					}
 				}
 
