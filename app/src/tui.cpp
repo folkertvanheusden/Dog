@@ -15,8 +15,8 @@
 #include "max-ascii.h"
 #include "search.h"
 #include "str.h"
+#include "syzygy.h"
 #include "tui.h"
-
 
 
 void my_printf(const char *const fmt, ...)
@@ -201,7 +201,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
-	auto start_score = eval(pos, *sp1.parameters);
+	auto start_score = eval(pos, sp1.parameters);
 
 	if (colors) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
@@ -216,7 +216,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = eval(work, *sp1.parameters);
+			int  cur_score = eval(work, sp1.parameters);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
@@ -272,6 +272,29 @@ void tt_lookup()
 			tt_move = libchess::Move(te.value().data_._data.m);
 		if (tt_move.has_value() && positiont1.is_legal_move(tt_move.value()))
 			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
+	}
+}
+
+void do_syzygy(const libchess::Position & pos)
+{
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+	if (with_syzygy) {
+		std::optional<std::pair<libchess::Move, int> > s_root = probe_fathom_root(pos);
+		if (s_root.has_value())
+			my_printf("Syzygy move + score for current position: %.2f for %s\n", s_root.value().second / 100., s_root.value().first.to_str().c_str());
+		else
+			my_printf("No Syzygy move + score for current position.\n");
+
+		std::optional<int> s_nonroot = probe_fathom_nonroot(pos);
+		if (s_nonroot.has_value())
+			my_printf("Syzygy score for current position: %.2f\n", s_nonroot.value() / 100.);
+		else
+			my_printf("No Syzygy score for current position.\n");
+	}
+	else
+#endif
+	{
+		my_printf("No syzygy available\n");
 	}
 }
 
@@ -353,8 +376,10 @@ static void help()
 	my_printf("player  select player (\"white\" or \"black\")\n");
 	my_printf("time    set think time, in seconds\n");
 	my_printf("fen     show fen for current position\n");
+	my_printf("setfen  set fen\n");
 	my_printf("eval    show current evaluation score\n");
 	my_printf("moves   show valid moves\n");
+	my_printf("syzygy  probe the syzygy ETB\n");
 	my_printf("tt      show TT entry for current position\n");
 	my_printf("undo    take back last move\n");
 	my_printf("auto    auto play until the end\n");
@@ -415,6 +440,12 @@ void tui()
 				player.reset();
 			else if (parts[0] == "fen")
 				my_printf("FEN: %s\n", positiont1.fen().c_str());
+			else if (parts[0] == "setfen") {
+				if (parts.size() == 6 + 1)
+					positiont1 = libchess::Position(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4] + " " + parts[5] + " " + parts[6]);
+				else
+					my_printf("Invalid FEN\n");
+			}
 			else if (parts[0] == "hash")
 				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.hash());
 			else if (parts[0] == "perft" && parts.size() == 2)
@@ -438,6 +469,8 @@ void tui()
 			}
 			else if (parts[0] == "moves")
 				show_movelist(positiont1);
+			else if (parts[0] == "syzygy")
+				do_syzygy(positiont1);
 			else if (parts[0] == "trace") {
 				if (parts.size() == 2)
 					trace_enabled = parts[1] == "on";
@@ -475,7 +508,7 @@ void tui()
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int score = eval(positiont1, *sp1.parameters);
+				int score = eval(positiont1, sp1.parameters);
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt")
@@ -489,7 +522,7 @@ void tui()
 					if (positiont1.is_legal_move(move.value())) {
 						positiont1.make_move(move.value());
 						moves_played.push_back(move.value());
-						scores.push_back(eval(positiont1, *sp1.parameters));
+						scores.push_back(eval(positiont1, sp1.parameters));
 						valid = true;
 					}
 				}
@@ -514,7 +547,7 @@ void tui()
 				positiont1.make_move(move.value());
 				positiont1.display();
 				moves_played.push_back(move.value());
-				scores.push_back(eval(positiont1, *sp1.parameters));
+				scores.push_back(eval(positiont1, sp1.parameters));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
@@ -522,13 +555,13 @@ void tui()
 				int            best_score { 0 };
 				chess_stats    cs;
 				clear_flag(sp1.stop);
-				std::tie(best_move, best_score) = search_it(&positiont1, think_time, true, &sp1, -1, 0, { }, &cs);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(positiont1, best_move, colors);
 
 				positiont1.make_move(best_move);
 				moves_played.push_back(best_move);
-				scores.push_back(eval(positiont1, *sp1.parameters));
+				scores.push_back(eval(positiont1, sp1.parameters));
 			}
 
 			my_printf("\n");

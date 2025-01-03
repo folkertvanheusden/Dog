@@ -14,12 +14,12 @@ typedef struct {
 
 typedef struct
 {
-	const eval_par *parameters;
+	const eval_par & parameters;
 	bool      is_t2;
 
 	int16_t *const history;
 
-	chess_stats *cs;
+	chess_stats & cs;
 
 	uint16_t  md;
 
@@ -78,32 +78,15 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, search_pars_t *const sp);
+int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #endif
 
-class sort_movelist_compare
-{
-private:
-        libchess::Position       *const p  { nullptr };
-	const eval_par           *const ep { nullptr };
-	const search_pars_t      *const sp { nullptr };
-        std::vector<libchess::Move>     first_moves;
-        std::optional<libchess::Square> previous_move_target;
-
-public:
-        sort_movelist_compare(libchess::Position *const p, const search_pars_t *const sp);
-        void add_first_move(const libchess::Move move);
-        int move_evaluater(const libchess::Move move) const;
-};
-
-void trace(const char *const fmt, ...);
+void my_trace(const char *const fmt, ...);
 void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t *const sp, const int thread_nr);
 void set_thread_name(std::string name);
-void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
 chess_stats calculate_search_statistics();
