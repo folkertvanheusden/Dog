@@ -236,7 +236,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			}
 		}
 
-		if (n_played >= 5) {
+		if (n_played >= 3) {
 			sp.cs.data.qs_lmp++;
 			break;
 		}
