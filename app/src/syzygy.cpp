@@ -3,8 +3,7 @@
 #include "fathom/src/tbprobe.h"
 #include "libchess/Position.h"
 
-struct pos
-{
+struct pos {
 	uint64_t white;
 	uint64_t black;
 	uint64_t kings;
@@ -13,10 +12,10 @@ struct pos
 	uint64_t bishops;
 	uint64_t knights;
 	uint64_t pawns;
-	uint8_t castling;
-	uint8_t rule50;
-	uint8_t ep;
-	bool turn;
+	uint8_t  castling;
+	uint8_t  rule50;
+	uint8_t  ep;
+	bool     turn;
 };
 
 static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct pos & pos, unsigned *results, unsigned wdl)
@@ -44,11 +43,9 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct p
 		unsigned from     = TB_GET_FROM(selected_move);
 		unsigned to       = TB_GET_TO(selected_move);
 		unsigned promotes = TB_GET_PROMOTES(selected_move);
+		char     to_type  = 0x00;
 
-		char to_type = 0x00;
-
-		switch (promotes)
-		{
+		switch (promotes) {
 			case TB_PROMOTES_QUEEN:
 				to_type = 'q'; break;
 			case TB_PROMOTES_ROOK:
@@ -60,7 +57,6 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct p
 		}
 
 		char move_str[6] { char('a' + (from & 7)), char('1' + (from >> 3)), char('a' + (to & 7)), char('1' + (to >> 3)) };
-
 		if (to_type)
 			move_str[5] = to_type;
 
@@ -75,7 +71,7 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct p
 
 pos gen_parameters(const libchess::Position & lpos)
 {
-	pos pos;
+	pos pos { };
 	pos.turn    = lpos.side_to_move() == libchess::constants::WHITE;
 	pos.white   = lpos.color_bb(libchess::constants::WHITE);
 	pos.black   = lpos.color_bb(libchess::constants::BLACK);
@@ -123,9 +119,8 @@ pos gen_parameters(const libchess::Position & lpos)
 
 std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess::Position & lpos)
 {
-	auto pos = gen_parameters(lpos);
-
-	unsigned results[TB_MAX_MOVES];
+	unsigned results[TB_MAX_MOVES] { };
+	auto     pos = gen_parameters(lpos);
 	unsigned res = tb_probe_root(pos.white, pos.black, pos.kings, pos.queens, pos.rooks, pos.bishops, pos.knights, pos.pawns, pos.rule50, pos.castling, pos.ep, pos.turn, results);
 
 	if (res == TB_RESULT_FAILED) {
@@ -160,18 +155,15 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 {
-	auto pos = gen_parameters(lpos);
-
+	auto     pos = gen_parameters(lpos);
 	unsigned res = tb_probe_wdl(pos.white, pos.black, pos.kings, pos.queens, pos.rooks, pos.bishops, pos.knights, pos.pawns, pos.rule50, pos.castling, pos.ep, pos.turn);
 	if (res == TB_RESULT_FAILED) {
 		// no hit
 		return { };
 	}
 
-	int score = 0;
-
+	int score  = 0;
 	int result = TB_GET_WDL(res);
-
 	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
 		score = -9999;
 	else if (result == TB_DRAW)
@@ -189,7 +181,6 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 void fathom_init(const std::string & path)
 {
 	tb_init(path.c_str());
-
 	printf("# %d men syzygy\n", TB_LARGEST);
 }
 

@@ -7,6 +7,141 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+
+movesortvalue versus master    (MVV-LVA fixes)
+	Elo   | 49.00 +- 14.63 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | 2.94 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1092 W: 388 L: 235 D: 469
+	Penta | [19, 92, 208, 171, 56]
+	https://pyronomy.pythonanywhere.com/test/799/
+
+noincrhash   LAZYSMP
+	Score of Dog-f9473e2-noincrhash-LCb6c9d04-TH3 vs Dog-f9473e2-noincrhash-LCb6c9d04: 961 - 960 - 1824  [0.500] 3745
+	Elo difference: 0.1 +/- 8.0, LOS: 50.9 %, DrawRatio: 48.7 %
+	SPRT: llr -2.97 (-100.8%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+noincrhash   <--- libchess has incremental hash removed
+	Score of Dog-f9473e2-noincrhash-LCb6c9d04 vs Dog-4f73e99-master-LCb6c9d04: 292 - 331 - 526  [0.483] 1149
+	Elo difference: -11.8 +/- 14.8, LOS: 5.9 %, DrawRatio: 45.8 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+ttalwaysreplace1slot
+	Score of Dog-d496bdb-ttalwaysreplace1slot-LCb6c9d04 vs Dog-7136cf9-master-LCb6c9d04: 506 - 425 - 753  [0.524] 1684
+	Elo difference: 16.7 +/- 12.3, LOS: 99.6 %, DrawRatio: 44.7 %
+	SPRT: llr 2.96 (100.6%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+TC
+	Score of Dog-b3fdd57-TC-LCb6c9d04 vs Dog-ace6200-awaywithpointers-LCb6c9d04: 359 - 394 - 648  [0.488] 1401
+	Elo difference: -8.7 +/- 13.3, LOS: 10.1 %, DrawRatio: 46.3 %
+	SPRT: llr -2.96 (-100.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+pieceval
+	Score of Dog-663a420-pieceval-LCb6c9d04 vs Dog-ace6200-awaywithpointers-LCb6c9d04: 391 - 423 - 738  [0.490] 1552
+	Elo difference: -7.2 +/- 12.5, LOS: 13.1 %, DrawRatio: 47.6 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+awaywithpointers
+	Score of Dog-ace6200-awaywithpointers-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 782 - 795 - 1373  [0.498] 2950
+	Elo difference: -1.5 +/- 9.2, LOS: 37.2 %, DrawRatio: 46.5 %
+	SPRT: llr -2.99 (-101.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+doIID 5944c1b36c0c9e483178ce8a3b58ef480c68916e versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -56.96 +- 40.53 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -0.54 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 160 W: 34 L: 60 D: 66
+	Penta | [9, 29, 22, 19, 1]
+	https://pyronomy.pythonanywhere.com/test/745/
+
+doIID 693930d50e1687fb7aeae0571cb35b4ffb1a02e6 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | 1.04 +- 13.65 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -0.06 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1336 W: 398 L: 394 D: 544
+	Penta | [47, 160, 257, 150, 54]
+	https://pyronomy.pythonanywhere.com/test/746/
+
+LMRrevisited4 171a3e3f2f9e39e64b5c93557cf9d749847838b9 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -38.68 +- 19.40 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -1.77 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 884 W: 240 L: 338 D: 306
+	Penta | [75, 104, 141, 88, 34]
+	https://pyronomy.pythonanywhere.com/test/744/
+
+doIID 5944c1b36c0c9e483178ce8a3b58ef480c68916e versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -56.96 +- 40.53 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -0.54 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 160 W: 34 L: 60 D: 66
+	Penta | [9, 29, 22, 19, 1]
+	https://pyronomy.pythonanywhere.com/test/745/
+
+LMRrevisited5 13418b277f610a50cc318c5a23dbf09837d6ec26 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -315.25 +- 47.64 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -2.46 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 282 W: 14 L: 217 D: 51
+	Penta | [81, 41, 19, 0, 0]
+	https://pyronomy.pythonanywhere.com/test/743/
+
+LMRrevisited5 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -315.25 +- 47.64 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -2.46 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 282 W: 14 L: 217 D: 51
+	Penta | [81, 41, 19, 0, 0]
+	https://pyronomy.pythonanywhere.com/test/743/
+
+LMRrevisited4 versus be8e29e25944ce4933707265b997edae9d8e371f
+	Elo   | -23.92 +- 13.34 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | -2.26 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1702 W: 491 L: 608 D: 603
+	Penta | [102, 232, 272, 171, 74]
+	https://pyronomy.pythonanywhere.com/test/739/
+
+LMRrevisited3
+	Score of Dog-efedb39-LMRrevisited3-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 4745 - 4557 - 7701  [0.506] 17003
+	Elo difference: 3.8 +/- 3.9, LOS: 97.4 %, DrawRatio: 45.3 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+master
+	Score of Dog-6322ebd-master-LCb6c9d04 vs Dog-c4ba323-noIID-LCf8a7b99: 1197 - 1081 - 1831  [0.514] 4109
+	Elo difference: 9.8 +/- 7.9, LOS: 99.2 %, DrawRatio: 44.6 %
+	SPRT: llr 2.95 (100.3%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+LMRrevisitedB
+	Score of Dog-55955b8-LMRrevisitedB-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 322 - 358 - 608  [0.486] 1288
+	Elo difference: -9.7 +/- 13.8, LOS: 8.4 %, DrawRatio: 47.2 %
+	SPRT: llr -2.98 (-101.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisitedB
+	Score of Dog-d358c88-LMRrevisitedB-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 481 - 510 - 841  [0.492] 1832
+	Elo difference: -5.5 +/- 11.7, LOS: 17.8 %, DrawRatio: 45.9 %
+	SPRT: llr -2.95 (-100.1%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisited2
+	Score of Dog-4364d4f-LMRrevisited2-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 413 - 446 - 734  [0.490] 1593
+	Elo difference: -7.2 +/- 12.5, LOS: 13.0 %, DrawRatio: 46.1 %
+	SPRT: llr -2.99 (-101.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+incheckPVS
+	Score of Dog-b663bdd-incheckPVS-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 432 - 465 - 747  [0.490] 1644
+	Elo difference: -7.0 +/- 12.4, LOS: 13.5 %, DrawRatio: 45.4 %
+	SPRT: llr -2.99 (-101.6%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+LMRrevisited[1]
+	Score of Dog-71e5096-LMRrevisited-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 2007 - 1878 - 3125  [0.509] 7010
+	Elo difference: 6.4 +/- 6.0, LOS: 98.1 %, DrawRatio: 44.6 %
+	SPRT: llr 1.46 (49.6%), lbound -2.94, ubound 2.94
+
+LMRrevisited
+	Score of Dog-ff673de-LMRrevisited-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 0 - 38 - 7  [0.078] 45
+	Elo difference: -429.6 +/- 153.9, LOS: 0.0 %, DrawRatio: 15.6 %
+	SPRT: llr -2.97 (-101.0%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 SPP bigger margin
 	Score of Dog-5cb051e-SPP-LCb6c9d04 vs Dog-a6e4323-master-LCb6c9d04: 87 - 139 - 172  [0.435] 398
 	Elo difference: -45.7 +/- 25.8, LOS: 0.0 %, DrawRatio: 43.2 %

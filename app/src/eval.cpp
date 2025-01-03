@@ -215,6 +215,14 @@ void count_board(const libchess::Position & pos, int counts[2][6])
 	}
 }
 
+int game_phase(const libchess::Position & pos, const eval_par & parameters)
+{
+	int counts[2][6] { };
+	count_board(pos, counts);
+
+	return game_phase(counts, parameters);
+}
+
 void scan_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[8], int n_pawns_w[8], int n_pawns_b[8])
 {
 	for(libchess::Color color : libchess::constants::COLORS) {
