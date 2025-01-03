@@ -6,6 +6,7 @@ public:
 	struct {
 		uint32_t  nodes;
 		uint32_t  qnodes;
+		uint32_t  qs_lmp;
 
 		uint32_t  n_draws;
 

@@ -235,6 +235,11 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 			}
 		}
+
+		if (n_played >= 5) {
+			sp.cs.data.qs_lmp++;
+			break;
+		}
 	}
 
 	if (n_played == 0) {
@@ -742,6 +747,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
 			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
 			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
+			printf("# qs-LMP: %.2f%%\n", counts.data.qs_lmp * 100. / counts.data.qnodes);
 			cs.add(counts);
 			printf("# avg a/b distance: %.2f/%.2f\n", cs.data.alpha_distance / double(cs.data.n_alpha_distances), cs.data.beta_distance / double(cs.data.n_beta_distances));
 		}
