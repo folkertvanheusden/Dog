@@ -438,7 +438,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 					constexpr double lmr_base = 1.0;
 					int reduction = log(depth) * log(n_played + 1) * lmr_mul + lmr_base;
 #else
-					int reduction = lmr_reductions[std::min(N_LMR_DEPTH - 1, int(depth))][std::min(N_LMR_MOVES - 1, n_played + 1)];
+					int reduction = lmr_reductions[std::min(N_LMR_DEPTH - 1, int(depth))][std::min(N_LMR_MOVES - 1, n_played)];
 #endif
 					new_depth = std::max(depth - reduction, 0);
 				}
