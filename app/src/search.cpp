@@ -59,34 +59,34 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		to_type = *move.promotion_piece_type();
 
 		int piece_val = eval_piece(to_type, sp.parameters);
-		assert(piece_val < 4096);
-		score  += piece_val << 18;
+		assert(piece_val < 2048);
+		score  += piece_val << 19;
 	}
 
 	if (p.is_capture_move(move)) {
 		if (move.type() == libchess::Move::Type::ENPASSANT) {
-			assert(sp.parameters.pawn < 4096);
-			score += sp.parameters.pawn << 18;
+			assert(sp.parameters.pawn < 2048);
+			score += sp.parameters.pawn << 19;
 		}
 		else {
 			auto piece_to = p.piece_on(move.to_square());
 
 			// victim
 			int victim_val = eval_piece(piece_to->type(), sp.parameters);
-			assert(victim_val < 4096);
-			score += victim_val << 18;
+			assert(victim_val < 2048);
+			score += victim_val << 19;
 		}
 
 		if (from_type != libchess::constants::KING) {
 			int add = (eval_piece(libchess::constants::QUEEN, sp.parameters) - eval_piece(from_type, sp.parameters)) * 256;
-			assert(abs(add) < (1 << 18));
+			assert(abs(add) < (1 << 19));
 			score += add;
 		}
 	}
 	else {
 		int index = history_index(p.side_to_move(), from_type, move.to_square());
 		int hist_val = sp.history[index] * 256;
-		assert(abs(hist_val) < (1 << 18));
+		assert(abs(hist_val) < (1 << 19));
 		score += hist_val;
 	}
 
@@ -226,17 +226,20 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			best_score = eval(pos, sp.parameters);
 	}
 
+	assert(best_score >= -10000);
+	assert(best_score <=  10000);
+
 	return best_score;
 }
 
 void update_history(search_pars_t & sp, const int index, const int bonus)
 {
-	constexpr int max_history = 32760;
+	constexpr int max_history = 1023;
 	constexpr int min_history = -max_history;
 	int  clamped_bonus   = std::clamp(bonus, min_history, max_history);
 	int  final_value     = clamped_bonus - sp.history[index] * abs(clamped_bonus) / max_history;
 
-	assert(sp.history[index] + final_value <=  32767);
+	assert(sp.history[index] + final_value <=  32767);  // sp.history is 16 bit
 	assert(sp.history[index] + final_value >= -32768);
 
 	sp.history[index]  += final_value;
