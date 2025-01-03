@@ -236,6 +236,9 @@ void update_history(search_pars_t & sp, const int index, const int bonus)
 	int  clamped_bonus   = std::clamp(bonus, min_history, max_history);
 	int  final_value     = clamped_bonus - sp.history[index] * abs(clamped_bonus) / max_history;
 
+	assert(sp.history[index] + final_value <=  32767);
+	assert(sp.history[index] + final_value >= -32768);
+
 	sp.history[index]  += final_value;
 }
 
