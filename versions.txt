@@ -8,6 +8,25 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+v2.6
+	Rank Name                                Elo    +    - games score oppo. draws 
+	   1 Stash-18.0                         2274   15   15  1423   56%  2236   28% 
+	   2 Dog-6af9ab9-master-LC6850e7d       2239   12   12  2214   63%  2149   27% 
+	   3 Dog-1cced59-master-LCd4c7e13       2235    8    7  6340   62%  2149   26%   <- v2.6
+	   4 Googleplex_Starthinker-1.6         2228    5    5 17990   54%  2198   22% 
+	   5 Dog-5950744-PVS-LCb6c9d04          2210    6    6 11900   62%  2124   28% 
+	   6 Dog-22a052f-v2.5c-LCd2e43e0        2197    7    6  9846   60%  2124   28% 
+	   7 Dog-5258d4d-master-LCbf93a0a       2197    7    7  8626   60%  2124   29% 
+	   8 Dog-d50b4ab-stats-LCbf93a0a        2194    7    7  9389   60%  2124   29% 
+	   9 Dog-bae0094-master-LCd2e43e0       2193    6    7  8631   60%  2124   28% 
+	  10 Dog-363e95d-master-LC61d27ed       2190    5    5 17258   59%  2124   28% 
+	  11 Dog-7b75d02-master-LC6b61930       2189    7    7  8630   59%  2124   28% 
+	  12 Dog-2c6ea2a-insufmatfix-LCd2e43e0  2188    6    7  8629   59%  2124   28% 
+	  13 dorpsgek                           2151    5    5 18005   43%  2198   34% 
+	  14 Embla-2.0.7                        2117    5    5 17996   38%  2198   33% 
+	  15 baislicka                          2114    5    5 18008   38%  2198   29% 
+	  16 SpaceDog_TBs-0.97.7                2012    5    6 17997   25%  2198   23% 
+
 movesortvalue versus master    (MVV-LVA fixes)
 	Elo   | 49.00 +- 14.63 (95%)
 	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
