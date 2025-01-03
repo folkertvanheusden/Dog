@@ -7,7 +7,6 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
-
 movesortvalue versus master    (MVV-LVA fixes)
 	Elo   | 49.00 +- 14.63 (95%)
 	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
