@@ -82,20 +82,6 @@ int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #endif
 
-class sort_movelist_compare
-{
-private:
-        const libchess::Position  & p;
-	const search_pars_t       & sp;
-        std::vector<libchess::Move> first_moves;
-        std::optional<libchess::Square> previous_move_target;
-
-public:
-        sort_movelist_compare(const libchess::Position & p, const search_pars_t & sp);
-        void add_first_move(const libchess::Move move);
-        int move_evaluater(const libchess::Move move) const;
-};
-
 void my_trace(const char *const fmt, ...);
 void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
@@ -103,5 +89,4 @@ void set_new_ponder_position(const bool is_ponder);
 void start_ponder();
 void pause_ponder();
 void set_thread_name(std::string name);
-void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
 chess_stats calculate_search_statistics();

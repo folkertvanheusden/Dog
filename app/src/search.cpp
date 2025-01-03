@@ -12,6 +12,7 @@
 #include "main.h"
 #include "max-ascii.h"
 #include "psq.h"
+#include "search.h"
 #include "str.h"
 #if defined(linux) || defined(_WIN32)
 #include "syzygy.h"
@@ -41,6 +42,7 @@ void sort_movelist_compare::add_first_move(const libchess::Move move)
 	first_moves.push_back(move);
 }
 
+// MVV-LVA
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
 	for(size_t i=0; i<first_moves.size(); i++) {
@@ -56,28 +58,41 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	if (p.is_promotion_move(move)) {
 		to_type = *move.promotion_piece_type();
 
-		score  += eval_piece(to_type, sp.parameters) << 18;
+		int piece_val = eval_piece(to_type, sp.parameters);
+		assert(piece_val < 4096);
+		score  += piece_val << 18;
 	}
 
 	if (p.is_capture_move(move)) {
-		if (move.type() == libchess::Move::Type::ENPASSANT)
+		if (move.type() == libchess::Move::Type::ENPASSANT) {
+			assert(sp.parameters.pawn < 4096);
 			score += sp.parameters.pawn << 18;
+		}
 		else {
 			auto piece_to = p.piece_on(move.to_square());
 
 			// victim
-			score += eval_piece(piece_to->type(), sp.parameters) << 18;
+			int victim_val = eval_piece(piece_to->type(), sp.parameters);
+			assert(victim_val < 4096);
+			score += victim_val << 18;
 		}
 
-		if (from_type != libchess::constants::KING)
-			score += (eval_piece(libchess::constants::QUEEN, sp.parameters) - eval_piece(from_type, sp.parameters)) * 256;
+		if (from_type != libchess::constants::KING) {
+			int add = (eval_piece(libchess::constants::QUEEN, sp.parameters) - eval_piece(from_type, sp.parameters)) * 256;
+			assert(abs(add) < (1 << 18));
+			score += add;
+		}
 	}
 	else {
 		int index = history_index(p.side_to_move(), from_type, move.to_square());
-		score += sp.history[index] * 256;
+		int hist_val = sp.history[index] * 256;
+		assert(abs(hist_val) < (1 << 18));
+		score += hist_val;
 	}
 
-	score += -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
+	int psq_add = -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
+	assert(abs(psq_add) < 256);
+	score += psq_add;
 
 	return score;
 }

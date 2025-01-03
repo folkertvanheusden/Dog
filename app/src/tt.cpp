@@ -11,11 +11,12 @@
 #include "tt.h"
 
 
+static_assert(sizeof(tt_entry) == 16, "tt_entry must be 16 bytes in size");
+
 tt tti;
 
 tt::tt()
 {
-	assert(sizeof(tt_entry) == 16);
 	allocate();
 	reset();
 }
