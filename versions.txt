@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+movesortvalue versus master    (MVV-LVA fixes)
+	Elo   | 49.00 +- 14.63 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | 2.94 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1092 W: 388 L: 235 D: 469
+	Penta | [19, 92, 208, 171, 56]
+	https://pyronomy.pythonanywhere.com/test/799/
+
 noincrhash   LAZYSMP
 	Score of Dog-f9473e2-noincrhash-LCb6c9d04-TH3 vs Dog-f9473e2-noincrhash-LCb6c9d04: 961 - 960 - 1824  [0.500] 3745
 	Elo difference: 0.1 +/- 8.0, LOS: 50.9 %, DrawRatio: 48.7 %
