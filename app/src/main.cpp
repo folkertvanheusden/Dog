@@ -591,6 +591,8 @@ void main_task()
 		printf("Malloc of sp2-history failed\n");
 #endif
 
+	init_lmr();
+
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
@@ -888,6 +890,8 @@ void hello() {
 
 void run_bench()
 {
+	init_lmr();
+
 	memset(sp1.history, 0x00, history_malloc_size);
 
 	chess_stats    cs;
