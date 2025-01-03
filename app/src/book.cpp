@@ -48,12 +48,12 @@ struct polyglot_entry {
 	}
 } __attribute__ ((__packed__));
 
+static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in size");
+
 polyglot_book::polyglot_book(const std::string & filename)
 {
 	fh = fopen(filename.c_str(), "rb");
-	if (fh)
-		assert(sizeof(polyglot_entry) == 16);
-	else
+	if (!fh)
 		printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
 }
 
@@ -102,7 +102,7 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 	return libchess::Move(sq_from, sq_to, type);
 }
 
-void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> *const moves_out)
+void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> & moves_out)
 {
 	const uint64_t hash  { p.hash() };
 	polyglot_entry entry {          };
@@ -124,7 +124,7 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 			break;
 		auto move = convert_polyglot_move(my_NTOHS(entry.move), p);
 		if (p.is_legal_move(move))
-			moves_out->push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
+			moves_out.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
 		else
 			printf("Book: hash collision! (%s)\n", move.to_str().c_str());
 	}
@@ -169,8 +169,8 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			std::vector<libchess::Move> moves;
 			moves.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
 
-			scan(p, index, -1, -1, &moves);  // backward search
-			scan(p, index,  1,  n, &moves);  // forward serach
+			scan(p, index, -1, -1, moves);  // backward search
+			scan(p, index,  1,  n, moves);  // forward serach
 
 			printf("Selecting from %zu moves (", moves.size());
 			bool first = true;

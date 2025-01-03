@@ -18,7 +18,7 @@ Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be instal
 
 The program also has a integrated text-interface. For that just run it and enter "tui".
 
-To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 19 (needs libomp-19-dev)):
+To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14):
 
 	cd app/src/linux-windows
 	mkdir build
@@ -33,12 +33,6 @@ To build it for windows (using mingw-w64):
 	cd buildwindows
 	cmake -DCMAKE_TOOLCHAIN_FILE=../mingw64.cmake ..
 	make
-
-If you want to move the Dog.exe binary to an other windows system, then do not forget to copy the following files as well:
-* libgcc_s_seh-1.dll
-* libgomp-1.dll
-* libstdc++-6.dll
-* libwinpthread-1.dll
 
 The Linux/windows versions contain a Dog in ansi-art visible when you run it with '-h'.
 
