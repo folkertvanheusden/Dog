@@ -8,6 +8,44 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+movesortvalue versus master    (MVV-LVA fixes)
+	Elo   | 49.00 +- 14.63 (95%)
+	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
+	LLR   | 2.94 (-2.25, 2.89) [0.00, 5.00]
+	Games | N: 1092 W: 388 L: 235 D: 469
+	Penta | [19, 92, 208, 171, 56]
+	https://pyronomy.pythonanywhere.com/test/799/
+
+noincrhash   LAZYSMP
+	Score of Dog-f9473e2-noincrhash-LCb6c9d04-TH3 vs Dog-f9473e2-noincrhash-LCb6c9d04: 961 - 960 - 1824  [0.500] 3745
+	Elo difference: 0.1 +/- 8.0, LOS: 50.9 %, DrawRatio: 48.7 %
+	SPRT: llr -2.97 (-100.8%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+noincrhash   <--- libchess has incremental hash removed
+	Score of Dog-f9473e2-noincrhash-LCb6c9d04 vs Dog-4f73e99-master-LCb6c9d04: 292 - 331 - 526  [0.483] 1149
+	Elo difference: -11.8 +/- 14.8, LOS: 5.9 %, DrawRatio: 45.8 %
+	SPRT: llr -2.95 (-100.2%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+ttalwaysreplace1slot
+	Score of Dog-d496bdb-ttalwaysreplace1slot-LCb6c9d04 vs Dog-7136cf9-master-LCb6c9d04: 506 - 425 - 753  [0.524] 1684
+	Elo difference: 16.7 +/- 12.3, LOS: 99.6 %, DrawRatio: 44.7 %
+	SPRT: llr 2.96 (100.6%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+TC
+	Score of Dog-b3fdd57-TC-LCb6c9d04 vs Dog-ace6200-awaywithpointers-LCb6c9d04: 359 - 394 - 648  [0.488] 1401
+	Elo difference: -8.7 +/- 13.3, LOS: 10.1 %, DrawRatio: 46.3 %
+	SPRT: llr -2.96 (-100.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+pieceval
+	Score of Dog-663a420-pieceval-LCb6c9d04 vs Dog-ace6200-awaywithpointers-LCb6c9d04: 391 - 423 - 738  [0.490] 1552
+	Elo difference: -7.2 +/- 12.5, LOS: 13.1 %, DrawRatio: 47.6 %
+	SPRT: llr -2.98 (-101.3%), lbound -2.94, ubound 2.94 - H0 was accepted
+
+awaywithpointers
+	Score of Dog-ace6200-awaywithpointers-LCb6c9d04 vs Dog-6322ebd-master-LCb6c9d04: 782 - 795 - 1373  [0.498] 2950
+	Elo difference: -1.5 +/- 9.2, LOS: 37.2 %, DrawRatio: 46.5 %
+	SPRT: llr -2.99 (-101.4%), lbound -2.94, ubound 2.94 - H0 was accepted
+
 doIID 5944c1b36c0c9e483178ce8a3b58ef480c68916e versus be8e29e25944ce4933707265b997edae9d8e371f
 	Elo   | -56.96 +- 40.53 (95%)
 	SPRT  | 8.0+0.08s Threads=1 Hash=8MB

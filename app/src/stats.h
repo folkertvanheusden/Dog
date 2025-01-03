@@ -41,5 +41,5 @@ public:
 	virtual ~chess_stats();
 
 	void reset();
-	void add(const chess_stats *const in);
+	void add(const chess_stats & in);
 };

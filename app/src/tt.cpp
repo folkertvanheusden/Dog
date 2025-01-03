@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
@@ -10,6 +10,8 @@
 #include "libchess/Position.h"
 #include "tt.h"
 
+
+static_assert(sizeof(tt_entry) == 16, "tt_entry must be 16 bytes in size");
 
 tt tti;
 
@@ -30,115 +32,81 @@ void tt::allocate()
 	size_t psram_size = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 	if (psram_size > ESP32_TT_RAM_SIZE) {
 		printf("Using %zu bytes of PSRAM\n", psram_size);
-		n_entries = psram_size / sizeof(tt_hash_group);
-		entries = reinterpret_cast<tt_hash_group *>(heap_caps_malloc(n_entries * sizeof(tt_hash_group), MALLOC_CAP_SPIRAM));
+		n_entries = psram_size / sizeof(tt_entry);
+		entries = reinterpret_cast<tt_entry *>(heap_caps_malloc(n_entries * sizeof(tt_entry), MALLOC_CAP_SPIRAM));
 	}
 	else {
 		printf("No PSRAM\n");
-		entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
+		entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));
 	}
 #else
-	entries = reinterpret_cast<tt_hash_group *>(malloc(n_entries * sizeof(tt_hash_group)));
+	entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));
 #endif
 }
 
 void tt::set_size(const uint64_t s)
 {
-	n_entries = s / sizeof(tt_hash_group);
+	n_entries = s / sizeof(tt_entry);
 	free(entries);
 	allocate();
+	reset();
 	printf("# Newly allocated node count: %" PRIu64 "\n", n_entries);
 }
 
 void tt::reset()
 {
-	memset(entries, 0x00, sizeof(tt_hash_group) * n_entries);
-}
-
-void tt::inc_age()
-{
-	age++;
+	memset(entries, 0x00, sizeof(tt_entry) * n_entries);
 }
 
 // see https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+#if defined(ESP32)
+static inline uint32_t fastrange32(uint32_t word, uint32_t p)
+{
+	return (uint64_t(word) * uint64_t(p)) >> 32;
+}
+#define fastrange fastrange32
+#else
 typedef unsigned __int128 uint128_t;
 inline uint64_t fastrange64(uint64_t word, uint64_t p)
 {
 	return (uint128_t(word) * uint128_t(p)) >> 64;
 }
+#define fastrange fastrange64
+#endif
 
 std::optional<tt_entry> tt::lookup(const uint64_t hash)
 {
-	uint64_t        index = fastrange64(hash, n_entries);
-	tt_entry *const e     = entries[index].entries;
-	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
-		tt_entry & cur = e[i];
+	uint64_t   index = fastrange(hash, n_entries);
+	tt_entry & cur   = entries[index];
 
-		if ((cur.hash ^ cur.data_.data) == hash) {
-			cur.data_._data.age = age;
-			cur.hash = hash ^ cur.data_.data;
-			return cur;
-		}
-	}
+	if ((cur.hash ^ cur.data_.data) == hash)
+		return cur;
 
 	return { };
 }
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
-	uint64_t index           = fastrange64(hash, n_entries);
-	int      use_sub_index   =  -1;
-	int      min_depth       = 999;
-	int      min_depth_index =  -1;
+	uint64_t        index = fastrange(hash, n_entries);
+	tt_entry *const e     = &entries[index];
 
-	tt_entry   *const e     = entries[index].entries;
-	for(int i=0; i<N_TE_PER_HASH_GROUP; i++) {
-		if ((e[i].hash ^ e[i].data_.data) == hash) {
-			if (e[i].data_._data.depth > d) {
-				e[i].data_._data.age = age;
-				e[i].hash = hash ^ e[i].data_.data;
-				return;
-			}
-			if (f != EXACT && e[i].data_._data.depth == d) {
-				e[i].data_._data.age = age;
-				e[i].hash = hash ^ e[i].data_.data;
-				return;
-			}
+	tt_entry::u n { };
+	n._data.score = int16_t(score);
+	n._data.depth = uint8_t(d);
+	n._data.flags = f;
+	n._data.m     = m.value();
 
-			use_sub_index = i;
+	e->hash       = hash ^ n.data;
+	e->data_.data = n.data;
+}
 
-			break;
-		}
+int tt::get_per_mille_filled()
+{
+	int count = 0;
+	for(int i=0; i<1000; i++)
+		count += entries[i].hash != 0;
 
-		if (e[i].data_._data.age != age)
-			use_sub_index = i;
-		else if (e[i].data_._data.depth < min_depth) {
-			min_depth = e[i].data_._data.depth;
-			min_depth_index = i;
-		}
-	}
-
-	if (use_sub_index == -1) {
-		use_sub_index = min_depth_index;
-
-		if (use_sub_index == -1) {
-			use_sub_index = 0;
-
-			printf("# ERROR: sub_index < 0\n");
-		}
-	}
-
-	tt_entry *const cur = &e[use_sub_index];
-
-	tt_entry::u n;
-	n._data.score     = int16_t(score);
-	n._data.depth     = uint8_t(d);
-	n._data.flags     = f;
-	n._data.age       = age;
-	n._data.m         = m.value();
-
-	cur -> hash       = hash ^ n.data;
-	cur -> data_.data = n.data;
+	return count;
 }
 
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
