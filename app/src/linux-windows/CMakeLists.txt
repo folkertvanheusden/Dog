@@ -58,20 +58,24 @@ add_executable(
   ../fathom/src/tbprobe.c
 )
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads)
+
 include(FindPkgConfig)
 
 find_package(OpenMP)
 IF (OpenMP_FOUND)
 	MESSAGE("WITH OpenMP")
         if (ASAN EQUAL 1)
-                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX -fsanitize=address,undefined)
+                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX -fsanitize=address,undefined Threads::Threads)
         else()
-                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX)
+                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX Threads::Threads)
         endif()
 else()
 	MESSAGE("without OpenMP")
        if (ASAN EQUAL 1)
-               target_link_libraries(Dog PRIVATE -fsanitize=address,undefined)
+               target_link_libraries(Dog PRIVATE -fsanitize=address,undefined Threads::Threads)
        endif()
 endif()
 
