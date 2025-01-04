@@ -78,7 +78,6 @@ else()
                target_link_libraries(Dog PRIVATE -fsanitize=address,undefined Threads::Threads)
        else()
                target_link_libraries(Dog PRIVATE Threads::Threads)
-       else()
        endif()
 endif()
 
