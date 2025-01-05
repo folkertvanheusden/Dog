@@ -37,7 +37,7 @@ private:
 #elif defined(__ANDROID__)
 	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };
 #elif defined(linux) || defined(_WIN32) || defined(__APPLE__)
-	uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_entry) };
+	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };  // as requested, because of OpenBench testing
 #endif
 	void allocate();
 
