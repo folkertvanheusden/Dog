@@ -19,7 +19,7 @@
 #define APPNAME "Dog"
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 #include "max.h"
 #include <chrono>
 #include <fcntl.h>
@@ -56,7 +56,7 @@
 #include "psq.h"
 #include "search.h"
 #include "str.h"
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 #include "syzygy.h"
 bool with_syzygy = false;
 #endif
@@ -77,7 +77,7 @@ end_t         stop1 { false };
 chess_stats  *sp1cs = new chess_stats();
 search_pars_t sp1   { default_parameters, false, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp1cs, 0, &stop1 };
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 std::vector<search_pars_t> sp2;
 std::vector<end_t *>       stop2;
 std::vector<chess_stats *> sp2cs;
@@ -89,12 +89,12 @@ chess_stats  *sp2cs = new chess_stats();
 search_pars_t sp2   { default_parameters, true,  reinterpret_cast<int16_t *>(malloc(history_malloc_size)), *sp2cs, 0, &stop2 };
 #endif
 
-#if defined(linux)
+#if defined(linux) || defined(__APPLE__)
 uint64_t wboard { 0 };
 uint64_t bboard { 0 };
 #endif
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 std::string my_trace_file;
 #endif
 bool trace_enabled = false;
@@ -110,7 +110,7 @@ void my_trace(const char *const fmt, ...)
 		vprintf(fmt, ap);
 		va_end(ap);
 	}
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 	if (my_trace_file.empty() == false) {
 		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
@@ -147,7 +147,7 @@ auto stop_handler = []()
 #endif
 };
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 std::thread *ponder_thread_handle { nullptr };
 #else
 TaskHandle_t ponder_thread_handle;
@@ -159,7 +159,7 @@ void think_timeout(void *arg)
 	set_flag(stop);
 }
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 #define LED_INTERNAL 0
 #define LED_GREEN    0
 #define LED_BLUE     0
@@ -252,6 +252,8 @@ void set_thread_name(std::string name)
                 name = name.substr(0, 15);
 
         pthread_setname_np(pthread_self(), name.c_str());
+#elif defined(__APPLE__)
+        pthread_setname_np(name.c_str());
 #endif
 }
 
@@ -262,7 +264,7 @@ libchess::UCIService uci_service{"Dog v2.6", "Folkert van Heusden", std::cout, i
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	stop_ponder_thread();
 
 	for(auto & stop: stop2)
@@ -300,7 +302,7 @@ auto allow_ponder_handler = [](const bool value) {
 
 auto commerial_option_handler = [](const std::string & value) { };
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 extern "C" {
 void vApplicationMallocFailedHook()
 {
@@ -378,7 +380,7 @@ int check_min_stack_size(const int nr, const search_pars_t & sp)
 }
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 void gpio_set_level(int a, int b)
 {
 }
@@ -391,7 +393,7 @@ void ponder_thread(void *p)
 	my_trace("# pondering started\n");
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	for(auto & sp: sp2)
 		sp.is_t2 = true;
 #else
@@ -406,7 +408,7 @@ void ponder_thread(void *p)
 		search_fen_lock.lock();
 		// if other fen, then trigger search
 		if (search_fen.empty() == false && search_fen_version != prev_search_fen_version) {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			for(auto & sp: sp2)
 				clear_flag(sp.stop);
 #else
@@ -416,7 +418,7 @@ void ponder_thread(void *p)
 			positiont2 = libchess::Position(search_fen);
 			valid      = positiont2.game_state() == libchess::Position::GameState::IN_PROGRESS;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			for(auto & sp: sp2)
 				memset(sp.history, 0x00, history_malloc_size);
 #else
@@ -437,7 +439,7 @@ void ponder_thread(void *p)
 			my_trace("# ponder search start\n");
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID) || defined(__APPLE__)
 			int n_threads = is_ponder ? thread_count : (thread_count - 1);
 			my_trace("# starting %d threads\n", n_threads);
 
@@ -468,7 +470,7 @@ void ponder_thread(void *p)
 		}
 		else {
 			// TODO replace this by condition variables
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			std::this_thread::sleep_for(std::chrono::microseconds(10000));
 #else
 			vTaskDelay(10);  // TODO divide
@@ -480,14 +482,14 @@ void ponder_thread(void *p)
 	my_trace("# pondering thread stopping\n");
 #endif
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	vTaskDelete(nullptr);
 #endif
 }
 
 void start_ponder_thread()
 {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	ponder_quit = false;
 
 	for(auto & sp: sp2)
@@ -506,7 +508,7 @@ void start_ponder_thread()
 void stop_ponder_thread()
 {
 	my_trace(" *** STOP PONDER ***\n");
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	if (ponder_thread_handle) {
 		ponder_quit = true;
 
@@ -541,7 +543,7 @@ void set_new_ponder_position(const bool this_is_ponder)
 	search_fen = positiont1.fen();
 	is_ponder  = this_is_ponder;
 	search_fen_version++;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	for(auto & sp: sp2)
 		set_flag(sp.stop);
 #else
@@ -553,7 +555,7 @@ void set_new_ponder_position(const bool this_is_ponder)
 void reset_search_statistics()
 {
 	sp1.cs.reset();
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
         for(auto & sp: sp2)
                 sp.cs.reset();
 #else
@@ -566,7 +568,7 @@ chess_stats calculate_search_statistics()
         chess_stats out { };
 
 	out.add(sp1.cs);
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
         for(auto & sp: sp2)
 		out.add(sp.cs);
 #else
@@ -668,7 +670,7 @@ void main_task()
 				clear_flag(sp1.stop);
 				reset_search_statistics();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 				sp1.md     = 1;
 				sp2.md     = 1;
 				start_blink(led_green_timer);
@@ -679,7 +681,7 @@ void main_task()
 
 				chess_stats cs;
 				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 				stop_blink(led_green_timer, &led_green);
 #endif
 
@@ -704,14 +706,14 @@ void main_task()
 
 		try {
 			clear_flag(sp1.stop);
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			esp_start_ts = start_ts;
 			sp1.md       = 1;
 			sp2.md       = 1;
 #endif
 			reset_search_statistics();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
@@ -769,7 +771,7 @@ void main_task()
 			bool           has_best   { false };
 
 			// probe the Syzygy endgame table base
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 			if (with_syzygy) {
 				sp1.cs.data.syzygy_queries++;
 
@@ -794,7 +796,7 @@ void main_task()
 			libchess::UCIService::bestmove(best_move.to_str());
 
 			// no longer thinking
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
 #if defined(__ANDROID__)
@@ -907,7 +909,7 @@ void run_bench()
 	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
 }
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 void help()
 {
 	print_max();
@@ -954,7 +956,7 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
 		else if (c == 'u')
 			usb_disp_thread = new std::thread(usb_disp, optarg);
 #endif

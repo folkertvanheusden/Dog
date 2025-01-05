@@ -1,4 +1,4 @@
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 #include <limits.h>
 #include <sys/time.h>
 #endif
@@ -14,7 +14,7 @@
 #include "psq.h"
 #include "search.h"
 #include "str.h"
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 #include "syzygy.h"
 #endif
 #include "test.h"
@@ -162,7 +162,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 {
 	if (sp.stop->flag)
 		return 0;
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	if (qsdepth > sp.md) {
 		if (check_min_stack_size(1, sp))
 			return 0;
@@ -274,7 +274,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	int d = max_depth - depth;
 
 	if (d > sp.md) {
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 		if (check_min_stack_size(0, sp))
 			return 0;
 #endif
@@ -334,7 +334,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	}
 	////////
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	if (with_syzygy && sp.is_t2) {
 		// check piece count
 		unsigned counts = pos.occupancy_bb().popcount();
@@ -523,7 +523,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 	return best_score;
 }
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 uint64_t esp_timer_get_time()
 {
 	timeval tv;
@@ -564,13 +564,13 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 {
 	uint64_t t_offset = esp_timer_get_time();
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
 	if (sp.is_t2 == false) {
 		if (search_time > 0) {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
 					timer(search_time, sp.stop);
@@ -593,7 +593,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 		int8_t  max_depth = 1 + (sp.is_t2 ? thread_nr + 1: 0);
 #else
 		int8_t  max_depth = 1 + sp.is_t2;
@@ -755,7 +755,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	}
 
 	if (!sp.is_t2) {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 		set_flag(sp.stop);
 
 		if (think_timeout_timer) {

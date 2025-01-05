@@ -277,7 +277,7 @@ void tt_lookup()
 
 void do_syzygy(const libchess::Position & pos)
 {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	if (with_syzygy) {
 		std::optional<std::pair<libchess::Move, int> > s_root = probe_fathom_root(pos);
 		if (s_root.has_value())
@@ -531,7 +531,7 @@ void tui()
 			}
 		}
 		else {
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
@@ -568,7 +568,7 @@ void tui()
 
 			if (do_ponder)
 				set_new_ponder_position(true);  // regular ponder
-#if !defined(linux) && !defined(_WIN32)
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
 		}

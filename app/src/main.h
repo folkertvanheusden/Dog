@@ -24,19 +24,19 @@ typedef struct
 	uint16_t  md;
 
 	end_t    *stop;
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	char      move[5];
 	int       score;
 #endif
 } search_pars_t;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 extern std::vector<search_pars_t> sp2;
 #else
 extern search_pars_t sp2;
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 uint64_t esp_timer_get_time();
 #endif
 

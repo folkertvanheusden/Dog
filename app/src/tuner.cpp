@@ -8,7 +8,7 @@
 #include "search.h"
 
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 void tune(std::string file)
 {
 	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });

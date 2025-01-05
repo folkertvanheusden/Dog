@@ -36,7 +36,7 @@ private:
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
 #elif defined(__ANDROID__)
 	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };
-#elif defined(linux) || defined(_WIN32)
+#elif defined(linux) || defined(_WIN32) || defined(__APPLE__)
 	uint64_t n_entries { 256 * 1024 * 1024 / sizeof(tt_entry) };
 #endif
 	void allocate();
