@@ -735,7 +735,6 @@ void main_task()
 			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
 			int think_time     = 0;
-			int think_time_opp = 0;
 
 			bool is_absolute_time = false;
 			bool time_limit_hit   = false;
@@ -751,8 +750,7 @@ void main_task()
 				int ms           = is_white ? w_time : b_time;
 				int ms_opponent  = is_white ? b_time : w_time;
 
-				think_time     = (ms          + (cur_n_moves - 1) * time_inc    ) / double(cur_n_moves + 7);
-				think_time_opp = (ms_opponent + (cur_n_moves - 1) * time_inc_opp) / double(cur_n_moves + 7);
+				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 
 				int limit_duration_min = ms / 15;
 				if (think_time > limit_duration_min) {
