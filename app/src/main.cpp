@@ -259,7 +259,7 @@ void set_thread_name(std::string name)
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.6", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.7", "Folkert van Heusden", std::cout, is};
 
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
@@ -880,7 +880,7 @@ void hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	my_printf("# compiled on " __DATE__ " " __TIME__ "\n\n");
+	my_printf("# Version " VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
 	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }

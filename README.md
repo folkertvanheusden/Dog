@@ -1,5 +1,4 @@
 Dog was written by Folkert van Heusden.
-It is based on the chess program Micah with different evaluation and different threading (lazy smp).
 Licensed under the MIT license.
 
 

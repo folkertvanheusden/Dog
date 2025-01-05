@@ -29,7 +29,7 @@ else()
 	MESSAGE("without ASAN")
 endif()
 
-set(DOG_VERSION 2.6)
+set(DOG_VERSION 2.7)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG}")
 
 if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
