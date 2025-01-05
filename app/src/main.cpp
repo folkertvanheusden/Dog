@@ -916,6 +916,7 @@ void help()
 
 	printf("-t x  thread count\n");
 	printf("-s x  set path to Syzygy\n");
+	printf("-H x  set size of hashtable to x MB\n");
 	printf("-u x  USB display device\n");
 	printf("-T x  tune using epd file\n");
 	printf("-R x  my_trace to file\n");
@@ -938,7 +939,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:UR:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:UR:H:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -962,6 +963,8 @@ int main(int argc, char *argv[])
 #endif
 		else if (c == 'R')
 			my_trace_file = optarg;
+		else if (c == 'H')
+			tti.set_size(uint64_t(atol(optarg)) * 1024 * 1024);
 		else {
 			help();
 
