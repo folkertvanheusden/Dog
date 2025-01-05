@@ -8,6 +8,17 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+noOppTime
+	Rank Name                              Elo    +    - games score oppo. draws 
+	   1 Stash-18.0                       2252   22   22   538   53%  2233   25% 
+	   2 Dog-24a4b46-noOppTime-LCd4c7e13  2238    9    9  3551   61%  2160   28% 
+	   3 Googleplex_Starthinker-1.6       2231   23   23   537   50%  2233   18% 
+	   4 Dog-1cced59-master-LCd4c7e13     2226   21   21   538   49%  2232   47% 
+	   5 dorpsgek                         2151   22   22   540   38%  2233   30% 
+	   6 baislicka                        2126   23   23   538   35%  2234   24% 
+	   7 Embla-2.0.7                      2117   22   23   540   33%  2234   30% 
+	   8 SpaceDog_TBs-0.97.7              2016   25   26   540   22%  2234   19% 
+
 v2.6
 	Rank Name                                Elo    +    - games score oppo. draws 
 	   1 Stash-18.0                         2274   15   15  1423   56%  2236   28% 
