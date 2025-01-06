@@ -108,7 +108,7 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		score += hist_val;
 	}
 
-	int psq_add = -psq(move.from_square(), piece_from->color(), from_type, 0) + psq(move.to_square(), piece_from->color(), to_type, 0);
+	int psq_add = -psq(move.from_square(), piece_from->color(), from_type).first + psq(move.to_square(), piece_from->color(), to_type).first;
 	assert(abs(psq_add) < 256);
 	score += psq_add;
 
