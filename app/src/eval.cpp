@@ -208,10 +208,8 @@ int development(const libchess::Position & pos)
 void count_board(const libchess::Position & pos, int counts[2][6])
 {
 	for(libchess::Color color : libchess::constants::COLORS) {
-		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-			counts[color][type] = piece_bb.popcount();
-		}
+		for(libchess::PieceType type : libchess::constants::PIECE_TYPES)
+			counts[color][type] = pos.piece_type_bb(type, color).popcount();
 	}
 }
 
