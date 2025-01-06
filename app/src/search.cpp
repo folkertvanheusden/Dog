@@ -392,7 +392,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, thread_nr);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
-				return beta;
+				return abs(nmscore) >= 9800 ? beta : nmscore;
 			}
                 }
 	}
