@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+insufmat
+	Score of Dog-394bb62-insufmat-LCd4c7e13 vs Dog-a53db4e-master-LCd4c7e13: 393 - 461 - 667  [0.478] 1521
+	...      Dog-394bb62-insufmat-LCd4c7e13 playing White: 227 - 195 - 340  [0.521] 762
+	...      Dog-394bb62-insufmat-LCd4c7e13 playing Black: 166 - 266 - 327  [0.434] 759
+	...      White vs Black: 493 - 361 - 667  [0.543] 1521
+	Elo difference: -15.5 +/- 13.1, LOS: 1.0 %, DrawRatio: 43.9 %
+	SPRT: llr -4.62 (-100.4%), lbound -4.6, ubound 4.6 - H0 was accepted
+
 noOppTime
 	Rank Name                              Elo    +    - games score oppo. draws 
 	   1 Stash-18.0                       2252   22   22   538   53%  2233   25% 
