@@ -555,6 +555,21 @@ void timer(const int think_time, end_t *const ei)
 #endif
 }
 
+// as fast as possible
+std::optional<libchess::Move> least_effort_quick_pick(const libchess::Position & pos)
+{
+	uint64_t       hash        = pos.hash();
+	std::optional<tt_entry> te = tti.lookup(hash);
+
+	if (te.has_value()) {
+		auto tt_move = libchess::Move(te.value().data_._data.m);
+		if (pos.is_legal_move(tt_move))
+			return tt_move;
+	}
+
+	return { };
+}
+
 double calculate_EBF(const std::vector<uint64_t> & node_counts)
 {
         size_t n = node_counts.size();
@@ -565,12 +580,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 {
 	uint64_t t_offset = esp_timer_get_time();
 
+	constexpr uint64_t min_search_time = 45;  // need at least this number of milliseconds to do a search
+	constexpr uint64_t critical_min_search_time = 5;
+
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
 	if (sp.is_t2 == false) {
-		if (search_time > 0) {
+		if (search_time >= min_search_time) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
@@ -587,7 +605,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	auto move_list = pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
-	if (move_list.size() > 1) {
+	if (move_list.size() > 1 && search_time >= min_search_time) {
 		int16_t alpha     = -32767;
 		int16_t beta      =  32767;
 
@@ -749,10 +767,16 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #endif
 	}
 	else {
-#if !defined(__ANDROID__)
-		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
-#endif
-		best_score = eval(pos, sp.parameters);
+		// at least some time? then check tt for something sane and
+		// do an evaluation to return a score. if not: return first
+		// move in the move-list.
+		if (search_time >= critical_min_search_time) {
+			auto better_move = least_effort_quick_pick(pos);
+			if (better_move.has_value())
+				best_move = better_move.value();
+
+			best_score = eval(pos, sp.parameters);
+		}
 	}
 
 	if (!sp.is_t2) {
