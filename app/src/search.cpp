@@ -125,25 +125,6 @@ bool is_check(libchess::Position & pos)
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
 }
 
-bool is_insufficient_material_draw_light(const libchess::Position & pos)
-{
-        if (pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE).popcount() ||
-                pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK).popcount() ||
-                pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE).popcount() ||
-                pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK).popcount() ||
-                pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::WHITE).popcount() ||
-                pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
-                return false;
-
-        if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() &&
-                pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount()) ||
-                (pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() &&
-                pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()))
-                return false;
-
-        return true;
-}
-
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
         int counts[2][6] { };
@@ -235,7 +216,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 
 	sp.cs.data.qnodes++;
 
-	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw_light(pos))
+	if (pos.halfmoves() >= 100 || pos.is_repeat() || is_insufficient_material_draw(pos))
 		return 0;
 
 	int  best_score = -32767;
