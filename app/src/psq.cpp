@@ -139,14 +139,14 @@ constexpr int KingPSTEG[64] = {
 };
 
 const int *const idx[2][8] = {
-	{ PawnPSTMG, KnightPSTMG, BishopPSTMG, RookPSTMG, QueenPSTMG, KingPSTMG},
-	{ PawnPSTEG, KnightPSTEG, BishopPSTEG, RookPSTEG, QueenPSTEG, KingPSTEG}
+	{ PawnPSTMG, KnightPSTMG, BishopPSTMG, RookPSTMG, QueenPSTMG, KingPSTMG },
+	{ PawnPSTEG, KnightPSTEG, BishopPSTEG, RookPSTEG, QueenPSTEG, KingPSTEG }
 };
 
-int psq(const libchess::Square sq, const libchess::Color c, const libchess::PieceType t, const int phase)
+std::pair<int, int> psq(const libchess::Square sq, const libchess::Color c, const libchess::PieceType t)
 {
-	const int pos = sq;
+	const int pos   = sq;
 	const int index = c == libchess::constants::WHITE ? pos : (pos ^ 56);
 
-	return (idx[0][t][index] * (255 - phase) + idx[1][t][index] * phase) / 256;
+	return { idx[0][t][index], idx[1][t][index] };
 }

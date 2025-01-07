@@ -86,7 +86,7 @@ protected:
 				break;
 			}
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			int length = 0;
 			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
 			if (length) {

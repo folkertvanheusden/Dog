@@ -5,9 +5,10 @@
 #include "eval.h"
 #include "main.h"
 #include "my_tuner.h"
+#include "search.h"
 
 
-#if defined(linux) || defined(_WIN32)
+#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 void tune(std::string file)
 {
 	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });
@@ -16,26 +17,25 @@ void tune(std::string file)
 	std::vector<libchess::TunableParameter> tunable_parameters = default_parameters.get_tunable_parameters();
 	printf("%zu parameters\n", tunable_parameters.size());
 
+	chess_stats cs;
 	int16_t history[history_size] { 0 };
 	libchess::Tuner<libchess::Position> tuner{normalized_results, tunable_parameters,
-		[&history](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
+		[&history, &cs](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			search_pars_t sp { &cur, false, history };
+			search_pars_t sp { cur, false, history, cs };
 			sp.stop       = new end_t();
 			sp.stop->flag = false;
-			sp.cs         = new chess_stats();
 
 #pragma omp parallel for
 			for(auto &p: positions) {
 				auto & pos = p.position();
-				int score = qs(pos, -32767, 32767, 0, &sp, 0);
+				int score = qs(pos, -32767, 32767, 0, sp, 0);
 				if (pos.side_to_move() != libchess::constants::WHITE)
 					score = -score;
 				p.set_result(score);
 			}
 
-			delete sp.cs;
 			delete sp.stop;
 		}};
 

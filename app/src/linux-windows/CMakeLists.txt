@@ -10,20 +10,36 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 #set(CMAKE_BUILD_TYPE Debug)
 
-if (CMAKE_BUILD_TYPE EQUAL RelWithDebInfo)
+if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+	MESSAGE("Release mode with debug info")
 	set(MY_DEBUG 1)
-elseif (CMAKE_BUILD_TYPE EQUAL Debug)
+elseif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	MESSAGE(" * DEBUG MODE * ")
 	set(MY_DEBUG 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline -O0")
 else()
 	set(MY_DEBUG 0)
 endif()
 
-set(DOG_VERSION 2.5)
+if (ASAN EQUAL 1)
+	set(MY_DEBUG 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline -O0 -fsanitize=address,undefined")
+	MESSAGE("WITH ASAN")
+else()
+	MESSAGE("without ASAN")
+endif()
+
+set(DOG_VERSION 2.7)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG}")
 
-cmake_policy(SET CMP0069 NEW)
-set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+	MESSAGE("WITH LTO")
+	cmake_policy(SET CMP0069 NEW)
+	set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	MESSAGE("without LTO")
+endif()
 
 add_executable(
   Dog
@@ -46,10 +62,28 @@ add_executable(
   ../fathom/src/tbprobe.c
 )
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads)
+
 include(FindPkgConfig)
 
-find_package(OpenMP REQUIRED)
-target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX)
+find_package(OpenMP)
+IF (OpenMP_FOUND)
+	MESSAGE("WITH OpenMP")
+        if (ASAN EQUAL 1)
+                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX -fsanitize=address,undefined Threads::Threads)
+        else()
+                target_link_libraries(Dog PRIVATE OpenMP::OpenMP_CXX Threads::Threads)
+        endif()
+else()
+	MESSAGE("without OpenMP")
+       if (ASAN EQUAL 1)
+               target_link_libraries(Dog PRIVATE -fsanitize=address,undefined Threads::Threads)
+       else()
+               target_link_libraries(Dog PRIVATE Threads::Threads)
+       endif()
+endif()
 
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 

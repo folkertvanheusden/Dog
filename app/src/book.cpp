@@ -48,12 +48,12 @@ struct polyglot_entry {
 	}
 } __attribute__ ((__packed__));
 
+static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in size");
+
 polyglot_book::polyglot_book(const std::string & filename)
 {
 	fh = fopen(filename.c_str(), "rb");
-	if (fh)
-		assert(sizeof(polyglot_entry) == 16);
-	else
+	if (!fh)
 		printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
 }
 
@@ -76,7 +76,7 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 	libchess::PieceType promote_to { p.piece_type_on(sq_from).value() };
 	if (promotion_type == 0)
 		assert(p.piece_type_on(sq_from).value() != libchess::constants::PAWN || (to_y != 0 && to_y != 7));
-	else {
+	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN) {
 		libchess::PieceType promotions[] { libchess::constants::PAWN /* invalid */, libchess::constants::KNIGHT,
 			libchess::constants::BISHOP, libchess::constants::ROOK, libchess::constants::QUEEN };
 		promote_to = promotions[promotion_type];
@@ -84,9 +84,12 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	libchess::Move::Type type { libchess::Move::Type::NONE };
 
-	if (promotion_type)
+	if (promotion_type) {
 		type = is_capture ? libchess::Move::Type::CAPTURE_PROMOTION : libchess::Move::Type::PROMOTION;
-	else if (is_capture)
+		return libchess::Move(sq_from, sq_to, promote_to, type);
+	}
+
+	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
 	else if ((sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) ||
 		 (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8))) {
@@ -96,10 +99,10 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
 
-	return libchess::Move(sq_from, sq_to, promote_to, type);
+	return libchess::Move(sq_from, sq_to, type);
 }
 
-void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> *const moves_out)
+void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> & moves_out)
 {
 	const uint64_t hash  { p.hash() };
 	polyglot_entry entry {          };
@@ -109,11 +112,21 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 		index += direction;
 		if (index == end)
 			break;
-		fseek(fh, index * sizeof(polyglot_entry), SEEK_SET);
-		fread(&entry, sizeof(polyglot_entry), 1, fh);
+		if (fseek(fh, index * sizeof(polyglot_entry), SEEK_SET) == -1) {
+			printf("Seek in book failed: %s\n", strerror(errno));
+			break;
+		}
+		if (fread(&entry, sizeof(polyglot_entry), 1, fh) != 1) {
+			printf("Problem reading from book: %s\n", strerror(errno));
+			break;
+		}
 		if (my_NTOHLL(entry.hash) != hash)
 			break;
-		moves_out->push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
+		auto move = convert_polyglot_move(my_NTOHS(entry.move), p);
+		if (p.is_legal_move(move))
+			moves_out.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
+		else
+			printf("Book: hash collision! (%s)\n", move.to_str().c_str());
 	}
 }
 
@@ -156,10 +169,19 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			std::vector<libchess::Move> moves;
 			moves.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
 
-			scan(p, index, -1, -1, &moves);  // backward search
-			scan(p, index,  1,  n, &moves);  // forward serach
+			scan(p, index, -1, -1, moves);  // backward search
+			scan(p, index,  1,  n, moves);  // forward serach
 
-			printf("Selecting from %zu moves...\n", moves.size());
+			printf("Selecting from %zu moves (", moves.size());
+			bool first = true;
+			for(auto & m: moves) {
+				if (first)
+					first = false;
+				else
+					printf(" ");
+				printf("%s", m.to_str().c_str());
+			}
+			printf(")...\n");
 
 			std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
 			return moves.at(dist(rng));

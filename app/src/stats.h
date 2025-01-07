@@ -6,7 +6,7 @@ public:
 	struct {
 		uint32_t  nodes;
 		uint32_t  qnodes;
-
+		uint32_t  n_standing_pat;
 		uint32_t  n_draws;
 
 		uint32_t  alpha_distance;
@@ -41,5 +41,5 @@ public:
 	virtual ~chess_stats();
 
 	void reset();
-	void add(const chess_stats *const in);
+	void add(const chess_stats & in);
 };

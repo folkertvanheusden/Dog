@@ -208,11 +208,17 @@ int development(const libchess::Position & pos)
 void count_board(const libchess::Position & pos, int counts[2][6])
 {
 	for(libchess::Color color : libchess::constants::COLORS) {
-		for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-			libchess::Bitboard piece_bb = pos.piece_type_bb(type, color);
-			counts[color][type] = piece_bb.popcount();
-		}
+		for(libchess::PieceType type : libchess::constants::PIECE_TYPES)
+			counts[color][type] = pos.piece_type_bb(type, color).popcount();
 	}
+}
+
+int game_phase(const libchess::Position & pos, const eval_par & parameters)
+{
+	int counts[2][6] { };
+	count_board(pos, counts);
+
+	return game_phase(counts, parameters);
 }
 
 void scan_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[8], int n_pawns_w[8], int n_pawns_b[8])
@@ -240,23 +246,30 @@ void scan_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[
 
 int calc_psq(const libchess::Position & pos, const int phase, const eval_par & parameters)
 {
-	int score = 0;
+	int a = 0;
+	int b = 0;
 
 	for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 		libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
 		while (piece_bb_w) {
 			libchess::Square sq = piece_bb_w.forward_bitscan();
 			piece_bb_w.forward_popbit();
-			score += psq(sq, libchess::constants::WHITE, type, phase);
+			auto rc = psq(sq, libchess::constants::WHITE, type);
+			a += rc.first;
+			b += rc.second;
 		}
 
 		libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
 		while (piece_bb_b) {
 			libchess::Square sq = piece_bb_b.forward_bitscan();
 			piece_bb_b.forward_popbit();
-			score -= psq(sq, libchess::constants::BLACK, type, phase);
+			auto rc = psq(sq, libchess::constants::BLACK, type);
+			a -= rc.first;
+			b -= rc.second;
 		}
 	}
+
+	int score = (a * (255 - phase) + b * phase) / 256;
 
 	return score * parameters.psq_mul / parameters.psq_div;
 }
