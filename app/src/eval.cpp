@@ -246,23 +246,30 @@ void scan_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[
 
 int calc_psq(const libchess::Position & pos, const int phase, const eval_par & parameters)
 {
-	int score = 0;
+	int a = 0;
+	int b = 0;
 
 	for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
 		libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
 		while (piece_bb_w) {
 			libchess::Square sq = piece_bb_w.forward_bitscan();
 			piece_bb_w.forward_popbit();
-			score += psq(sq, libchess::constants::WHITE, type, phase);
+			auto rc = psq(sq, libchess::constants::WHITE, type);
+			a += rc.first;
+			b += rc.second;
 		}
 
 		libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
 		while (piece_bb_b) {
 			libchess::Square sq = piece_bb_b.forward_bitscan();
 			piece_bb_b.forward_popbit();
-			score -= psq(sq, libchess::constants::BLACK, type, phase);
+			auto rc = psq(sq, libchess::constants::BLACK, type);
+			a -= rc.first;
+			b -= rc.second;
 		}
 	}
+
+	int score = (a * (255 - phase) + b * phase) / 256;
 
 	return score * parameters.psq_mul / parameters.psq_div;
 }
