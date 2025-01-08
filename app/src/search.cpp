@@ -515,8 +515,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		int work_score = eval_to_tt(best_score, csd);
 
-		tti.store(hash, flag, depth, work_score,
-				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
+		if (best_score > start_alpha && m->value())
+			tti.store(hash, flag, depth, work_score, *m);
+		else if (tt_move.has_value())
+			tti.store(hash, flag, depth, work_score, tt_move.value());
+		else
+			tti.store(hash, flag, depth, work_score);
 	}
 
 	return best_score;
