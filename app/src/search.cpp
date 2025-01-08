@@ -291,7 +291,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	int       start_alpha = alpha;
+	const int start_alpha = alpha;
 	const int csd         = max_depth - depth;
 
 	// TT //
