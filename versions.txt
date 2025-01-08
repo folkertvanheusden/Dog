@@ -8,6 +8,37 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+TTprobeFunc2
+	Score of Dog-67c2a3e-TTprobeFunc2-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 139 - 228 - 226  [0.425] 593
+	Elo difference: -52.5 +/- 22.1, LOS: 0.0 %, DrawRatio: 38.1 %
+	SPRT: llr -4.61 (-100.3%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+Temergency
+	Score of Dog-feb1c09-Temergency-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 463 - 530 - 739  [0.481] 1732
+	Elo difference: -13.4 +/- 12.4, LOS: 1.7 %, DrawRatio: 42.7 %
+	SPRT: llr -4.62 (-100.5%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+keepttmove
+	Score of Dog-4f7b210-keepttmove-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 1619 - 1631 - 2381  [0.499] 5631
+	Elo difference: -0.7 +/- 6.9, LOS: 41.7 %, DrawRatio: 42.3 %
+	SPRT: llr -4.64 (-101.0%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+keepttmove
+	334eaa6: -2.7
+
+ttPVco
+	Score of Dog-da42a73-ttPVco-LCb6c9d04 vs Dog-a53db4e-master-LCd4c7e13: 1138 - 1168 - 1818  [0.496] 4124
+	Elo difference: -2.5 +/- 7.9, LOS: 26.6 %, DrawRatio: 44.1 %
+	SPRT: llr -4.6 (-100.1%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+insufmat
+	Score of Dog-394bb62-insufmat-LCd4c7e13 vs Dog-a53db4e-master-LCd4c7e13: 393 - 461 - 667  [0.478] 1521
+	...      Dog-394bb62-insufmat-LCd4c7e13 playing White: 227 - 195 - 340  [0.521] 762
+	...      Dog-394bb62-insufmat-LCd4c7e13 playing Black: 166 - 266 - 327  [0.434] 759
+	...      White vs Black: 493 - 361 - 667  [0.543] 1521
+	Elo difference: -15.5 +/- 13.1, LOS: 1.0 %, DrawRatio: 43.9 %
+	SPRT: llr -4.62 (-100.4%), lbound -4.6, ubound 4.6 - H0 was accepted
+
 noOppTime
 	Rank Name                              Elo    +    - games score oppo. draws 
 	   1 Stash-18.0                       2252   22   22   538   53%  2233   25% 

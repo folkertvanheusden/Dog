@@ -293,6 +293,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	int  start_alpha = alpha;
 	bool is_pv       = alpha != beta -1;
+	int csd         = max_depth - depth;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
@@ -305,12 +306,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
-		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			sp.cs.data.tt_invalid++;
-			tt_move.reset();  // move stored in TT is not valid - TT-collision
-		}
-		else if (te.value().data_._data.depth >= depth && !is_pv) {
-			int csd        = max_depth - depth;
+		if (te.value().data_._data.depth >= depth) {
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
@@ -319,15 +315,20 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
-				if (tt_move.has_value()) {
-					*m = tt_move.value();  // move in TT is valid
+				*m = libchess::Move(0);
+
+				if (is_root_position) {
+					if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false)
+						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+					else
+						*m = tt_move.value();  // move in TT is valid
 					return work_score;
 				}
 
-				if (!is_root_position) {  // no move, but score is valid
-					*m = libchess::Move(0);
-					return work_score;
-				}
+				if (tt_move.has_value())
+					*m = tt_move.value();  // not used directly, only for move ordening
+
+				return work_score;
 			}
 		}
 	}
@@ -351,7 +352,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp.cs.data.tt_store++;
 
 				int score      = syzygy_score.value();
-				int csd        = max_depth - depth;
 				int work_score = eval_to_tt(score, csd);
 				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
 				return score;
@@ -501,7 +501,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + (max_depth - depth);
+			best_score = -10000 + csd;
 		else
 			best_score = 0;
 	}
@@ -515,11 +515,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		int csd        = max_depth - depth;
 		int work_score = eval_to_tt(best_score, csd);
 
-		tti.store(hash, flag, depth, work_score,
-				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
+		if (best_score > start_alpha && m->value())
+			tti.store(hash, flag, depth, work_score, *m);
+		else if (tt_move.has_value())
+			tti.store(hash, flag, depth, work_score, tt_move.value());
+		else
+			tti.store(hash, flag, depth, work_score);
 	}
 
 	return best_score;
@@ -556,21 +559,6 @@ void timer(const int think_time, end_t *const ei)
 #endif
 }
 
-// as fast as possible
-std::optional<libchess::Move> least_effort_quick_pick(const libchess::Position & pos)
-{
-	uint64_t       hash        = pos.hash();
-	std::optional<tt_entry> te = tti.lookup(hash);
-
-	if (te.has_value()) {
-		auto tt_move = libchess::Move(te.value().data_._data.m);
-		if (pos.is_legal_move(tt_move))
-			return tt_move;
-	}
-
-	return { };
-}
-
 double calculate_EBF(const std::vector<uint64_t> & node_counts)
 {
         size_t n = node_counts.size();
@@ -581,15 +569,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 {
 	uint64_t t_offset = esp_timer_get_time();
 
-	constexpr uint64_t min_search_time = 45;  // need at least this number of milliseconds to do a search
-	constexpr uint64_t critical_min_search_time = 5;
-
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
 	if (sp.is_t2 == false) {
-		if (search_time >= min_search_time) {
+		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
@@ -606,7 +591,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	auto move_list = pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
-	if (move_list.size() > 1 && (search_time >= min_search_time || search_time == -1)) {
+	if (move_list.size() > 1) {
 		int16_t alpha     = -32767;
 		int16_t beta      =  32767;
 
@@ -768,16 +753,10 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #endif
 	}
 	else {
-		// at least some time? then check tt for something sane and
-		// do an evaluation to return a score. if not: return first
-		// move in the move-list.
-		if (search_time >= critical_min_search_time) {
-			auto better_move = least_effort_quick_pick(pos);
-			if (better_move.has_value())
-				best_move = better_move.value();
-
-			best_score = eval(pos, sp.parameters);
-		}
+#if !defined(__ANDROID__)
+		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
+#endif
+		best_score = eval(pos, sp.parameters);
 	}
 
 	if (!sp.is_t2) {
