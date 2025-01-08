@@ -305,11 +305,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
-		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			sp.cs.data.tt_invalid++;
-			tt_move.reset();  // move stored in TT is not valid - TT-collision
-		}
-		else if (te.value().data_._data.depth >= depth) {
+		if (te.value().data_._data.depth >= depth) {
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
@@ -318,15 +314,17 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
-				if (tt_move.has_value()) {
-					*m = tt_move.value();  // move in TT is valid
+				if (is_root_position) {
+					if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false)
+						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+					else
+						*m = tt_move.value();  // move in TT is valid
 					return work_score;
 				}
 
-				if (!is_root_position) {  // no move, but score is valid
-					*m = libchess::Move(0);
-					return work_score;
-				}
+				*m = libchess::Move(0);
+
+				return work_score;
 			}
 		}
 	}
