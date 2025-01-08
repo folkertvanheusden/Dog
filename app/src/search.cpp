@@ -291,8 +291,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	int start_alpha = alpha;
-	int csd         = max_depth - depth;
+	const int start_alpha = alpha;
+	const int csd         = max_depth - depth;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
