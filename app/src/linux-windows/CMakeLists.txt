@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 #set(CMAKE_BUILD_TYPE Debug)
 
+SET(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+
 if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 	MESSAGE("Release mode with debug info")
 	set(MY_DEBUG 1)
