@@ -8,15 +8,20 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
-TTprobeFunc2
-	Score of Dog-67c2a3e-TTprobeFunc2-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 139 - 228 - 226  [0.425] 593
-	Elo difference: -52.5 +/- 22.1, LOS: 0.0 %, DrawRatio: 38.1 %
-	SPRT: llr -4.61 (-100.3%), lbound -4.6, ubound 4.6 - H0 was accepted
+ttNoLegalChk - 548761d is ttNoLegalChk!!
+	Score of Dog-548761d-master-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 2292 - 2090 - 3103  [0.513] 7485
+	Elo difference: 9.4 +/- 6.0, LOS: 99.9 %, DrawRatio: 41.5 %
+	SPRT: llr 4.64 (101.0%), lbound -4.6, ubound 4.6 - H1 was accepted
 
 Temergency
 	Score of Dog-feb1c09-Temergency-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 463 - 530 - 739  [0.481] 1732
 	Elo difference: -13.4 +/- 12.4, LOS: 1.7 %, DrawRatio: 42.7 %
 	SPRT: llr -4.62 (-100.5%), lbound -4.6, ubound 4.6 - H0 was accepted
+
+TTprobeFunc2
+	Score of Dog-67c2a3e-TTprobeFunc2-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 139 - 228 - 226  [0.425] 593
+	Elo difference: -52.5 +/- 22.1, LOS: 0.0 %, DrawRatio: 38.1 %
+	SPRT: llr -4.61 (-100.3%), lbound -4.6, ubound 4.6 - H0 was accepted
 
 keepttmove
 	Score of Dog-4f7b210-keepttmove-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 1619 - 1631 - 2381  [0.499] 5631
