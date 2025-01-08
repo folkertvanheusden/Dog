@@ -314,6 +314,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
+				*m = libchess::Move(0);
+
 				if (is_root_position) {
 					if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false)
 						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
@@ -322,7 +324,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 					return work_score;
 				}
 
-				*m = libchess::Move(0);
+				if (tt_move.has_value())
+					*m = tt_move.value();  // not used directly, only for move ordening
 
 				return work_score;
 			}
