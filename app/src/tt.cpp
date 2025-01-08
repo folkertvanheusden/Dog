@@ -94,7 +94,12 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n._data.score = int16_t(score);
 	n._data.depth = uint8_t(d);
 	n._data.flags = f;
-	n._data.m     = m.value();
+
+	tt_entry & cur = entries[index];
+	if (m.value() == 0 && (cur.hash ^ cur.data_.data) == hash)
+		n._data.m = cur.data_._data.m;
+	else
+		n._data.m = m.value();
 
 	e->hash       = hash ^ n.data;
 	e->data_.data = n.data;
