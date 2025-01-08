@@ -291,7 +291,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	int start_alpha       = alpha;
+	int start_alpha = alpha;
+	int csd         = max_depth - depth;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
@@ -309,7 +310,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			tt_move.reset();  // move stored in TT is not valid - TT-collision
 		}
 		else if (te.value().data_._data.depth >= depth) {
-			int csd        = max_depth - depth;
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
@@ -350,7 +350,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp.cs.data.tt_store++;
 
 				int score      = syzygy_score.value();
-				int csd        = max_depth - depth;
 				int work_score = eval_to_tt(score, csd);
 				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
 				return score;
@@ -500,7 +499,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + (max_depth - depth);
+			best_score = -10000 + csd;
 		else
 			best_score = 0;
 	}
@@ -514,7 +513,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		int csd        = max_depth - depth;
 		int work_score = eval_to_tt(best_score, csd);
 
 		tti.store(hash, flag, depth, work_score,
