@@ -291,8 +291,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	const int start_alpha = alpha;
-	const int csd         = max_depth - depth;
+	const int  start_alpha = alpha;
+	const int  csd         = max_depth - depth;
+	const bool is_pv       = alpha != beta -1;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
@@ -305,7 +306,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
-		if (te.value().data_._data.depth >= depth) {
+		if (te.value().data_._data.depth >= depth && !is_pv) {
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
