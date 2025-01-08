@@ -291,7 +291,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	int start_alpha       = alpha;
+	int  start_alpha = alpha;
+	bool is_pv       = alpha != beta -1;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
@@ -308,7 +309,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			sp.cs.data.tt_invalid++;
 			tt_move.reset();  // move stored in TT is not valid - TT-collision
 		}
-		else if (te.value().data_._data.depth >= depth) {
+		else if (te.value().data_._data.depth >= depth && !is_pv) {
 			int csd        = max_depth - depth;
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
@@ -605,7 +606,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	auto move_list = pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
-	if (move_list.size() > 1 && search_time >= min_search_time) {
+	if (move_list.size() > 1 && (search_time >= min_search_time || search_time == -1)) {
 		int16_t alpha     = -32767;
 		int16_t beta      =  32767;
 
