@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+Temergency
+	Score of Dog-feb1c09-Temergency-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 463 - 530 - 739  [0.481] 1732
+	Elo difference: -13.4 +/- 12.4, LOS: 1.7 %, DrawRatio: 42.7 %
+	SPRT: llr -4.62 (-100.5%), lbound -4.6, ubound 4.6 - H0 was accepted
+
 keepttmove
 	Score of Dog-4f7b210-keepttmove-LCd4c7e13 vs Dog-ffb8dc5-master-LCd4c7e13: 1619 - 1631 - 2381  [0.499] 5631
 	Elo difference: -0.7 +/- 6.9, LOS: 41.7 %, DrawRatio: 42.3 %
