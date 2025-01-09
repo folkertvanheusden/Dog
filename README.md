@@ -25,6 +25,10 @@ To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14):
 	cmake ..
 	make
 
+RedHat users can use:
+
+    rpmbuild -ba Dog.spec
+
 To build it for windows (using mingw-w64):
 
 	cd app/src/linux-windows
