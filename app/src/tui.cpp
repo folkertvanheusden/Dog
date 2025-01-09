@@ -387,6 +387,7 @@ static void help()
 	my_printf("trace   on/off\n");
 	my_printf("colors  on/off\n");
 	my_printf("perft   run \"perft\" for the given depth\n");
+	my_printf("...or enter a move (SAN/LAN)\n");
 }
 
 void tui()
