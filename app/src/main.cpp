@@ -666,6 +666,7 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
 			}
 
+			chess_stats cs;
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
 				reset_search_statistics();
@@ -679,7 +680,6 @@ void main_task()
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				chess_stats cs;
 				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 				stop_blink(led_green_timer, &led_green);
@@ -691,6 +691,8 @@ void main_task()
 			}
 
 			printf("\nFinished.\n");
+
+			emit_statistics(cs, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -809,6 +811,9 @@ void main_task()
 			my_trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 			set_new_ponder_position(true);
 			positiont1.unmake_move();
+
+			if (positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS)
+				emit_statistics(global_cs, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)

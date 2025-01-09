@@ -565,6 +565,16 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
+void emit_statistics(const chess_stats & counts, const std::string & header)
+{
+	printf("# * %s *\n", header.c_str());
+	printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
+	printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
+	printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
+	printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
+	printf("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
+}
+
 std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs)
 {
 	uint64_t t_offset = esp_timer_get_time();
@@ -743,12 +753,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #if !defined(__ANDROID__)
 		if (!sp.is_t2) {
 			auto counts = calculate_search_statistics();
-			printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
-			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
-			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
-			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
 			cs.add(counts);
-			printf("# avg a/b distance: %.2f/%.2f\n", cs.data.alpha_distance / double(cs.data.n_alpha_distances), cs.data.beta_distance / double(cs.data.n_beta_distances));
+			emit_statistics(counts, "move statistics");
 		}
 #endif
 	}
