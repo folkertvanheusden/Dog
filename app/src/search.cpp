@@ -236,6 +236,9 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 				alpha = score;
 			}
 		}
+
+		if (n_played >= 3)
+			break;
 	}
 
 	if (n_played == 0) {
@@ -570,7 +573,7 @@ void emit_statistics(const chess_stats & counts, const std::string & header)
 	printf("# * %s *\n", header.c_str());
 	printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
 	printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
-	printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
+	printf("# avg bco index: %.2f, qs bco index: %.2f, qsearlystop: %.2f%%\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes), counts.data.n_qs_early_stop * 100. / counts.data.qnodes);
 	printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
 	printf("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
 }
