@@ -259,7 +259,7 @@ void set_thread_name(std::string name)
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.7", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.8", "Folkert van Heusden", std::cout, is};
 
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;

@@ -31,7 +31,7 @@ else()
 	MESSAGE("without ASAN")
 endif()
 
-set(DOG_VERSION 2.7)
+set(DOG_VERSION 2.8)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG}")
 
 set_source_files_properties(../fathom/src/tbprobe.c PROPERTIES LANGUAGE CXX)
