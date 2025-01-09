@@ -7,6 +7,10 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+[native build: -march=native -mtune=native]
+	Score of Dog-07ab3f2-master-LCd4c7e13-native vs Dog-4623fd4-qsearlystop-LCd4c7e13: 1153 - 1008 - 1701  [0.519] 3862
+	Elo difference: 13.1 +/- 8.2, LOS: 99.9 %, DrawRatio: 44.0 %
+	SPRT: llr 4.61 (100.3%), lbound -4.6, ubound 4.6 - H1 was accepted
 
 qsearlystop
 	Score of Dog-4623fd4-qsearlystop-LCd4c7e13 vs Dog-b25fff1-v2.8beta-LCd4c7e13: 2344 - 2314 - 3663  [0.502] 8321
