@@ -56,6 +56,7 @@ add_executable(
   ../max.cpp
   ../max-ascii.cpp
   ../psq.cpp
+  ../san.cpp
   ../search.cpp
   ../stats.cpp
   ../str.cpp

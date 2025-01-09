@@ -13,6 +13,7 @@
 #include "main.h"
 #include "main.h"
 #include "max-ascii.h"
+#include "san.h"
 #include "search.h"
 #include "str.h"
 #include "syzygy.h"
@@ -517,8 +518,11 @@ void tui()
 				print_max_ascii();
 			else {
 				bool valid = false;
-				auto move  = libchess::Move::from(parts[0]);
-				if (move.has_value()) {
+				std::optional<libchess::Move> move;
+				move = libchess::Move::from(parts[0]);
+				if (move.has_value() == false)
+					move = SAN_to_move(parts[0], positiont1);
+				if (move.has_value() == true) {
 					if (positiont1.is_legal_move(move.value())) {
 						positiont1.make_move(move.value());
 						moves_played.push_back(move.value());
