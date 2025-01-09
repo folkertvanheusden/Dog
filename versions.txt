@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+qsearlystop
+	Score of Dog-4623fd4-qsearlystop-LCd4c7e13 vs Dog-b25fff1-v2.8beta-LCd4c7e13: 2344 - 2314 - 3663  [0.502] 8321
+	Elo difference: 1.3 +/- 5.6, LOS: 67.0 %, DrawRatio: 44.0 %
+	SPRT: llr -4.61 (-100.4%), lbound -4.6, ubound 4.6 - H0 was accepted
+
 ttPVco
 	Elo   | 6.73 +- 4.87 (95%)
 	SPRT  | 8.0+0.08s Threads=1 Hash=8MB
