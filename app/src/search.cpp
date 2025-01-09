@@ -321,10 +321,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				*m = libchess::Move(0);
 
 				if (is_root_position) {
-					if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false)
-						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
-					else
-						*m = tt_move.value();  // move in TT is valid
+					if (tt_move.has_value()) {
+						if (pos.is_legal_move(tt_move.value()) == false)
+							sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+						else
+							*m = tt_move.value();  // move in TT is valid
+					}
 					return work_score;
 				}
 
