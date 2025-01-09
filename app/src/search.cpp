@@ -237,7 +237,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			}
 		}
 
-		if (n_played >= 3)
+		if (n_played >= 3 && best_score >= 9800)
 			break;
 	}
 
