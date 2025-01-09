@@ -19,10 +19,11 @@ void chess_stats::reset()
 
 void chess_stats::add(const chess_stats & source)
 {
-	this->data.nodes          += source.data.nodes;
-	this->data.qnodes         += source.data.qnodes;
-	this->data.n_draws        += source.data.n_draws;
-	this->data.n_standing_pat += source.data.n_standing_pat;
+	this->data.nodes           += source.data.nodes;
+	this->data.qnodes          += source.data.qnodes;
+	this->data.n_draws         += source.data.n_draws;
+	this->data.n_standing_pat  += source.data.n_standing_pat;
+	this->data.n_qs_early_stop += source.data.n_qs_early_stop;
 
         this->data.tt_query += source.data.tt_query;
         this->data.tt_hit   += source.data.tt_hit;
