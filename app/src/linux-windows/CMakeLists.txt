@@ -92,3 +92,6 @@ endif()
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
+
+include(GNUInstallDirs)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION /usr/games)
