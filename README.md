@@ -25,7 +25,13 @@ To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14):
 	cmake ..
 	make
 
-RedHat users can use:
+Debian/Ubuntu users can then also run:
+
+    cpack
+
+to get an installable .deb package-file.
+
+RedHat users can use the following instead (from the root of the project):
 
     rpmbuild -ba Dog.spec
 
