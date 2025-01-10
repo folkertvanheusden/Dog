@@ -394,7 +394,6 @@ void test_mate_finder(const std::string & filename, const int search_time)
 	size_t      n           = positions.size();
 	printf("Loaded %zu tests\n", n);
 
-#pragma omp parallel for reduction(+ : mates_found)
 	for(size_t i=0; i<n; i++) {
 		chess_stats   cs;
 		int16_t       history[history_size] { };
@@ -406,7 +405,6 @@ void test_mate_finder(const std::string & filename, const int search_time)
 		delete sp.stop;
 
 		bool hit = abs(rc.second) >= 9800;
-
 		mates_found += hit;
 	}
 
