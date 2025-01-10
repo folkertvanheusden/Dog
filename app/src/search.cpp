@@ -182,7 +182,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t & sp, const int thread_nr)
+int qs(libchess::Position & pos, int alpha, const int beta, const int qsdepth, search_pars_t & sp, const int thread_nr)
 {
 	if (sp.stop->flag)
 		return 0;
@@ -291,7 +291,7 @@ void update_history(search_pars_t & sp, const int index, const int bonus)
 	sp.history[index]  += final_value;
 }
 
-int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, const int thread_nr)
+int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, const int thread_nr)
 {
 	if (sp.stop->flag)
 		return 0;
