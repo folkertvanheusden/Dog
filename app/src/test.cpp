@@ -389,20 +389,27 @@ void test_mate_finder(const std::string & filename, const int search_time)
 {
 	init_lmr();
 
-	int         mates_found = 0, checked = 0;
-	chess_stats cs;
+	int         mates_found = 0;
 	auto        positions   = load_epd(filename);
-	for(auto & p: positions) {
-		clear_flag(sp1.stop);
-		memset(sp1.history, 0x00, history_malloc_size);
+	size_t      n           = positions.size();
+	printf("Loaded %zu tests\n", n);
 
-		auto rc = search_it(p.first, search_time, false, sp1, -1, 0, { }, cs, false);
+#pragma omp parallel for reduction(+ : mates_found)
+	for(size_t i=0; i<n; i++) {
+		chess_stats   cs;
+		int16_t       history[history_size] { };
+		search_pars_t sp { default_parameters, false, history, cs };
+		sp.stop       = new end_t();
+		sp.stop->flag = false;
 
-		checked++;
-		mates_found += abs(rc.second) >= 9800;
-		printf("%d: %d\n", checked, mates_found);
+		auto rc  = search_it(positions.at(i).first, search_time, false, sp, -1, 0, { }, cs, false);
+		delete sp.stop;
+
+		bool hit = abs(rc.second) >= 9800;
+
+		mates_found += hit;
 	}
 
-	printf("%.2f\n", mates_found * 100. / checked);
+	printf("%d %.2f %zu\n", mates_found, mates_found * 100. / n, n);
 }
 #endif
