@@ -1,0 +1,17 @@
+0.4b	% ok: 3.21, total processed: 6533, total queued: 6554, errors: 21, took: 101.765
+v0.5	% ok: 2.46, total processed: 6553, total queued: 6554, errors: 1, took: 105.550
+v0.6	% ok: 2.79, total processed: 6553, total queued: 6554, errors: 1, took: 106.091
+v0.7	% ok: 2.83, total processed: 6544, total queued: 6554, errors: 10, took: 198.341
+v0.8	% ok: 2.98, total processed: 6542, total queued: 6554, errors: 12, took: 237.788
+v0.9	% ok: 2.64, total processed: 6541, total queued: 6554, errors: 13, took: 74.651
+v1.0	% ok: 2.77, total processed: 6543, total queued: 6554, errors: 11, took: 74.286
+v1.1	% ok: 2.66, total processed: 6542, total queued: 6554, errors: 12, took: 73.647
+v2.1	% ok: 4.89, total processed: 6544, total queued: 6554, errors: 10, took: 70.640
+v2.2	% ok: 4.98, total processed: 6544, total queued: 6554, errors: 10, took: 70.898
+v2.3	% ok: 6.11, total processed: 6544, total queued: 6554, errors: 10, took: 103.989
+v2.4	% ok: 6.30, total processed: 6543, total queued: 6554, errors: 11, took: 104.525
+v2.5	% ok: 10.12, total processed: 6543, total queued: 6554, errors: 11, took: 104.522
+v2.5b	% ok: 10.65, total processed: 6543, total queued: 6554, errors: 11, took: 104.411
+v2.6c	% ok: 8.27, total processed: 6545, total queued: 6554, errors: 9, took: 103.908
+v2.7	% ok: 8.20, total processed: 6545, total queued: 6554, errors: 9, took: 103.407
+v2.8	% ok: 8.13, total processed: 6545, total queued: 6554, errors: 9, took: 103.303
