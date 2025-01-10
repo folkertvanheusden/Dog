@@ -430,6 +430,8 @@ void tests()
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
+
+		printf("Ok\n");
 	}
 
 	// san
