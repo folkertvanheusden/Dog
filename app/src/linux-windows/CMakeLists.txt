@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 #set(CMAKE_BUILD_TYPE Debug)
 
+SET(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+
 if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 	MESSAGE("Release mode with debug info")
 	set(MY_DEBUG 1)
@@ -29,8 +31,12 @@ else()
 	MESSAGE("without ASAN")
 endif()
 
-set(DOG_VERSION 2.7)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG}")
+set(PROJECT_VERSION_MAJOR 2)
+set(PROJECT_VERSION_MINOR 9)
+set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG}")
+
+set_source_files_properties(../fathom/src/tbprobe.c PROPERTIES LANGUAGE CXX)
 
 if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 	MESSAGE("WITH LTO")
@@ -50,6 +56,7 @@ add_executable(
   ../max.cpp
   ../max-ascii.cpp
   ../psq.cpp
+  ../san.cpp
   ../search.cpp
   ../stats.cpp
   ../str.cpp
@@ -88,3 +95,16 @@ endif()
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
+
+include(GNUInstallDirs)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION /usr/games)
+
+SET(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_CONTACT "mail@vanheusden.comm")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Folkert van Heusden")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+set(CPACK_DEBIAN_PACKAGE_VERSION ${DOG_VERSION})
+set(CPACK_DEBIAN_PACKAGE_RELEASE ${DOG_VERSION})
+set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+set(CPACK_DEBIAN_COMPRESSION_TYPE zstd)
+INCLUDE(CPack)

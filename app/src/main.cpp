@@ -259,7 +259,7 @@ void set_thread_name(std::string name)
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v2.7", "Folkert van Heusden", std::cout, is};
+libchess::UCIService uci_service{"Dog v2.8", "Folkert van Heusden", std::cout, is};
 
 auto thread_count_handler = [](const int value)  {
 	thread_count = value;
@@ -451,7 +451,7 @@ void ponder_thread(void *p)
 					chess_stats cs;
 					libchess::Position p(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs);
+					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs, false);
                                 }));
 			}
 
@@ -462,7 +462,7 @@ void ponder_thread(void *p)
 #else
 			start_blink(led_blue_timer);
 			chess_stats cs;
-			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs);
+			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs, false);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			my_trace("# Pondering finished\n");
@@ -666,6 +666,7 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
 			}
 
+			chess_stats cs;
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
 				reset_search_statistics();
@@ -679,8 +680,7 @@ void main_task()
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				chess_stats cs;
-				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
+				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs, true);
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -691,6 +691,8 @@ void main_task()
 			}
 
 			printf("\nFinished.\n");
+
+			emit_statistics(cs, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -790,7 +792,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs, true);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -809,6 +811,9 @@ void main_task()
 			my_trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 			set_new_ponder_position(true);
 			positiont1.unmake_move();
+
+			if (positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS)
+				emit_statistics(global_cs, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -880,7 +885,7 @@ void hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	my_printf("# Version " VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
 	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }
@@ -897,7 +902,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs);
+	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs, true);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
@@ -921,6 +926,7 @@ void help()
 	printf("-T x  tune using epd file\n");
 	printf("-R x  my_trace to file\n");
 	printf("-U    run unit tests\n");
+	printf("-Q x:y:z run test type x againt file y with search time z (ms), with x is \"matefinder\"\n");
 }
 
 int main(int argc, char *argv[])
@@ -939,7 +945,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:UR:H:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:UR:H:Q:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -948,6 +954,17 @@ int main(int argc, char *argv[])
 		if (c == 'U') {
 			run_tests();
 			return 1;
+		}
+
+		if (c == 'Q') {
+			auto parts = split(optarg, ":");
+			if (parts[0] == "matefinder")
+				test_mate_finder(parts[1], std::stoi(parts[2]));
+			else {
+				printf("Test type %s not known\n", parts[0].c_str());
+				return 1;
+			}
+			return 0;
 		}
 
 		if (c == 't')

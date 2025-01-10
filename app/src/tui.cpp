@@ -13,6 +13,7 @@
 #include "main.h"
 #include "main.h"
 #include "max-ascii.h"
+#include "san.h"
 #include "search.h"
 #include "str.h"
 #include "syzygy.h"
@@ -386,6 +387,7 @@ static void help()
 	my_printf("trace   on/off\n");
 	my_printf("colors  on/off\n");
 	my_printf("perft   run \"perft\" for the given depth\n");
+	my_printf("...or enter a move (SAN/LAN)\n");
 }
 
 void tui()
@@ -517,8 +519,11 @@ void tui()
 				print_max_ascii();
 			else {
 				bool valid = false;
-				auto move  = libchess::Move::from(parts[0]);
-				if (move.has_value()) {
+				std::optional<libchess::Move> move;
+				move = libchess::Move::from(parts[0]);
+				if (move.has_value() == false)
+					move = SAN_to_move(parts[0], positiont1);
+				if (move.has_value() == true) {
 					if (positiont1.is_legal_move(move.value())) {
 						positiont1.make_move(move.value());
 						moves_played.push_back(move.value());
@@ -555,7 +560,7 @@ void tui()
 				int            best_score { 0 };
 				chess_stats    cs;
 				clear_flag(sp1.stop);
-				std::tie(best_move, best_score) = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(positiont1, best_move, colors);
 

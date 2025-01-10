@@ -277,6 +277,9 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 				alpha = score;
 			}
 		}
+
+		if (n_played >= 3 && best_score >= 9800)
+			break;
 	}
 
 	if (n_played == 0) {
@@ -332,7 +335,9 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		return 0;
 	}
 
-	int start_alpha       = alpha;
+	const int  start_alpha = alpha;
+	const int  csd         = max_depth - depth;
+	const bool is_pv       = alpha != beta -1;
 
 	// TT //
 	std::optional<libchess::Move> tt_move { };
@@ -345,12 +350,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		if (te.value().data_._data.m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().data_._data.m);
 
-		if (tt_move.has_value() && pos.is_legal_move(tt_move.value()) == false) {
-			sp.cs.data.tt_invalid++;
-			tt_move.reset();  // move stored in TT is not valid - TT-collision
-		}
-		else if (te.value().data_._data.depth >= depth) {
-			int csd        = max_depth - depth;
+		if (te.value().data_._data.depth >= depth && !is_pv) {
 			int score      = te.value().data_._data.score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      = te.value().data_._data.flags;
@@ -359,15 +359,22 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
-				if (tt_move.has_value()) {
-					*m = tt_move.value();  // move in TT is valid
+				*m = libchess::Move(0);
+
+				if (is_root_position) {
+					if (tt_move.has_value()) {
+						if (pos.is_legal_move(tt_move.value()) == false)
+							sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+						else
+							*m = tt_move.value();  // move in TT is valid
+					}
 					return work_score;
 				}
 
-				if (!is_root_position) {  // no move, but score is valid
-					*m = libchess::Move(0);
-					return work_score;
-				}
+				if (tt_move.has_value())
+					*m = tt_move.value();  // not used directly, only for move ordening
+
+				return work_score;
 			}
 		}
 	}
@@ -391,7 +398,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 				sp.cs.data.tt_store++;
 
 				int score      = syzygy_score.value();
-				int csd        = max_depth - depth;
 				int work_score = eval_to_tt(score, csd);
 				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
 				return score;
@@ -541,7 +547,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + (max_depth - depth);
+			best_score = -10000 + csd;
 		else
 			best_score = 0;
 	}
@@ -555,11 +561,14 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		int csd        = max_depth - depth;
 		int work_score = eval_to_tt(best_score, csd);
 
-		tti.store(hash, flag, depth, work_score,
-				(best_score > start_alpha && m->value()) || tt_move.has_value() == false ? *m : tt_move.value());
+		if (best_score > start_alpha && m->value())
+			tti.store(hash, flag, depth, work_score, *m);
+		else if (tt_move.has_value())
+			tti.store(hash, flag, depth, work_score, tt_move.value());
+		else
+			tti.store(hash, flag, depth, work_score);
 	}
 
 	return best_score;
@@ -596,40 +605,32 @@ void timer(const int think_time, end_t *const ei)
 #endif
 }
 
-// as fast as possible
-std::optional<libchess::Move> least_effort_quick_pick(const libchess::Position & pos)
-{
-	uint64_t       hash        = pos.hash();
-	std::optional<tt_entry> te = tti.lookup(hash);
-
-	if (te.has_value()) {
-		auto tt_move = libchess::Move(te.value().data_._data.m);
-		if (pos.is_legal_move(tt_move))
-			return tt_move;
-	}
-
-	return { };
-}
-
 double calculate_EBF(const std::vector<uint64_t> & node_counts)
 {
         size_t n = node_counts.size();
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs)
+void emit_statistics(const chess_stats & counts, const std::string & header)
+{
+	my_trace("# * %s *\n", header.c_str());
+	my_trace("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
+	my_trace("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
+	my_trace("# avg bco index: %.2f, qs bco index: %.2f, qsearlystop: %.2f%%\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes), counts.data.n_qs_early_stop * 100. / counts.data.qnodes);
+	my_trace("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
+	my_trace("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
+}
+
+std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
-
-	constexpr uint64_t min_search_time = 45;  // need at least this number of milliseconds to do a search
-	constexpr uint64_t critical_min_search_time = 5;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
 	if (sp.is_t2 == false) {
-		if (search_time >= min_search_time) {
+		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
@@ -646,7 +647,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	auto move_list = pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
-	if (move_list.size() > 1 && search_time >= min_search_time) {
+	if (move_list.size() > 1) {
 		int16_t alpha     = -32767;
 		int16_t beta      =  32767;
 
@@ -675,11 +676,11 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 			if (sp.stop->flag) {
 #if !defined(__ANDROID__)
-				if (sp.is_t2 == false)
+				if (sp.is_t2 == false && output)
 					printf("# stop flag set\n");
 #endif
-				if (sp.is_t2 == false)
-					printf("info depth %d score cp %d\n", max_depth, score);
+				if (sp.is_t2 == false && output)
+					printf("info depth %d score cp %d\n", max_depth, best_score);
 				break;
 			}
 
@@ -757,25 +758,28 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 						ebf_str = "ebf " + ebf_str + " ";
 
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
-					if (abs(score) > 9800) {
-						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
-								max_depth, mate_moves,
-								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.data.syzygy_query_hits, pv_str.c_str());
-					}
-					else {
-						printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
-								max_depth, score,
-								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.data.syzygy_query_hits, pv_str.c_str());
+					if (output) {
+						if (abs(score) > 9800) {
+							int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
+							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+									max_depth, mate_moves,
+									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+									counts.data.syzygy_query_hits, pv_str.c_str());
+						}
+						else {
+							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+									max_depth, score,
+									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+									counts.data.syzygy_query_hits, pv_str.c_str());
+						}
 					}
 				}
 
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
 				    (thought_ms >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
-					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
+					if (output)
+						printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
 					break;
 				}
@@ -787,7 +791,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 					break;
 
 				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
-					printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+					if (output)
+						printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
 
@@ -798,26 +803,18 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #if !defined(__ANDROID__)
 		if (!sp.is_t2) {
 			auto counts = calculate_search_statistics();
-			printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
-			printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
-			printf("# avg bco index: %.2f, qs bco index: %.2f\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes));
-			printf("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
 			cs.add(counts);
-			printf("# avg a/b distance: %.2f/%.2f\n", cs.data.alpha_distance / double(cs.data.n_alpha_distances), cs.data.beta_distance / double(cs.data.n_beta_distances));
+			if (output)
+				emit_statistics(counts, "move statistics");
 		}
 #endif
 	}
 	else {
-		// at least some time? then check tt for something sane and
-		// do an evaluation to return a score. if not: return first
-		// move in the move-list.
-		if (search_time >= critical_min_search_time) {
-			auto better_move = least_effort_quick_pick(pos);
-			if (better_move.has_value())
-				best_move = better_move.value();
-
-			best_score = eval(pos, sp.parameters);
-		}
+#if !defined(__ANDROID__)
+		if (output)
+			printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
+#endif
+		best_score = eval(pos, sp.parameters);
 	}
 
 	if (!sp.is_t2) {

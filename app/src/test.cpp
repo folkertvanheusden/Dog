@@ -4,7 +4,9 @@
 
 #include "eval.h"
 #include "main.h"
+#include "san.h"
 #include "search.h"
+#include "str.h"
 
 
 void tests()
@@ -61,7 +63,7 @@ void tests()
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
-		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, cs);
+		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, cs, false);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -428,6 +430,24 @@ void tests()
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
+	}
+
+	// san
+	{
+		printf("SAN parsing test\n");
+
+		std::vector<std::tuple<const std::string, const std::string, const std::string> > tests {
+			{ "7r/3r1p1p/6p1/1p6/2B5/5PP1/1Q5P/1K1k4 b - - 0 38", "bxc4", "7r/3r1p1p/6p1/8/2p5/5PP1/1Q5P/1K1k4 w - - 0 39" },
+			{ "2n1r1n1/1p1k1p2/6pp/R2pP3/3P4/8/5PPP/2R3K1 b - - 0 30", "Nge7", "2n1r3/1p1knp2/6pp/R2pP3/3P4/8/5PPP/2R3K1 w - - 1 31" },
+			{ "8/5p2/1kn1r1n1/1p1pP3/6K1/8/4R3/5R2 b - - 9 60", "Ngxe5+", "8/5p2/1kn1r3/1p1pn3/6K1/8/4R3/5R2 w - - 0 61" },
+			{ "r3k2r/pp1bnpbp/1q3np1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R b KQkq - 5 15", "Ng8", "r3k1nr/pp1bnpbp/1q4p1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R w KQkq - 6 16" },
+		};
+
+		for(auto & test: tests) {
+			libchess::Position pos(std::get<0>(test));
+			pos.make_move(SAN_to_move(std::get<1>(test), pos).value());
+			my_assert(std::get<2>(test) == pos.fen());
+		}
 
 		printf("Ok\n");
 	}
@@ -440,3 +460,61 @@ void run_tests()
 	th->join();
 	delete th;
 }
+
+#if !defined(ESP32)
+std::vector<std::pair<libchess::Position, const std::string> > load_epd(const std::string & filename)
+{
+	std::vector<std::pair<libchess::Position, const std::string> > out;
+
+	FILE *fh = fopen(filename.c_str(), "r");
+	while(!feof(fh)) {
+		char buffer[4096];
+		if (!fgets(buffer, sizeof buffer, fh))
+			break;
+
+		auto parts = split(buffer, " ");
+		std::string fen = parts[0] + " " + parts[1] + " " + parts[2] + " " + parts[3];
+
+		auto check = parts[4];
+		if (check != "bm")
+			continue;
+
+		auto   move = parts[5];
+		size_t sc   = move.find(';');
+		if (sc != std::string::npos)
+			move = move.substr(0, sc);
+
+		out.push_back({ libchess::Position(fen), move });
+	}
+
+	return out;
+}
+
+void test_mate_finder(const std::string & filename, const int search_time)
+{
+	init_lmr();
+
+	int         mates_found = 0;
+	auto        positions   = load_epd(filename);
+	size_t      n           = positions.size();
+	printf("Loaded %zu tests\n", n);
+
+#pragma omp parallel for reduction(+ : mates_found)
+	for(size_t i=0; i<n; i++) {
+		chess_stats   cs;
+		int16_t       history[history_size] { };
+		search_pars_t sp { default_parameters, false, history, cs };
+		sp.stop       = new end_t();
+		sp.stop->flag = false;
+
+		auto rc  = search_it(positions.at(i).first, search_time, false, sp, -1, 0, { }, cs, false);
+		delete sp.stop;
+
+		bool hit = abs(rc.second) >= 9800;
+
+		mates_found += hit;
+	}
+
+	printf("%d %.2f %zu\n", mates_found, mates_found * 100. / n, n);
+}
+#endif
