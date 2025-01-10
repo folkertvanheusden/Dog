@@ -6,6 +6,7 @@
 #include "main.h"
 #include "san.h"
 #include "search.h"
+#include "str.h"
 
 
 void tests()
@@ -354,3 +355,52 @@ void run_tests()
 	th->join();
 	delete th;
 }
+
+#if !defined(ESP32)
+std::vector<std::pair<libchess::Position, const std::string> > load_epd(const std::string & filename)
+{
+	std::vector<std::pair<libchess::Position, const std::string> > out;
+
+	FILE *fh = fopen(filename.c_str(), "r");
+	while(!feof(fh)) {
+		char buffer[4096];
+		if (!fgets(buffer, sizeof buffer, fh))
+			break;
+
+		auto parts = split(buffer, " ");
+		std::string fen = parts[0] + " " + parts[1] + " " + parts[2] + " " + parts[3];
+
+		auto check = parts[4];
+		if (check != "bm")
+			continue;
+
+		auto   move = parts[5];
+		size_t sc   = move.find(';');
+		if (sc != std::string::npos)
+			move = move.substr(0, sc);
+
+		out.push_back({ libchess::Position(fen), move });
+	}
+
+	return out;
+}
+
+void test_mate_finder(const std::string & filename, const int search_time)
+{
+	int         mates_found = 0, checked = 0;
+	chess_stats cs;
+	auto        positions   = load_epd(filename);
+	for(auto & p: positions) {
+		clear_flag(sp1.stop);
+		memset(sp1.history, 0x00, history_malloc_size);
+
+		auto rc = search_it(p.first, search_time, false, sp1, -1, 0, { }, cs);
+
+		checked++;
+		mates_found += abs(rc.second) >= 9800;
+		printf("%d: %d\n", checked, mates_found);
+	}
+
+	printf("%.2f\n", mates_found * 100. / checked);
+}
+#endif

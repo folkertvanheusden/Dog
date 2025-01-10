@@ -926,6 +926,7 @@ void help()
 	printf("-T x  tune using epd file\n");
 	printf("-R x  my_trace to file\n");
 	printf("-U    run unit tests\n");
+	printf("-Q x:y:z run test type x againt file y with search time z (ms), with x is \"matefinder\"\n");
 }
 
 int main(int argc, char *argv[])
@@ -944,7 +945,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:UR:H:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:UR:H:Q:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -953,6 +954,17 @@ int main(int argc, char *argv[])
 		if (c == 'U') {
 			run_tests();
 			return 1;
+		}
+
+		if (c == 'Q') {
+			auto parts = split(optarg, ":");
+			if (parts[0] == "matefinder")
+				test_mate_finder(parts[1], std::stoi(parts[2]));
+			else {
+				printf("Test type %s not known\n", parts[0].c_str());
+				return 1;
+			}
+			return 0;
 		}
 
 		if (c == 't')
