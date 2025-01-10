@@ -1,17 +1,53 @@
 #! /usr/bin/python3
 
+# written by folkert van heusden
+# mit license
+
 import chess
 import chess.engine
+import getopt
 import psutil
+import sys
 import time
 from multiprocessing import Process, Queue
 
-
-epd_file = 'matetrack/matetrack.epd'
-proc = './Dog'
+    
+epd_file = None
+proc = None
 time_limit = 0.5
-
 num_procs = psutil.cpu_count()
+
+def help():
+    print('-f x  epd file to process')
+    print('-e x  chess-program (UCI) to test')
+    print(f'-t x  time limit per move (in seconds, default: {time_limit})')
+    print(f'-T n  number of threads (default: {num_procs})')
+    print('-h    this help')
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'f:e:t:T:h')
+
+except getopt.GetoptError as err:
+    print(err)
+    help()
+    sys.exit(2)
+
+for o, a in opts:
+    if o == '-f':
+        epd_file = a
+    elif o == '-e':
+        proc = a
+    elif o == '-t':
+        time_limit = float(a)
+    elif o == '-T':
+        num_procs = int(a)
+    elif o == '-h':
+        help()
+        sys.exit(0)
+
+if epd_file == None or proc == None:
+    help()
+    sys.exit(1)
 
 def do_it(q_in, q_out):
     engine = chess.engine.SimpleEngine.popen_uci(proc)
@@ -45,6 +81,7 @@ for i in range(num_procs):
     p.start()
     processes.append(p)
 
+start = time.time()
 n_queued = 0
 for line in open(epd_file, 'r').readlines():
     line = line.rstrip('\n')
@@ -74,8 +111,10 @@ while True:
     else:
         errors += 1
 
+end = time.time()
+
 total_n = ok + nok
-print(f'% ok: {ok * 100 / total_n}, total processed: {total_n}, total queued: {n_queued}, errors: {errors}')
+print(f'% ok: {ok * 100 / total_n:.2f}, total processed: {total_n}, total queued: {n_queued}, errors: {errors}, took: {end - start:.3f}')
 
 for p in processes:
     p.join()
