@@ -127,21 +127,62 @@ bool is_check(libchess::Position & pos)
 
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
-	if (pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE).popcount() || 
-		pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
-		return false;
+        int counts[2][6] { };
+        count_board(pos, counts);
 
-	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() &&
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount()) ||
-		(pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() &&
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()))
-		return false;
+        constexpr int white  = libchess::constants::WHITE;
+        constexpr int black  = libchess::constants::BLACK;
 
-	return true;
+        constexpr int pawn   = libchess::constants::PAWN;
+        constexpr int rook   = libchess::constants::ROOK;
+        constexpr int queen  = libchess::constants::QUEEN;
+        constexpr int knight = libchess::constants::KNIGHT;
+        //constexpr int king   = libchess::constants::KING;
+        constexpr int bishop = libchess::constants::BISHOP;
+
+        // A king + any(pawn, rook, queen) is sufficient.
+        if (counts[white][pawn] || counts[black][pawn] ||
+                counts[white][rook] || counts[black][rook] ||
+                counts[white][queen] || counts[black][queen]) {
+                return false;
+        }
+
+        // A king and more than one other type of piece is sufficient (e.g. knight + bishop).
+        if ((counts[white][knight] && counts[white][bishop]) ||
+            (counts[black][knight] && counts[black][bishop])) {
+                return false;
+        }
+
+        // https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
+
+        // A king and two (or more) knights is sufficient
+        int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
+        if (max_n_knights >= 2) {
+                return false;
+        }
+
+        // King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
+        bool r_b_n_p = ((counts[white][rook] || counts[white][bishop] || counts[white][knight] || counts[white][pawn]) && counts[black][knight]) ||
+                       ((counts[black][rook] || counts[black][bishop] || counts[black][knight] || counts[black][pawn]) && counts[white][knight]);
+        if (r_b_n_p) {
+                return false;
+        }
+
+        // King + bishop against king + any(knight, pawn) is sufficient.
+        if ((counts[white][bishop] && (counts[black][knight] || counts[black][pawn])) ||
+            (counts[black][bishop] && (counts[white][knight] || counts[white][pawn]))) {
+                return false;
+        }
+
+        // King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
+        constexpr uint64_t white_squares = 0x55aa55aa55aa55aall;
+        constexpr uint64_t black_squares = 0xaa55aa55aa55aa55ll;
+        libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::BISHOP);
+        if ((piece_bb & black_squares) && (piece_bb & white_squares)) {
+                return false;
+        }
+
+        return true;
 }
 
 libchess::MoveList gen_qs_moves(libchess::Position & pos)

@@ -327,6 +327,111 @@ void tests()
 		printf("Ok\n");
 	}
 
+	// bool is_insufficient_material_draw(const libchess::Position & pos)
+	{
+		printf("is_insufficient_material_draw test\n");
+
+		// start position
+		{
+			libchess::Position p1 { libchess::constants::STARTPOS_FEN };
+			my_assert(is_insufficient_material_draw(p1) == false);
+		}
+
+		// two kings
+		{
+			libchess::Position p1 { "8/8/8/2k5/8/5K2/8/8 w - - 0 1" };
+			my_assert(is_insufficient_material_draw(p1) == true);
+		}
+
+		// A king + any(pawn, rook, queen) is sufficient.
+		{
+			std::vector<std::string> tests { "8/8/5p2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5R2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5Q2/2k5/8/5K2/8/8 w - - 0 1" };
+			for(auto & test: tests) {
+				// printf(" %s\n", test.c_str());
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+
+		// A king and more than one other type of piece is sufficient (e.g. knight + bishop).
+		{
+			libchess::Position p1 { "8/8/5nb1/2k5/8/5K2/8/8 w - - 0 1" };
+			my_assert(is_insufficient_material_draw(p1) == false);
+		}
+
+		// A king and two (or more) knights is sufficient.
+		{
+			libchess::Position p1 { "8/8/5nn1/2k5/8/5K2/8/8 w - - 0 1" };
+			my_assert(is_insufficient_material_draw(p1) == false);
+		}
+
+		// King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
+		{
+			std::vector<std::string> tests { "8/8/5nR1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nB1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nN1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nP1/2k5/8/5K2/8/8 w - - 0 1" };
+			for(auto & test: tests) {
+				// printf(" %s\n", test.c_str());
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+
+		// King + bishop against king + any(knight, pawn) is sufficient.
+		{
+			std::vector<std::string> tests { "8/8/2b5/2k5/5N2/5K2/8/8 w - - 0 1", "8/8/2b5/2k5/5P2/5K2/8/8 w - - 0 1" };
+			for(auto & test: tests) {
+				// printf(" %s\n", test.c_str());
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+
+		// King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
+
+		// tests from https://github.com/toanth/motors/blob/main/gears/src/games/chess.rs#L1564-L1610
+		// insufficient
+		{
+			std::vector<std::string> tests { "8/4k3/8/8/8/8/8/2K5 w - - 0 1",
+				"8/4k3/8/8/8/8/5N2/2K5 w - - 0 1",
+				"8/8/8/6k1/8/2K5/5b2/6b1 w - - 0 1",  // bishops on same color
+				"8/8/3B4/7k/8/8/1K6/6b1 w - - 0 1",
+				"8/6B1/8/6k1/8/2K5/8/6b1 w - - 0 1",
+				"3b3B/2B5/1B1B4/B7/3b4/4b2k/5b2/1K6 w - - 0 1",  // bishops on same color
+				"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/2B5 w - - 0 1"  // bishops on same color
+			};
+			for(auto & test: tests) {
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == true);
+			}
+		}
+		// sufficient
+		{
+			std::vector<std::string> tests { "8/8/4k3/8/8/1K6/8/7R w - - 0 1",
+				"5r2/3R4/4k3/8/8/1K6/8/8 w - - 0 1",
+				"8/8/4k3/8/8/1K6/8/6BB w - - 0 1",
+				"8/8/4B3/8/8/7K/8/6bk w - - 0 1",
+				"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/1B6 w - - 0 1",
+				"8/3k4/8/8/8/8/NNN5/1K6 w - - 0 1"
+			};
+			for(auto & test: tests) {
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+		// sufficient but unreasonable
+		{
+			std::vector<std::string> tests { "6B1/8/8/6k1/8/2K5/8/6b1 w - - 0 1",
+				"8/8/4B3/8/8/7K/8/6bk b - - 0 1",
+				"8/8/4B3/7k/8/8/1K6/6b1 w - - 0 1",
+				"8/3k4/8/8/8/8/1NN5/1K6 w - - 0 1",
+				"8/2nk4/8/8/8/8/1NN5/1K6 w - - 0 1",
+			};
+			for(auto & test: tests) {
+				libchess::Position p1 { test };
+				my_assert(is_insufficient_material_draw(p1) == false);
+			}
+		}
+	}
+
 	// san
 	{
 		printf("SAN parsing test\n");
