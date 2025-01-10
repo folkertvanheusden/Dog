@@ -639,7 +639,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 					printf("# stop flag set\n");
 #endif
 				if (sp.is_t2 == false && output)
-					printf("info depth %d score cp %d\n", max_depth, score);
+					printf("info depth %d score cp %d\n", max_depth, best_score);
 				break;
 			}
 
