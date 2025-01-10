@@ -674,7 +674,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 			if (sp.stop->flag) {
 #if !defined(__ANDROID__)
 				if (sp.is_t2 == false && output)
-					printf("# stop flag set\n");
+					my_trace("info string stop flag set\n");
 #endif
 				if (sp.is_t2 == false && output)
 					printf("info depth %d score cp %d\n", max_depth, best_score);
@@ -776,7 +776,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 				    (thought_ms >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
 					if (output)
-						printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
+						my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
 					break;
 				}
@@ -789,7 +789,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
 					if (output)
-						printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+						my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
 
@@ -809,7 +809,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	else {
 #if !defined(__ANDROID__)
 		if (output)
-			printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
+			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
 #endif
 		best_score = eval(pos, sp.parameters);
 	}
