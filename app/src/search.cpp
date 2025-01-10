@@ -125,56 +125,42 @@ bool is_check(libchess::Position & pos)
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
 }
 
+// https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
+	using namespace libchess::constants;
+
         // A king + any(pawn, rook, queen) is sufficient.
-	if (pos.piece_type_bb(libchess::constants::PAWN) || pos.piece_type_bb(libchess::constants::QUEEN) || pos.piece_type_bb(libchess::constants::ROOK))
+	if (pos.piece_type_bb(PAWN) || pos.piece_type_bb(QUEEN) || pos.piece_type_bb(ROOK))
 		return false;
 
-        int counts[2][6] { };
-        count_board(pos, counts);
-
-        constexpr int white  = libchess::constants::WHITE;
-        constexpr int black  = libchess::constants::BLACK;
-
-        constexpr int pawn   = libchess::constants::PAWN;
-        constexpr int rook   = libchess::constants::ROOK;
-        constexpr int queen  = libchess::constants::QUEEN;
-        constexpr int knight = libchess::constants::KNIGHT;
-        //constexpr int king   = libchess::constants::KING;
-        constexpr int bishop = libchess::constants::BISHOP;
-
         // A king and more than one other type of piece is sufficient (e.g. knight + bishop).
-        if ((counts[white][knight] && counts[white][bishop]) ||
-            (counts[black][knight] && counts[black][bishop])) {
-                return false;
-        }
-
-        // https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
+	if ((pos.piece_type_bb(KNIGHT, WHITE) && pos.piece_type_bb(BISHOP, WHITE)) ||
+	    (pos.piece_type_bb(KNIGHT, BLACK) && pos.piece_type_bb(BISHOP, BLACK)))
+		return false;
 
         // A king and two (or more) knights is sufficient
-        int max_n_knights = std::max(counts[white][knight], counts[black][knight]);
-        if (max_n_knights >= 2) {
+	if (pos.piece_type_bb(KNIGHT, WHITE).popcount() >= 2 ||
+	    pos.piece_type_bb(KNIGHT, BLACK).popcount() >= 2)
+		return false;
+
+        // King + bishop against king + any(knight, pawn) is sufficient.
+        if ((pos.piece_type_bb(BISHOP, WHITE) && (pos.piece_type_bb(KNIGHT, BLACK) || pos.piece_type_bb(PAWN, BLACK))) ||
+            (pos.piece_type_bb(BISHOP, BLACK) && (pos.piece_type_bb(KNIGHT, WHITE) || pos.piece_type_bb(PAWN, WHITE)))) {
                 return false;
         }
 
         // King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
-        bool r_b_n_p = ((counts[white][rook] || counts[white][bishop] || counts[white][knight] || counts[white][pawn]) && counts[black][knight]) ||
-                       ((counts[black][rook] || counts[black][bishop] || counts[black][knight] || counts[black][pawn]) && counts[white][knight]);
-        if (r_b_n_p) {
-                return false;
-        }
-
-        // King + bishop against king + any(knight, pawn) is sufficient.
-        if ((counts[white][bishop] && (counts[black][knight] || counts[black][pawn])) ||
-            (counts[black][bishop] && (counts[white][knight] || counts[white][pawn]))) {
-                return false;
-        }
+        if (((pos.piece_type_bb(ROOK, WHITE) || pos.piece_type_bb(BISHOP, WHITE) || pos.piece_type_bb(KNIGHT, WHITE) || pos.piece_type_bb(PAWN, WHITE))
+				&& pos.piece_type_bb(KNIGHT, BLACK)) ||
+            ((pos.piece_type_bb(ROOK, BLACK) || pos.piece_type_bb(BISHOP, BLACK) || pos.piece_type_bb(KNIGHT, BLACK) || pos.piece_type_bb(PAWN, BLACK))
+	    			&& pos.piece_type_bb(KNIGHT, WHITE)))
+			return false;
 
         // King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
         constexpr uint64_t white_squares = 0x55aa55aa55aa55aall;
         constexpr uint64_t black_squares = 0xaa55aa55aa55aa55ll;
-        libchess::Bitboard piece_bb = pos.piece_type_bb(libchess::constants::BISHOP);
+        const libchess::Bitboard piece_bb = pos.piece_type_bb(BISHOP);
         if ((piece_bb & black_squares) && (piece_bb & white_squares)) {
                 return false;
         }
