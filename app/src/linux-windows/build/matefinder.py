@@ -61,9 +61,8 @@ def do_it(q_in, q_out):
             b = chess.Board(msg)
 
             result = engine.play(b, chess.engine.Limit(time=time_limit), info=chess.engine.INFO_SCORE)
-
-            score = result.info['score'].white().score()
-            if abs(score) > 9800:
+            result = result.info['score'].white()
+            if result.is_mate() or abs(result.score()) > 9800:
                 q_out.put(1)
             else:
                 q_out.put(0)
