@@ -127,6 +127,10 @@ bool is_check(libchess::Position & pos)
 
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
+        // A king + any(pawn, rook, queen) is sufficient.
+	if (pos.piece_type_bb(libchess::constants::PAWN) || pos.piece_type_bb(libchess::constants::QUEEN) || pos.piece_type_bb(libchess::constants::ROOK))
+		return false;
+
         int counts[2][6] { };
         count_board(pos, counts);
 
@@ -139,13 +143,6 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
         constexpr int knight = libchess::constants::KNIGHT;
         //constexpr int king   = libchess::constants::KING;
         constexpr int bishop = libchess::constants::BISHOP;
-
-        // A king + any(pawn, rook, queen) is sufficient.
-        if (counts[white][pawn] || counts[black][pawn] ||
-                counts[white][rook] || counts[black][rook] ||
-                counts[white][queen] || counts[black][queen]) {
-                return false;
-        }
 
         // A king and more than one other type of piece is sufficient (e.g. knight + bishop).
         if ((counts[white][knight] && counts[white][bishop]) ||
