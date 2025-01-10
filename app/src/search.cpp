@@ -155,7 +155,7 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 				&& pos.piece_type_bb(KNIGHT, BLACK)) ||
             ((pos.piece_type_bb(ROOK, BLACK) || pos.piece_type_bb(BISHOP, BLACK) || pos.piece_type_bb(KNIGHT, BLACK) || pos.piece_type_bb(PAWN, BLACK))
 	    			&& pos.piece_type_bb(KNIGHT, WHITE)))
-			return false;
+		return false;
 
         // King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
         constexpr uint64_t white_squares = 0x55aa55aa55aa55aall;
