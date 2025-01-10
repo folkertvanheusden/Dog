@@ -68,8 +68,15 @@ def do_it(q_in, q_out):
             else:
                 q_out.put(0)
         except Exception as e:
-            print(e)
+            print(f'Problem: {e}')
             q_out.put(-1)
+
+            try:
+                engine.quit()
+                engine = chess.engine.SimpleEngine.popen_uci(proc)
+            except Exception as e:
+                print(f'Problem "{e}" while recovering, aborting...')
+                break
 
     q_out.put(None)
 
