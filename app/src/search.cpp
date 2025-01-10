@@ -580,7 +580,7 @@ void emit_statistics(const chess_stats & counts, const std::string & header)
 	my_trace("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs)
+std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -635,10 +635,10 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 			if (sp.stop->flag) {
 #if !defined(__ANDROID__)
-				if (sp.is_t2 == false)
+				if (sp.is_t2 == false && output)
 					printf("# stop flag set\n");
 #endif
-				if (sp.is_t2 == false)
+				if (sp.is_t2 == false && output)
 					printf("info depth %d score cp %d\n", max_depth, score);
 				break;
 			}
@@ -717,25 +717,28 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 						ebf_str = "ebf " + ebf_str + " ";
 
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
-					if (abs(score) > 9800) {
-						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
-								max_depth, mate_moves,
-								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.data.syzygy_query_hits, pv_str.c_str());
-					}
-					else {
-						printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
-								max_depth, score,
-								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.data.syzygy_query_hits, pv_str.c_str());
+					if (output) {
+						if (abs(score) > 9800) {
+							int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
+							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+									max_depth, mate_moves,
+									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+									counts.data.syzygy_query_hits, pv_str.c_str());
+						}
+						else {
+							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+									max_depth, score,
+									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+									counts.data.syzygy_query_hits, pv_str.c_str());
+						}
 					}
 				}
 
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
 				    (thought_ms >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
-					printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
+					if (output)
+						printf("# time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
 					break;
 				}
@@ -747,7 +750,8 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 					break;
 
 				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
-					printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+					if (output)
+						printf("# node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
 
@@ -759,13 +763,15 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		if (!sp.is_t2) {
 			auto counts = calculate_search_statistics();
 			cs.add(counts);
-			emit_statistics(counts, "move statistics");
+			if (output)
+				emit_statistics(counts, "move statistics");
 		}
 #endif
 	}
 	else {
 #if !defined(__ANDROID__)
-		printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
+		if (output)
+			printf("# only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
 #endif
 		best_score = eval(pos, sp.parameters);
 	}

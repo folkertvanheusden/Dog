@@ -451,7 +451,7 @@ void ponder_thread(void *p)
 					chess_stats cs;
 					libchess::Position p(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs);
+					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs, false);
                                 }));
 			}
 
@@ -462,7 +462,7 @@ void ponder_thread(void *p)
 #else
 			start_blink(led_blue_timer);
 			chess_stats cs;
-			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs);
+			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs, false);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			my_trace("# Pondering finished\n");
@@ -680,7 +680,7 @@ void main_task()
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs);
+				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs, true);
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 				stop_blink(led_green_timer, &led_green);
 #endif
@@ -792,7 +792,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs, true);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -902,7 +902,7 @@ void run_bench()
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs);
+	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs, true);
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = cs.data.nodes + cs.data.qnodes;

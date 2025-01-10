@@ -63,7 +63,7 @@ void tests()
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
 		chess_stats    cs;
-		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, cs);
+		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, cs, false);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -387,6 +387,8 @@ std::vector<std::pair<libchess::Position, const std::string> > load_epd(const st
 
 void test_mate_finder(const std::string & filename, const int search_time)
 {
+	init_lmr();
+
 	int         mates_found = 0, checked = 0;
 	chess_stats cs;
 	auto        positions   = load_epd(filename);
@@ -394,7 +396,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 		clear_flag(sp1.stop);
 		memset(sp1.history, 0x00, history_malloc_size);
 
-		auto rc = search_it(p.first, search_time, false, sp1, -1, 0, { }, cs);
+		auto rc = search_it(p.first, search_time, false, sp1, -1, 0, { }, cs, false);
 
 		checked++;
 		mates_found += abs(rc.second) >= 9800;
