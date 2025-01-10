@@ -57,9 +57,11 @@ def do_it(q_in, q_out):
         if msg == None:
             break
 
-        b = chess.Board(msg)
-        result = engine.play(b, chess.engine.Limit(time=time_limit), info=chess.engine.INFO_SCORE)
         try:
+            b = chess.Board(msg)
+
+            result = engine.play(b, chess.engine.Limit(time=time_limit), info=chess.engine.INFO_SCORE)
+
             score = result.info['score'].white().score()
             if abs(score) > 9800:
                 q_out.put(1)
