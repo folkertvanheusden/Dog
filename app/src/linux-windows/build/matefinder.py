@@ -2,14 +2,16 @@
 
 import chess
 import chess.engine
-from multiprocessing import Process, Queue
+import psutil
 import time
+from multiprocessing import Process, Queue
 
 
-num_procs = 12
 epd_file = 'matetrack/matetrack.epd'
 proc = './Dog'
 time_limit = 0.5
+
+num_procs = psutil.cpu_count()
 
 def do_it(q_in, q_out):
     engine = chess.engine.SimpleEngine.popen_uci(proc)
