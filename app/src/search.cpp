@@ -184,7 +184,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 
 int qs(libchess::Position & pos, int alpha, const int beta, const int qsdepth, search_pars_t & sp, const int thread_nr)
 {
-	if (sp.stop->flag)
+	if (sp.stop.flag)
 		return 0;
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	if (qsdepth > sp.md) {
@@ -293,7 +293,7 @@ void update_history(search_pars_t & sp, const int index, const int bonus)
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, const int thread_nr)
 {
-	if (sp.stop->flag)
+	if (sp.stop.flag)
 		return 0;
 
 	if (depth == 0)
@@ -367,7 +367,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 	////////
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	if (with_syzygy && sp.is_t2) {
+	if (with_syzygy) {
 		// check piece count
 		unsigned counts = pos.occupancy_bb().popcount();
 
@@ -402,10 +402,8 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 	}
 
 #if defined(linux)
-	if (sp.is_t2 == false) {
-		wboard = pos.color_bb(libchess::constants::WHITE);
-		bboard = pos.color_bb(libchess::constants::BLACK);
-	}
+	wboard = pos.color_bb(libchess::constants::WHITE);
+	bboard = pos.color_bb(libchess::constants::BLACK);
 #endif
 
 	///// null move
@@ -535,7 +533,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 			best_score = 0;
 	}
 
-	if (sp.stop->flag == false) {
+	if (sp.stop.flag == false) {
 		sp.cs.data.tt_store++;
 
 		tt_entry_flag flag = EXACT;
@@ -604,7 +602,7 @@ void emit_statistics(const chess_stats & counts, const std::string & header)
 	my_trace("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, const bool output)
+std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -612,12 +610,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 	std::thread *think_timeout_timer { nullptr };
 #endif
 
-	if (sp.is_t2 == false) {
+	if (thread_nr == 0) {
 		if (search_time > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
-					timer(search_time, sp.stop);
+					timer(search_time, &sp->stop);
 				});
 #else
 			esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
@@ -637,11 +635,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-		int8_t  max_depth = 1 + (sp.is_t2 ? thread_nr + 1: 0);
-#else
-		int8_t  max_depth = 1 + sp.is_t2;
-#endif
+		int8_t  max_depth = 1;
 
 		libchess::Move cur_move { 0 };
 
@@ -653,16 +647,16 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 #if defined(linux)
-			sp.md = 0;
+			sp->md = 0;
 #endif
-			int score = search(pos, max_depth, alpha, beta, 0, max_depth, &cur_move, sp, thread_nr);
+			int score = search(pos, max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, thread_nr);
 
-			if (sp.stop->flag) {
+			if (sp->stop.flag) {
 #if !defined(__ANDROID__)
-				if (sp.is_t2 == false && output)
+				if (thread_nr == 0 && output)
 					my_trace("info string stop flag set\n");
 #endif
-				if (sp.is_t2 == false && output)
+				if (thread_nr == 0 && output)
 					printf("info depth %d score cp %d\n", max_depth, best_score);
 				break;
 			}
@@ -700,12 +694,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 			}
 			else {
 				if (alpha != -32767) {
-					sp.cs.data.alpha_distance += abs(score - alpha);
-					sp.cs.data.n_alpha_distances++;
+					sp->cs.data.alpha_distance += abs(score - alpha);
+					sp->cs.data.n_alpha_distances++;
 				}
 				if (beta != 32767) {
-					sp.cs.data.beta_distance  += abs(beta - score);
-					sp.cs.data.n_beta_distances++;
+					sp->cs.data.beta_distance  += abs(beta - score);
+					sp->cs.data.n_beta_distances++;
 				}
 
 				alpha_repeat = beta_repeat = 0;
@@ -722,14 +716,14 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 				best_score = score;
 
 #if defined(linux)
-				strncpy(sp.move, best_move.to_str().c_str(), 4);
+				strncpy(sp->move, best_move.to_str().c_str(), 4);
 
-				sp.score = score;
+				sp->score = score;
 #endif
 
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (!sp.is_t2) {
+				if (thread_nr == 0) {
 					std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 					std::string pv_str;
 					for(auto & move : pv)
@@ -784,7 +778,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		}
 
 #if !defined(__ANDROID__)
-		if (!sp.is_t2 && output) {
+		if (thread_nr == 0 && output) {
 			auto counts = calculate_search_statistics();
 			emit_statistics(counts, "move statistics");
 		}
@@ -795,12 +789,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		if (output)
 			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), pos.fen().c_str());
 #endif
-		best_score = eval(pos, sp.parameters);
+		best_score = eval(pos, sp->parameters);
 	}
 
-	if (!sp.is_t2) {
+	if (thread_nr == 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-		set_flag(sp.stop);
+		set_flag(&sp->stop);
 
 		if (think_timeout_timer) {
 			think_timeout_timer->join();

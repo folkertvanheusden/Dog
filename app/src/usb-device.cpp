@@ -103,13 +103,13 @@ void usb_disp(const std::string & device)
 	pollfd fds[] { { fd, POLLIN, 0  } };
 
 	for(;;) {
-		if (!send_disp_cmd(fd, myformat("depth %d\n", sp1.md)))
+		if (!send_disp_cmd(fd, myformat("depth %d\n", sp.at(0)->md)))
 			break;
 
-		if (!send_disp_cmd(fd, myformat("move %s\n", sp1.move)))
+		if (!send_disp_cmd(fd, myformat("move %s\n", sp.at(0)->move)))
 			break;
 
-		if (!send_disp_cmd(fd, myformat("score %d\n", abs(sp1.score))))
+		if (!send_disp_cmd(fd, myformat("score %d\n", abs(sp.at(0)->score))))
 			break;
 
 		if (!send_disp_cmd(fd, myformat("bitmap 0 %" PRIx64 "\n", wboard)))

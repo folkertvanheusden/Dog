@@ -19,8 +19,6 @@ void tests()
 
 	set_thread_name("TESTS");
 
-	sp1.is_t2 = false;
-
 	printf("Size of int must be 32 bit\n");
 	my_assert(sizeof(int) == 4);
 	printf("Ok\n");
@@ -58,11 +56,11 @@ void tests()
 		libchess::Position p { entry.first };
 		my_assert(p.fen() == entry.first);
 
-		clear_flag(sp1.stop);
-		memset(sp1.history, 0x00, history_malloc_size);
+		clear_flag(&sp.at(0)->stop);
+		memset(sp.at(0)->history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(p, 100, false, sp1, -1, 0, { }, false);
+		std::tie(best_move, best_score) = search_it(p, 100, false, sp.at(0), -1, 0, { }, false);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -74,12 +72,12 @@ void tests()
 		printf("move sorting & generation test\n");
 		libchess::Position p { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
 
-		clear_flag(sp1.stop);
-		memset(sp1.history, 0x00, history_malloc_size);
+		clear_flag(&sp.at(0)->stop);
+		memset(sp.at(0)->history, 0x00, history_malloc_size);
 
 		libchess::MoveList move_list = p.pseudo_legal_move_list();
 		my_assert(move_list.size() == 7);
-		sort_movelist_compare smc(p, sp1);
+		sort_movelist_compare smc(p, *sp.at(0));
 		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 
 		int prev_v = 32767;
@@ -501,14 +499,8 @@ void test_mate_finder(const std::string & filename, const int search_time)
 	printf("Loaded %zu tests\n", n);
 
 	for(size_t i=0; i<n; i++) {
-		int16_t       history[history_size] { };
-		chess_stats   cs;
-		search_pars_t sp { default_parameters, false, history, cs };
-		sp.stop       = new end_t();
-		sp.stop->flag = false;
-
-		auto rc  = search_it(positions.at(i).first, search_time, false, sp, -1, 0, { }, false);
-		delete sp.stop;
+		clear_flag(&sp.at(0)->stop);
+		auto rc  = search_it(positions.at(i).first, search_time, false, sp.at(0), -1, 0, { }, false);
 
 		bool hit = abs(rc.second) >= 9800;
 		mates_found += hit;

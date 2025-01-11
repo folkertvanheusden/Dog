@@ -2,6 +2,8 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <thread>
+#include <libchess/Position.h>
 
 #include "eval_par.h"
 #include "stats.h"
@@ -15,26 +17,24 @@ typedef struct {
 typedef struct
 {
 	const eval_par & parameters;
-	bool      is_t2;
 
 	int16_t *const history;
 
-	chess_stats & cs;
+	chess_stats cs;
 
 	uint16_t  md;
 
-	end_t    *stop;
+	end_t     stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	char      move[5];
 	int       score;
 #endif
+	libchess::Position pos { libchess::constants::STARTPOS_FEN };
+
+	std::thread *thread_handle;
 } search_pars_t;
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-extern std::vector<search_pars_t> sp2;
-#else
-extern search_pars_t sp2;
-#endif
+extern std::vector<search_pars_t *> sp;
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 uint64_t esp_timer_get_time();
@@ -49,8 +49,7 @@ constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
 extern bool               trace_enabled;
 extern inbuf              i;
 extern std::istream       is;
-extern search_pars_t      sp1;
-extern libchess::Position positiont1;
+extern search_pars_t     *sp1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;

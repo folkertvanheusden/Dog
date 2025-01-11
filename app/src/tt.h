@@ -47,6 +47,7 @@ public:
 
 	void reset();
 	void set_size(const uint64_t s);
+	int  get_size() const;  // in MB
 	int  get_per_mille_filled();
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);

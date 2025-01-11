@@ -11,6 +11,7 @@
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 void tune(std::string file)
 {
+#if 0 // TODO
 	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });
 	printf("%zu EPDs loaded\n", normalized_results.size());
 
@@ -67,5 +68,6 @@ void tune(std::string file)
 			fprintf(fh, "%s=%d\n", parameter.name().c_str(), parameter.value());
 		fclose(fh);
 	}
+#endif
 }
 #endif

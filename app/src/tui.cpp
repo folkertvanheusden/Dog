@@ -202,14 +202,14 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
-	auto start_score = eval(pos, sp1.parameters);
+	auto start_score = eval(pos, sp.at(0)->parameters);
 
 	if (colors) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
 
 		int prev_score = start_score;
 		int nr         = 0;
-		libchess::Position work(positiont1);
+		libchess::Position work(sp.at(0)->pos);
 		for(auto & move: pv) {
 			if (++nr == 6)
 				my_printf("\n    "), nr = 0;
@@ -217,7 +217,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = eval(work, sp1.parameters);
+			int  cur_score = eval(work, sp.at(0)->parameters);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
@@ -261,7 +261,7 @@ void show_movelist(const libchess::Position & pos)
 
 void tt_lookup()
 {
-	auto te = tti.lookup(positiont1.hash());
+	auto te = tti.lookup(sp.at(0)->pos.hash());
 	if (te.has_value() == false)
 		my_printf("None\n");
 	else {
@@ -271,7 +271,7 @@ void tt_lookup()
 		std::optional<libchess::Move> tt_move;
 		if (te.value().data_._data.m)
 			tt_move = libchess::Move(te.value().data_._data.m);
-		if (tt_move.has_value() && positiont1.is_legal_move(tt_move.value()))
+		if (tt_move.has_value() && sp.at(0)->pos.is_legal_move(tt_move.value()))
 			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
 	}
 }
@@ -399,7 +399,7 @@ void tui()
 	if (do_ponder)
 		set_new_ponder_position(true);
 
-	std::optional<libchess::Color> player = positiont1.side_to_move();
+	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
 
 	trace_enabled = default_trace;
 	i.set_local_echo(true);
@@ -414,17 +414,17 @@ void tui()
 #endif
 
 	for(;;) {
-		display(positiont1, true, colors, moves_played, scores);
+		display(sp.at(0)->pos, true, colors, moves_played, scores);
 
-		bool finished = positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS;
-		if ((player.has_value() && player.value() == positiont1.side_to_move()) || finished) {
+		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
+		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			if (do_ponder)
 				set_new_ponder_position(true);
 
 			if (finished)
 				my_printf("Game is finished\n");
 			else
-				my_printf("Move number: %d, color: %s\n", positiont1.fullmoves(), positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+				my_printf("Move number: %d, color: %s\n", sp.at(0)->pos.fullmoves(), sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
 			std::string line;
 			my_printf("> ");
@@ -441,21 +441,21 @@ void tui()
 			else if (parts[0] == "auto")
 				player.reset();
 			else if (parts[0] == "fen")
-				my_printf("FEN: %s\n", positiont1.fen().c_str());
+				my_printf("FEN: %s\n", sp.at(0)->pos.fen().c_str());
 			else if (parts[0] == "setfen") {
 				if (parts.size() == 6 + 1)
-					positiont1 = libchess::Position(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4] + " " + parts[5] + " " + parts[6]);
+					sp.at(0)->pos = libchess::Position(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4] + " " + parts[5] + " " + parts[6]);
 				else
 					my_printf("Invalid FEN\n");
 			}
 			else if (parts[0] == "hash")
-				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", positiont1.hash());
+				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
 			else if (parts[0] == "perft" && parts.size() == 2)
-				perft(positiont1, std::stoi(parts.at(1)));
+				perft(sp.at(0)->pos, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
-				memset(sp1.history, 0x00, history_malloc_size);
+				memset(sp.at(0)->history, 0x00, history_malloc_size);
 				tti.reset();
-				positiont1 = libchess::Position(libchess::constants::STARTPOS_FEN);
+				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
 				moves_played.clear();
 				scores.clear();
 			}
@@ -470,9 +470,9 @@ void tui()
 				write_settings();
 			}
 			else if (parts[0] == "moves")
-				show_movelist(positiont1);
+				show_movelist(sp.at(0)->pos);
 			else if (parts[0] == "syzygy")
-				do_syzygy(positiont1);
+				do_syzygy(sp.at(0)->pos);
 			else if (parts[0] == "trace") {
 				if (parts.size() == 2)
 					trace_enabled = parts[1] == "on";
@@ -504,13 +504,13 @@ void tui()
 					set_new_ponder_position(true);
 			}
 			else if (parts[0] == "undo") {
-				positiont1.unmake_move();
-				player = positiont1.side_to_move();
+				sp.at(0)->pos.unmake_move();
+				player = sp.at(0)->pos.side_to_move();
 				moves_played.pop_back();
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int score = eval(positiont1, sp1.parameters);
+				int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
 				my_printf("evaluation score: %.2f\n", score / 100.);
 			}
 			else if (parts[0] == "tt")
@@ -522,12 +522,12 @@ void tui()
 				std::optional<libchess::Move> move;
 				move = libchess::Move::from(parts[0]);
 				if (move.has_value() == false)
-					move = SAN_to_move(parts[0], positiont1);
+					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					if (positiont1.is_legal_move(move.value())) {
-						positiont1.make_move(move.value());
+					if (sp.at(0)->pos.is_legal_move(move.value())) {
+						sp.at(0)->pos.make_move(move.value());
 						moves_played.push_back(move.value());
-						scores.push_back(eval(positiont1, sp1.parameters));
+						scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
 						valid = true;
 					}
 				}
@@ -543,29 +543,29 @@ void tui()
 			if (do_ponder)
 				set_new_ponder_position(false);  // lazy smp
 
-			my_printf("Color: %s\n", positiont1.side_to_move() == libchess::constants::WHITE ? "white":"black");
+			my_printf("Color: %s\n", sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
-			auto move = pb->query(positiont1);
+			auto move = pb->query(sp.at(0)->pos);
 			if (move.has_value()) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
-				positiont1.make_move(move.value());
-				positiont1.display();
+				sp.at(0)->pos.make_move(move.value());
+				sp.at(0)->pos.display();
 				moves_played.push_back(move.value());
-				scores.push_back(eval(positiont1, sp1.parameters));
+				scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
 				libchess::Move best_move  { 0 };
 				int            best_score { 0 };
-				clear_flag(sp1.stop);
-				std::tie(best_move, best_score) = search_it(positiont1, think_time, true, sp1, -1, 0, { }, true);
+				clear_flag(&sp.at(0)->stop);
+				std::tie(best_move, best_score) = search_it(sp.at(0)->pos, think_time, true, sp.at(0), -1, 0, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
-				emit_pv(positiont1, best_move, colors);
+				emit_pv(sp.at(0)->pos, best_move, colors);
 
-				positiont1.make_move(best_move);
+				sp.at(0)->pos.make_move(best_move);
 				moves_played.push_back(best_move);
-				scores.push_back(eval(positiont1, sp1.parameters));
+				scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
 			}
 
 			my_printf("\n");

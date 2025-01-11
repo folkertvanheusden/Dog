@@ -53,6 +53,11 @@ void tt::set_size(const uint64_t s)
 	printf("# Newly allocated node count: %" PRIu64 "\n", n_entries);
 }
 
+int tt::get_size() const
+{
+	return (n_entries * sizeof(tt_entry) + 1024 * 1024 - 1) / (1024 * 1024);
+}
+
 void tt::reset()
 {
 	memset(entries, 0x00, sizeof(tt_entry) * n_entries);
