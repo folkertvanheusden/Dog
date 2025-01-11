@@ -657,7 +657,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 					my_trace("info string stop flag set\n");
 #endif
 				if (thread_nr == 0 && output)
-					printf("info depth %d score cp %d\n", max_depth, best_score);
+					printf("info depth %d score cp %d\n", max_depth - 1, best_score);
 				break;
 			}
 
