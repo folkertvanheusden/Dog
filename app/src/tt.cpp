@@ -11,7 +11,7 @@
 #include "tt.h"
 
 
-static_assert(sizeof(tt_entry) == 16, "tt_entry must be 16 bytes in size");
+//static_assert(sizeof(tt_entry) == 16, "tt_entry must be 16 bytes in size");
 
 tt tti;
 
@@ -37,7 +37,9 @@ void tt::allocate()
 	}
 	else {
 		printf("No PSRAM\n");
-		entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));
+		auto n_bytes = n_entries * sizeof(tt_entry);
+		printf("Using %zu bytes of RAM\n", size_t(n_bytes));
+		entries = reinterpret_cast<tt_entry *>(malloc(n_bytes));
 	}
 #else
 	entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));

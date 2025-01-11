@@ -32,7 +32,7 @@ class tt
 private:
 	tt_entry *entries { nullptr };
 #if defined(ESP32)
-#define ESP32_TT_RAM_SIZE 49152
+#define ESP32_TT_RAM_SIZE 8192
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
 #elif defined(__ANDROID__)
 	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };

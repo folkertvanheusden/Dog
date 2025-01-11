@@ -148,9 +148,9 @@ void think_timeout(void *arg)
 
 QueueHandle_t uart_queue;
 
-const esp_timer_create_args_t think_timeout_pars = {
+esp_timer_create_args_t think_timeout_pars = {
             .callback = &think_timeout,
-            .arg      = &sp.at(0)->stop,
+            .arg      = nullptr,
             .name     = "searchto"
 };
 
@@ -217,22 +217,23 @@ void set_thread_name(std::string name)
 
 inbuf i;
 std::istream is(&i);
-libchess::UCIService uci_service{"Dog v3.0", "Folkert van Heusden", std::cout, is};
 
 // TODO replace by messages
-std::mutex              search_fen_lock;
-bool                    reconfigure_threads { false };
-std::condition_variable search_cv;
-std::string             search_fen;
-int                     search_fen_version { -1 };
-int                     search_think_time  { 0  };
-bool                    search_is_abs_time { false };
-int                     search_max_depth;
-std::optional<uint64_t> search_max_n_nodes;
-std::mutex              search_publish_lock;
-std::condition_variable search_cv_finished;
-libchess::Move          search_best_move   { 0  };
-int                     search_best_score  { 0  };
+struct {
+	std::mutex              search_fen_lock;
+	bool                    reconfigure_threads { false };
+	std::condition_variable search_cv;
+	std::string             search_fen;
+	int                     search_fen_version { -1 };
+	int                     search_think_time  { 0  };
+	bool                    search_is_abs_time { false };
+	int                     search_max_depth;
+	std::optional<uint64_t> search_max_n_nodes;
+	std::mutex              search_publish_lock;
+	std::condition_variable search_cv_finished;
+	libchess::Move          search_best_move   { 0  };
+	int                     search_best_score  { 0  };
+} work;
 
 void searcher(const int i)
 {
@@ -241,19 +242,19 @@ void searcher(const int i)
 	int last_fen_version = -1;
 
 	for(;;) {
-		std::unique_lock<std::mutex> lck(search_fen_lock);
-		while(search_fen_version == last_fen_version && reconfigure_threads == false)
-			search_cv.wait(lck);
+		std::unique_lock<std::mutex> lck(work.search_fen_lock);
+		while(work.search_fen_version == last_fen_version && work.reconfigure_threads == false)
+			work.search_cv.wait(lck);
 
-		if (reconfigure_threads)
+		if (work.reconfigure_threads)
 			break;
 
-		last_fen_version = search_fen_version;
+		last_fen_version = work.search_fen_version;
 
-		int  local_search_think_time  = search_think_time;
-		bool local_search_is_abs_time = search_is_abs_time;
-		int  local_search_max_depth   = search_max_depth;
-		auto local_search_max_n_nodes = search_max_n_nodes;
+		int  local_search_think_time  = work.search_think_time;
+		bool local_search_is_abs_time = work.search_is_abs_time;
+		int  local_search_max_depth   = work.search_max_depth;
+		auto local_search_max_n_nodes = work.search_max_n_nodes;
 
 		clear_flag(&sp.at(i)->stop);
 		lck.unlock();
@@ -265,12 +266,12 @@ void searcher(const int i)
 		std::tie(best_move, best_score) = search_it(sp.at(i)->pos, local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, i, local_search_max_n_nodes, i == 0);
 
 		if (i == 0) {
-			std::unique_lock<std::mutex> lck(search_publish_lock);
+			std::unique_lock<std::mutex> lck(work.search_publish_lock);
 
-			search_best_move  = best_move;
-			search_best_score = best_score;
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
 
-			search_cv_finished.notify_one();
+			work.search_cv_finished.notify_one();
 		}
 	}
 
@@ -279,12 +280,12 @@ void searcher(const int i)
 
 void delete_threads()
 {
-	reconfigure_threads = true;
+	work.reconfigure_threads = true;
 
 	for(auto & i: sp)
 		set_flag(&i->stop);
 
-	search_cv.notify_all();
+	work.search_cv.notify_all();
 
 	for(auto & i: sp) {
 		i->thread_handle->join();
@@ -296,7 +297,7 @@ void delete_threads()
 
 	sp.clear();
 
-	reconfigure_threads = false;
+	work.reconfigure_threads = false;
 }
 
 void allocate_threads(const int n)
@@ -307,6 +308,10 @@ void allocate_threads(const int n)
 		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(malloc(history_malloc_size)) }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
+#if defined(ESP32)
+	if (n > 0)
+		think_timeout_pars.arg = &sp.at(0)->stop;
+#endif
 }
 
 auto thread_count_handler = [](const int value)  {
@@ -376,14 +381,14 @@ void show_esp32_info()
 }
 
 int64_t esp_start_ts = 0;
-int check_min_stack_size(const int nr, const search_pars_t & sp)
+int check_min_stack_size(const int nr, search_pars_t & sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
 	my_trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
-		set_flag(sp.stop);
+		set_flag(&sp.stop);
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
@@ -445,6 +450,8 @@ chess_stats calculate_search_statistics()
 
 void main_task()
 {
+	libchess::UCIService *uci_service = new libchess::UCIService("Dog v3.0", "Folkert van Heusden", std::cout, is);
+
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
 
@@ -523,14 +530,12 @@ void main_task()
 		try {
 			for(auto & i: sp)
 				clear_flag(&i->stop);
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
-			esp_start_ts = start_ts;
 			for(auto & i: sp)
 				i->md = 1;
-#endif
 			reset_search_statistics();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+			esp_start_ts = start_ts;
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
@@ -606,30 +611,30 @@ void main_task()
 			if (!has_best) {
 				// put
 				{
-					std::unique_lock<std::mutex> lck(search_fen_lock);
+					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 					for(size_t i=1; i<sp.size(); i++)
 						sp.at(i)->pos = sp.at(0)->pos;
 
-					search_think_time  = depth.has_value() && think_time == 0 ? -1 : think_time;
-					search_is_abs_time = is_absolute_time;
-					search_max_depth   = depth.has_value() ? depth.value() : -1;
-					search_max_n_nodes.reset();
-					search_fen_version++;
-					search_best_move  = libchess::Move(0);
-					search_best_score = -32768;
-					search_cv.notify_all();
+					work.search_think_time  = depth.has_value() && think_time == 0 ? -1 : think_time;
+					work.search_is_abs_time = is_absolute_time;
+					work.search_max_depth   = depth.has_value() ? depth.value() : -1;
+					work.search_max_n_nodes.reset();
+					work.search_fen_version++;
+					work.search_best_move  = libchess::Move(0);
+					work.search_best_score = -32768;
+					work.search_cv.notify_all();
 				}
 
 				// get
 				{
-					std::unique_lock<std::mutex> lck(search_publish_lock);
+					std::unique_lock<std::mutex> lck(work.search_publish_lock);
 
-					while(search_best_move.value() == 0)
-						search_cv_finished.wait(lck);
+					while(work.search_best_move.value() == 0)
+						work.search_cv_finished.wait(lck);
 
-					best_move  = search_best_move;
-					best_score = search_best_score;
+					best_move  = work.search_best_move;
+					best_score = work.search_best_score;
 				}
 			}
 
@@ -661,32 +666,36 @@ void main_task()
 		}
 	};
 
+#if defined(ESP32)
+	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 2, thread_count_handler);
+#else
 	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 65536, thread_count_handler);
-	uci_service.register_option(thread_count_option);
+#endif
+	uci_service->register_option(thread_count_option);
 	libchess::UCISpinOption hash_size_option("Hash", tti.get_size(), 1, 1024, hash_size_handler);
-	uci_service.register_option(hash_size_option);
+	uci_service->register_option(hash_size_option);
 	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
-	uci_service.register_option(allow_ponder_option);
+	uci_service->register_option(allow_ponder_option);
 	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
-	uci_service.register_option(allow_tracing_option);
+	uci_service->register_option(allow_tracing_option);
 	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
-	uci_service.register_option(commerial_option);
+	uci_service->register_option(commerial_option);
 
-	uci_service.register_position_handler(position_handler);
-	uci_service.register_go_handler      (go_handler);
-	uci_service.register_stop_handler    (stop_handler);
+	uci_service->register_position_handler(position_handler);
+	uci_service->register_go_handler      (go_handler);
+	uci_service->register_stop_handler    (stop_handler);
 
-	uci_service.register_handler("eval",       eval_handler, true);
-	uci_service.register_handler("fen",        fen_handler, true);
-	uci_service.register_handler("d",          display_handler, true);
-	uci_service.register_handler("display",    display_handler, true);
-	uci_service.register_handler("dog",        dog_handler, false);
-	uci_service.register_handler("max",        dog_handler, false);
-	uci_service.register_handler("perft",      perft_handler, true);
-	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
-	uci_service.register_handler("tui",        tui_handler, true);
-	uci_service.register_handler("status",     status_handler, false);
-	uci_service.register_handler("help",       help_handler, false);
+	uci_service->register_handler("eval",       eval_handler, true);
+	uci_service->register_handler("fen",        fen_handler, true);
+	uci_service->register_handler("d",          display_handler, true);
+	uci_service->register_handler("display",    display_handler, true);
+	uci_service->register_handler("dog",        dog_handler, false);
+	uci_service->register_handler("max",        dog_handler, false);
+	uci_service->register_handler("perft",      perft_handler, true);
+	uci_service->register_handler("ucinewgame", ucinewgame_handler, true);
+	uci_service->register_handler("tui",        tui_handler, true);
+	uci_service->register_handler("status",     status_handler, false);
+	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
 		my_printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
@@ -696,7 +705,7 @@ void main_task()
 		std::getline(is, line);
 
 		if (line == "uci") {
-			uci_service.run();
+			uci_service->run();
 			break;  // else lichess-bot will break
 		}
 		else if (line == "tui") {
@@ -712,6 +721,8 @@ void main_task()
 	}
 
 	delete_threads();
+
+	delete uci_service;
 
 	printf("TASK TERMINATED\n");
 }
@@ -837,23 +848,19 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
+	//static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
 	main_task();
 
 	if (with_syzygy)
 		fathom_deinit();
 
-	for(size_t i=0; i<sp.size(); i++) {
-		free(sp.at(i)->history);
-		delete sp.at(i);
-	}
-
 	return 0;
 }
 #else
 extern "C" void app_main()
 {
+	printf("HIER001\n");
 	gpio_config_t io_conf { };
 	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
 	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
@@ -917,7 +924,7 @@ extern "C" void app_main()
 
 	gpio_set_level(LED_INTERNAL, 0);
 
-	start_ponder_thread();
+	allocate_threads(2);
 
 	main_task();
 

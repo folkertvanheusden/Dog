@@ -8,6 +8,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+threading [2 threads]
+	Score of Dog-21d5ba5-threading-LC7569dd6-2TH vs Dog-21d5ba5-threading-LC7569dd6: 155 - 69 - 205  [0.600] 429
+	Elo difference: 70.6 +/- 23.8, LOS: 100.0 %, DrawRatio: 47.8 %
+	SPRT: llr 4.64 (101.1%), lbound -4.6, ubound 4.6 - H1 was accepted
+
 master [insufmat!]
 	Score of Dog-6993838-master-LC7569dd6 vs Dog-505f482-master-LC7569dd6: 1774 - 1768 - 2945  [0.500] 6487
 	Elo difference: 0.3 +/- 6.2, LOS: 54.0 %, DrawRatio: 45.4 %

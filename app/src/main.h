@@ -49,7 +49,6 @@ constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
 extern bool               trace_enabled;
 extern inbuf              i;
 extern std::istream       is;
-extern search_pars_t     *sp1;
 extern tt                 tti;
 extern uint64_t           bboard;
 extern uint64_t           wboard;
@@ -77,7 +76,7 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, const search_pars_t & sp);
+int check_min_stack_size(const int nr, search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #endif
 
