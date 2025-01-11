@@ -524,6 +524,56 @@ void stop_ponder_thread()
 #endif
 }
 
+void tt_bench(const int search_time, const int interval)
+{
+	printf("info string Please wait %.3f seconds...\n", search_time / 1000.);
+
+	uint64_t end_t   = 0;
+	uint64_t start_t = 0;
+
+#if defined(ESP32)
+	std::thread th([search_time, &sp1, &start_t, &end_t]{
+		tti.reset();
+		chess_stats cs;
+		clear_flag(sp1.stop);
+		start_t = esp_timer_get_time();
+		end_t   = start_t + uint64_t(search_time) * 1000;
+		search_it(positiont1, search_time, true, sp1, -1, 0, { }, cs, false);
+	});
+#else
+	std::vector<std::thread *> ths;
+	for(int i=0; i<thread_count; i++) {
+		ths.push_back(new std::thread([i, search_time, &start_t, &end_t] {
+			chess_stats cs;
+			libchess::Position p(positiont1.fen());
+			set_thread_name("PT-" + std::to_string(i));
+			if (i == 0) {
+				start_t = esp_timer_get_time();
+				end_t   = start_t + uint64_t(search_time) * 1000;
+			}
+			search_it(p, 2147483647, true, sp2.at(i), -1, i, { }, cs, false);
+		}));
+	}
+#endif
+
+	do {
+		std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+
+		uint64_t diff_t = esp_timer_get_time() - start_t;
+		printf("info string tt fillness: %d per mille in %.2f ms\n", tti.get_per_mille_filled(), diff_t / 1000.);
+	}
+	while(esp_timer_get_time() <= end_t || end_t == 0);
+
+#if defined(ESP32)
+	th.join();
+#else
+	for(auto & th: ths) {
+		th->join();
+		delete th;
+	}
+#endif
+}
+
 void pause_ponder()
 {
 	my_trace("# *** PAUSE PONDER ***\n");
@@ -637,6 +687,16 @@ void main_task()
 		printf("perft        perft, parameter is depth\n");
 		printf("tui          switch to text interface\n");
 		printf("quit         exit to main menu\n");
+	};
+
+	auto tt_bench_handler = [](std::istringstream& line_stream) {
+		std::string temp;
+		line_stream >> temp;
+		int search_time = std::stoi(temp);
+		line_stream >> temp;
+		int interval    = std::stoi(temp);
+
+		tt_bench(search_time, interval);
 	};
 
 	auto perft_handler = [](std::istringstream& line_stream) {
@@ -847,6 +907,7 @@ void main_task()
 	uci_service.register_handler("dog",        dog_handler, false);
 	uci_service.register_handler("max",        dog_handler, false);
 	uci_service.register_handler("perft",      perft_handler, true);
+	uci_service.register_handler("tt-bench",   tt_bench_handler, true);
 	uci_service.register_handler("ucinewgame", ucinewgame_handler, true);
 	uci_service.register_handler("tui",        tui_handler, true);
 	uci_service.register_handler("status",     status_handler, false);
