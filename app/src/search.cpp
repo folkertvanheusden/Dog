@@ -604,7 +604,7 @@ void emit_statistics(const chess_stats & counts, const std::string & header)
 	my_trace("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
 }
 
-std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, chess_stats & cs, const bool output)
+std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int search_time, const bool is_absolute_time, search_pars_t & sp, const int ultimate_max_depth, const int thread_nr, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -700,12 +700,12 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 			}
 			else {
 				if (alpha != -32767) {
-					cs.data.alpha_distance += abs(score - alpha);
-					cs.data.n_alpha_distances++;
+					sp.cs.data.alpha_distance += abs(score - alpha);
+					sp.cs.data.n_alpha_distances++;
 				}
 				if (beta != 32767) {
-					cs.data.beta_distance  += abs(beta - score);
-					cs.data.n_beta_distances++;
+					sp.cs.data.beta_distance  += abs(beta - score);
+					sp.cs.data.n_beta_distances++;
 				}
 
 				alpha_repeat = beta_repeat = 0;
@@ -784,11 +784,9 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		}
 
 #if !defined(__ANDROID__)
-		if (!sp.is_t2) {
+		if (!sp.is_t2 && output) {
 			auto counts = calculate_search_statistics();
-			cs.add(counts);
-			if (output)
-				emit_statistics(counts, "move statistics");
+			emit_statistics(counts, "move statistics");
 		}
 #endif
 	}

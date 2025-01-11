@@ -448,10 +448,9 @@ void ponder_thread(void *p)
 
 			for(int i=0; i<n_threads; i++) {
 				ths.push_back(new std::thread([i, node_limit] {
-					chess_stats cs;
 					libchess::Position p(positiont2.fen());
                                         set_thread_name("PT-" + std::to_string(i));
-					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, cs, false);
+					search_it(p, 2147483647, true, sp2.at(i), -1, i, node_limit, false);
                                 }));
 			}
 
@@ -461,8 +460,7 @@ void ponder_thread(void *p)
 			}
 #else
 			start_blink(led_blue_timer);
-			chess_stats cs;
-			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, cs, false);
+			search_it(positiont2, 2147483647, true, sp2, -1, 0, { }, false);
 			stop_blink(led_blue_timer, &led_blue);
 #endif
 			my_trace("# Pondering finished\n");
@@ -534,24 +532,22 @@ void tt_bench(const int search_time, const int interval)
 #if defined(ESP32)
 	std::thread th([search_time, &sp1, &start_t, &end_t]{
 		tti.reset();
-		chess_stats cs;
 		clear_flag(sp1.stop);
 		start_t = esp_timer_get_time();
 		end_t   = start_t + uint64_t(search_time) * 1000;
-		search_it(positiont1, search_time, true, sp1, -1, 0, { }, cs, false);
+		search_it(positiont1, search_time, true, sp1, -1, 0, { }, false);
 	});
 #else
 	std::vector<std::thread *> ths;
 	for(int i=0; i<thread_count; i++) {
 		ths.push_back(new std::thread([i, search_time, &start_t, &end_t] {
-			chess_stats cs;
 			libchess::Position p(positiont1.fen());
 			set_thread_name("PT-" + std::to_string(i));
 			if (i == 0) {
 				start_t = esp_timer_get_time();
 				end_t   = start_t + uint64_t(search_time) * 1000;
 			}
-			search_it(p, 2147483647, true, sp2.at(i), -1, i, { }, cs, false);
+			search_it(p, 2147483647, true, sp2.at(i), -1, i, { }, false);
 		}));
 	}
 #endif
@@ -708,8 +704,8 @@ void main_task()
 
 	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
 		memset(sp1.history, 0x00, history_malloc_size);
-		tti.reset();
 		global_cs.reset();
+		tti.reset();
 		printf("# --- New game ---\n");
 	};
 
@@ -726,24 +722,25 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
 			}
 
-			chess_stats cs;
+			chess_stats cs_sum;
 			while(positiont1.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				clear_flag(sp1.stop);
 				reset_search_statistics();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
-				sp1.md     = 1;
-				sp2.md     = 1;
+				sp1.md = 1;
+				sp2.md = 1;
 				start_blink(led_green_timer);
 #endif
 
 				// false = lazy smp
 				set_new_ponder_position(false);
 
-				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, cs, true);
+				auto best_move = search_it(positiont1, think_time, true, sp1, -1, 0, { }, true);
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 				stop_blink(led_green_timer, &led_green);
 #endif
+				cs_sum.add(calculate_search_statistics());
 
 				printf("# %s %s [%d]\n", positiont1.fen().c_str(), best_move.first.to_str().c_str(), best_move.second);
 
@@ -752,7 +749,7 @@ void main_task()
 
 			printf("\nFinished.\n");
 
-			emit_statistics(cs, "global statistics");
+			emit_statistics(cs_sum, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -852,7 +849,7 @@ void main_task()
 
 			// main search
 			if (!has_best)
-				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), global_cs, true);
+				std::tie(best_move, best_score) = search_it(positiont1, think_time, is_absolute_time, sp1, depth.has_value() ? depth.value() : -1, 0, go_parameters.nodes(), true);
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
@@ -871,6 +868,8 @@ void main_task()
 			my_trace("# Think time: %d ms, used %.3f ms (%s, %d halfmoves, %d fullmoves, TL: %d)\n", think_time, (end_ts - start_ts) / 1000., is_white ? "white" : "black", positiont1.halfmoves(), positiont1.fullmoves(), time_limit_hit);
 			set_new_ponder_position(true);
 			positiont1.unmake_move();
+
+			global_cs.add(calculate_search_statistics());
 
 			if (positiont1.game_state() != libchess::Position::GameState::IN_PROGRESS)
 				emit_statistics(global_cs, "global statistics");
@@ -957,16 +956,15 @@ void run_bench()
 
 	memset(sp1.history, 0x00, history_malloc_size);
 
-	chess_stats    cs;
 	libchess::Move best_move  { 0 };
 	int            best_score { 0 };
 	sp1.is_t2      = false;
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, cs, true);
+	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp1, 10, 0, { }, true);
 	uint64_t end_ts   = esp_timer_get_time();
 
-	uint64_t node_count = cs.data.nodes + cs.data.qnodes;
+	uint64_t node_count = sp1.cs.data.nodes + sp1.cs.data.qnodes;
 	uint64_t t_diff     = end_ts - start_ts;
 
 	printf("===========================\n");
