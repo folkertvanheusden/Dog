@@ -9,6 +9,11 @@ e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
 threading [2 threads]
+	Score of Dog-5d6f622-threading-LC7569dd6-2TH vs Dog-5d6f622-threading-LC7569dd6: 77 - 24 - 84  [0.643] 185
+	Elo difference: 102.4 +/- 37.3, LOS: 100.0 %, DrawRatio: 45.4 %
+	SPRT: llr 2.95 (100.2%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+threading [2 threads]
 	Score of Dog-21d5ba5-threading-LC7569dd6-2TH vs Dog-21d5ba5-threading-LC7569dd6: 155 - 69 - 205  [0.600] 429
 	Elo difference: 70.6 +/- 23.8, LOS: 100.0 %, DrawRatio: 47.8 %
 	SPRT: llr 4.64 (101.1%), lbound -4.6, ubound 4.6 - H1 was accepted
