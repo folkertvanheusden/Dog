@@ -221,6 +221,7 @@ libchess::UCIService uci_service{"Dog v3.0", "Folkert van Heusden", std::cout, i
 
 // TODO replace by messages
 std::mutex              search_fen_lock;
+bool                    reconfigure_threads { false };
 std::condition_variable search_cv;
 std::string             search_fen;
 int                     search_fen_version { -1 };
@@ -241,13 +242,10 @@ void searcher(const int i)
 
 	for(;;) {
 		std::unique_lock<std::mutex> lck(search_fen_lock);
-		while(search_fen_version == last_fen_version) {
-			if (sp.at(i)->stop.flag)
-				break;
+		while(search_fen_version == last_fen_version && reconfigure_threads == false)
 			search_cv.wait(lck);
-		}
 
-		if (sp.at(i)->stop.flag)
+		if (reconfigure_threads)
 			break;
 
 		last_fen_version = search_fen_version;
@@ -281,6 +279,8 @@ void searcher(const int i)
 
 void delete_threads()
 {
+	reconfigure_threads = true;
+
 	for(auto & i: sp)
 		set_flag(&i->stop);
 
@@ -295,6 +295,8 @@ void delete_threads()
 	}
 
 	sp.clear();
+
+	reconfigure_threads = false;
 }
 
 void allocate_threads(const int n)
