@@ -48,7 +48,7 @@ struct polyglot_entry {
 	}
 } __attribute__ ((__packed__));
 
-//static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in size");
+static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in size");
 
 polyglot_book::polyglot_book(const std::string & filename)
 {

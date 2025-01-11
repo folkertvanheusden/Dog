@@ -848,7 +848,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	//static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
+	static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
 	main_task();
 
