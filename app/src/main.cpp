@@ -984,6 +984,7 @@ void help()
 	printf("-u x  USB display device\n");
 	printf("-T x  tune using epd file\n");
 	printf("-R x  my_trace to file\n");
+	printf("-r    enable tracing to screen\n");
 	printf("-U    run unit tests\n");
 	printf("-Q x:y:z run test type x againt file y with search time z (ms), with x is \"matefinder\"\n");
 }
@@ -1004,7 +1005,7 @@ int main(int argc, char *argv[])
 	}
 
 	int c = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:UR:H:Q:h")) != -1) {
+	while((c = getopt(argc, argv, "t:T:s:u:UR:rH:Q:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -1039,6 +1040,8 @@ int main(int argc, char *argv[])
 #endif
 		else if (c == 'R')
 			my_trace_file = optarg;
+                else if (c == 'r')
+                        trace_enabled = true;
 		else if (c == 'H')
 			tti.set_size(uint64_t(atol(optarg)) * 1024 * 1024);
 		else {
