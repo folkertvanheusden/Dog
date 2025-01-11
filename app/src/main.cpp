@@ -860,7 +860,6 @@ int main(int argc, char *argv[])
 #else
 extern "C" void app_main()
 {
-	printf("HIER001\n");
 	gpio_config_t io_conf { };
 	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
 	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
