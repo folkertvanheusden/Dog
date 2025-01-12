@@ -288,8 +288,8 @@ void searcher(const int i)
 void start_ponder()
 {
 	my_trace("# start ponder\n");
-	assert(work.search_count_running == 0);
 	std::unique_lock<std::mutex> lck(work.search_fen_lock);
+	assert(work.search_count_running == 0);
 
 	clear_flag(&sp.at(0)->stop);
 	for(size_t i=1; i<sp.size(); i++) {
@@ -304,8 +304,8 @@ void start_ponder()
 	work.search_fen_version++;
 	work.search_best_move  = libchess::Move(0);
 	work.search_best_score = -32768;
-	work.search_cv.notify_all();
 	work.search_output     = false;
+	work.search_cv.notify_all();
 }
 
 void stop_ponder()
@@ -327,8 +327,6 @@ void stop_ponder()
 		while(work.search_count_running != 0)
 			work.search_cv_finished.wait(lck);
 	}
-
-	assert(work.search_count_running == 0);
 
 	my_trace("# ponder stopped\n");
 }
