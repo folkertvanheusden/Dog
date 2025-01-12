@@ -233,6 +233,8 @@ struct {
 	std::condition_variable search_cv_finished;
 	libchess::Move          search_best_move   { 0  };
 	int                     search_best_score  { 0  };
+	bool                    search_output      { false };
+	int                     search_count_running { 0 };
 } work;
 
 void searcher(const int i)
@@ -255,27 +257,76 @@ void searcher(const int i)
 		bool local_search_is_abs_time = work.search_is_abs_time;
 		int  local_search_max_depth   = work.search_max_depth;
 		auto local_search_max_n_nodes = work.search_max_n_nodes;
+		bool local_search_output      = work.search_output;
+
+		work.search_count_running++;
 
 		clear_flag(&sp.at(i)->stop);
 		lck.unlock();
 
-		printf("think time %d, max depth: %d\n", local_search_think_time, local_search_max_depth);
-
+		// search!
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(sp.at(i)->pos, local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, i, local_search_max_n_nodes, i == 0);
+		std::tie(best_move, best_score) = search_it(sp.at(i)->pos, local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, i, local_search_max_n_nodes, i == 0 && local_search_output);
+
+		// notify finished
+		lck.lock();
 
 		if (i == 0) {
-			std::unique_lock<std::mutex> lck(work.search_publish_lock);
-
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
-
-			work.search_cv_finished.notify_one();
 		}
+
+		work.search_count_running--;
+		work.search_cv_finished.notify_one();
 	}
 
 	printf("Thread %d finished\n", i);
+}
+
+void start_ponder()
+{
+	my_trace("# start ponder\n");
+	std::unique_lock<std::mutex> lck(work.search_fen_lock);
+
+	clear_flag(&sp.at(0)->stop);
+	for(size_t i=1; i<sp.size(); i++) {
+		sp.at(i)->pos = sp.at(0)->pos;
+		clear_flag(&sp.at(i)->stop);
+	}
+
+	work.search_think_time  = -1;
+	work.search_is_abs_time = false;
+	work.search_max_depth   = -1;
+	work.search_max_n_nodes.reset();
+	work.search_fen_version++;
+	work.search_best_move  = libchess::Move(0);
+	work.search_best_score = -32768;
+	work.search_cv.notify_all();
+	work.search_output     = false;
+}
+
+void stop_ponder()
+{
+	my_trace("# stop ponder\n");
+
+	{
+		std::unique_lock<std::mutex> lck(work.search_fen_lock);
+
+		for(auto & i: sp)
+			set_flag(&i->stop);
+
+		work.search_cv.notify_all();
+	}
+
+	{
+		std::unique_lock<std::mutex> lck(work.search_publish_lock);
+
+		while(work.search_count_running != 0)
+			work.search_cv_finished.wait(lck);
+	}
+
+	my_trace("# ponder stopped\n");
 }
 
 void delete_threads()
@@ -322,8 +373,14 @@ auto hash_size_handler = [](const int value)  {
 	tti.set_size(uint64_t(value) * 1024 * 1024);
 };
 
-bool allow_ponder         = true;
+bool allow_ponder         = false;
 auto allow_ponder_handler = [](const bool value) {
+	if (allow_ponder != value) {
+		if (value)
+			start_ponder();
+		else
+			stop_ponder();
+	}
 	allow_ponder = value;
 	printf("# Ponder %s\n", value ? "enabled" : "disabled");
 };
@@ -414,24 +471,6 @@ void gpio_set_level(int a, int b)
 }
 #endif
 
-void start_pondering()
-{
-}
-
-void stop_pondering()
-{
-}
-
-void pause_ponder()
-{
-	// TODO
-}
-
-void set_new_ponder_position(const bool this_is_ponder)
-{
-	// TODO
-}
-
 void reset_search_statistics()
 {
         for(auto & i: sp)
@@ -513,6 +552,8 @@ void main_task()
 		global_cs.reset();
 		tti.reset();
 		printf("# --- New game ---\n");
+		if (allow_ponder)
+			start_ponder();
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
@@ -525,7 +566,9 @@ void main_task()
 	};
 
 	auto go_handler = [&global_cs](const libchess::UCIGoParameters & go_parameters) {
+#if defined(ESP32)
 		uint64_t start_ts = esp_timer_get_time();
+#endif
 
 		try {
 			for(auto & i: sp)
@@ -582,9 +625,6 @@ void main_task()
 				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), game_phase(sp.at(0)->pos, default_parameters), moves_to_go, tti.get_per_mille_filled());
 			}
 
-			// let the ponder thread run as a lazy-smp thread
-			set_new_ponder_position(false);
-
 			libchess::Move best_move  { 0 };
 			int            best_score { 0 };
 			bool           has_best   { false };
@@ -609,6 +649,8 @@ void main_task()
 
 			// main search
 			if (!has_best) {
+				stop_ponder();
+
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
@@ -623,6 +665,7 @@ void main_task()
 					work.search_fen_version++;
 					work.search_best_move  = libchess::Move(0);
 					work.search_best_score = -32768;
+					work.search_output     = true;
 					work.search_cv.notify_all();
 				}
 
@@ -630,7 +673,7 @@ void main_task()
 				{
 					std::unique_lock<std::mutex> lck(work.search_publish_lock);
 
-					while(work.search_best_move.value() == 0)
+					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 
 					best_move  = work.search_best_move;
@@ -652,8 +695,8 @@ void main_task()
 			if (sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS)
 				emit_statistics(global_cs, "global statistics");
 
-			// set ponder positition
-			// TODO
+			if (allow_ponder)
+				start_ponder();
 
 			global_cs.add(calculate_search_statistics());
 		}
@@ -674,9 +717,9 @@ void main_task()
 	uci_service->register_option(thread_count_option);
 	libchess::UCISpinOption hash_size_option("Hash", tti.get_size(), 1, 1024, hash_size_handler);
 	uci_service->register_option(hash_size_option);
-	libchess::UCICheckOption allow_ponder_option("Ponder", true, allow_ponder_handler);
+	libchess::UCICheckOption allow_ponder_option("Ponder", allow_ponder, allow_ponder_handler);
 	uci_service->register_option(allow_ponder_option);
-	libchess::UCICheckOption allow_tracing_option("Trace", true, allow_tracing_handler);
+	libchess::UCICheckOption allow_tracing_option("Trace", trace_enabled, allow_tracing_handler);
 	uci_service->register_option(allow_tracing_option);
 	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
 	uci_service->register_option(commerial_option);
@@ -767,6 +810,7 @@ void help()
 	print_max();
 
 	printf("-t x  thread count\n");
+	printf("-p    allow pondering\n");
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
 	printf("-u x  USB display device\n");
@@ -794,7 +838,7 @@ int main(int argc, char *argv[])
 
 	int thread_count =  1;
 	int c            = -1;
-	while((c = getopt(argc, argv, "t:T:s:u:UR:rH:Q:h")) != -1) {
+	while((c = getopt(argc, argv, "t:pT:s:u:UR:rH:Q:h")) != -1) {
 		if (c == 'T') {
 			tune(optarg);
 			return 0;
@@ -818,6 +862,8 @@ int main(int argc, char *argv[])
 
 		if (c == 't')
 			thread_count = atoi(optarg);
+		else if (c == 'p')
+			allow_ponder = true;
 		else if (c == 's') {
 			fathom_init(optarg);
 
