@@ -306,6 +306,7 @@ void start_ponder()
 	work.search_best_score = -32768;
 	work.search_output     = false;
 	work.search_cv.notify_all();
+	my_trace("# ponder started\n");
 }
 
 void stop_ponder()
