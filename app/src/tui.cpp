@@ -196,6 +196,11 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 
 	for(auto & line: lines)
 		my_printf("%s\n", line.c_str());
+
+	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
+		my_printf("Game is finished\n");
+	else
+		my_printf("Move number: %d, color: %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
 }
 
 void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const bool colors)
@@ -418,11 +423,6 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
-			if (finished)
-				my_printf("Game is finished\n");
-			else
-				my_printf("Move number: %d, color: %s\n", sp.at(0)->pos.fullmoves(), sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white":"black");
-
 			std::string line;
 			my_printf("> ");
 			if (!std::getline(is, line))
@@ -528,7 +528,6 @@ void tui()
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
-
 						sp.at(0)->pos.make_move(move.value());
 						moves_played.push_back(move.value());
 						scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
@@ -556,7 +555,6 @@ void tui()
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				sp.at(0)->pos.make_move(move.value());
-				sp.at(0)->pos.display();
 				moves_played.push_back(move.value());
 				scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
 			}
