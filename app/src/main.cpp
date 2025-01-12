@@ -357,7 +357,7 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(malloc(history_malloc_size)) }));
+		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)) }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
