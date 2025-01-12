@@ -418,11 +418,6 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
-			if (do_ponder)
-				start_ponder();
-			else
-				stop_ponder();
-
 			if (finished)
 				my_printf("Game is finished\n");
 			else
@@ -576,7 +571,7 @@ void tui()
 
 				sp.at(0)->pos.make_move(best_move);
 				moves_played.push_back(best_move);
-				scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
+				scores.push_back(best_score);
 			}
 
 			my_printf("\n");
