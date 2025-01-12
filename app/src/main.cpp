@@ -288,6 +288,7 @@ void searcher(const int i)
 void start_ponder()
 {
 	my_trace("# start ponder\n");
+	assert(work.search_count_running == 0);
 	std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 	clear_flag(&sp.at(0)->stop);
@@ -326,6 +327,8 @@ void stop_ponder()
 		while(work.search_count_running != 0)
 			work.search_cv_finished.wait(lck);
 	}
+
+	assert(work.search_count_running == 0);
 
 	my_trace("# ponder stopped\n");
 }
