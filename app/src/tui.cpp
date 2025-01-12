@@ -384,6 +384,7 @@ static void help()
 	my_printf("tt      show TT entry for current position\n");
 	my_printf("undo    take back last move\n");
 	my_printf("auto    auto play until the end\n");
+	my_printf("ponder  on/off\n");
 	my_printf("trace   on/off\n");
 	my_printf("colors  on/off\n");
 	my_printf("perft   run \"perft\" for the given depth\n");
@@ -454,6 +455,7 @@ void tui()
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(sp.at(0)->pos, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
+				stop_ponder();
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
 				tti.reset();
 				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
@@ -505,10 +507,13 @@ void tui()
 					start_ponder();
 			}
 			else if (parts[0] == "undo") {
+				stop_ponder();
 				sp.at(0)->pos.unmake_move();
 				player = sp.at(0)->pos.side_to_move();
 				moves_played.pop_back();
 				scores.pop_back();
+				if (do_ponder)
+					start_ponder();
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
@@ -519,6 +524,8 @@ void tui()
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else {
+				stop_ponder();
+
 				bool valid = false;
 				std::optional<libchess::Move> move;
 				move = libchess::Move::from(parts[0]);
@@ -526,6 +533,7 @@ void tui()
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
+
 						sp.at(0)->pos.make_move(move.value());
 						moves_played.push_back(move.value());
 						scores.push_back(eval(sp.at(0)->pos, sp.at(0)->parameters));
@@ -534,6 +542,9 @@ void tui()
 				}
 				if (!valid)
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+
+				if (do_ponder)
+					start_ponder();
 			}
 		}
 		else {
