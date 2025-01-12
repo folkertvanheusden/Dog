@@ -423,6 +423,9 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
+			if (do_ponder)
+				start_ponder();
+
 			std::string line;
 			my_printf("> ");
 			if (!std::getline(is, line))
@@ -489,17 +492,14 @@ void tui()
 				my_printf("Colors are now %senabled\n", colors ? "":"not ");
 			}
 			else if (parts[0] == "ponder") {
-				bool prev_ponder = do_ponder;
 				if (parts.size() == 2)
 					do_ponder = parts[1] == "on";
 				else
 					do_ponder = !do_ponder;
 				write_settings();
 				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
-				if (prev_ponder && do_ponder == false)
+				if (!do_ponder)
 					stop_ponder();
-				else if (!prev_ponder && do_ponder)
-					start_ponder();
 			}
 			else if (parts[0] == "undo") {
 				stop_ponder();
@@ -507,8 +507,6 @@ void tui()
 				player = sp.at(0)->pos.side_to_move();
 				moves_played.pop_back();
 				scores.pop_back();
-				if (do_ponder)
-					start_ponder();
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
@@ -536,9 +534,6 @@ void tui()
 				}
 				if (!valid)
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
-
-				if (do_ponder)
-					start_ponder();
 			}
 		}
 		else {
@@ -546,7 +541,6 @@ void tui()
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
-			stop_ponder();
 
 			my_printf("Color: %s\n", sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
@@ -574,12 +568,12 @@ void tui()
 
 			my_printf("\n");
 
-			if (do_ponder)
-				start_ponder();
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
 		}
+
+		stop_ponder();
 	}
 
 	delete pb;
