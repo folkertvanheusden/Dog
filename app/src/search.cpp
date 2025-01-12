@@ -569,8 +569,7 @@ void timer(const int think_time, end_t *const ei)
 	if (think_time > 0) {
 		auto end_time = std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time};
 
-		std::mutex m;  // not used
-
+		std::mutex m;
 		std::unique_lock<std::mutex> lk(m);
 
 		for(;!ei->flag;) {
@@ -798,7 +797,6 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 		if (think_timeout_timer) {
 			think_timeout_timer->join();
-
 			delete think_timeout_timer;
 		}
 #else

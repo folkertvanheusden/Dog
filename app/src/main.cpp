@@ -132,7 +132,8 @@ auto stop_handler = []()
 void think_timeout(void *arg)
 {
 	end_t *stop = reinterpret_cast<end_t *>(arg);
-	set_flag(stop);
+	if (stop)
+		set_flag(stop);
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
@@ -360,8 +361,15 @@ void allocate_threads(const int n)
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
-	if (n > 0)
+	if (n > 0) {
 		think_timeout_pars.arg = &sp.at(0)->stop;
+		static bool first = true;
+		if (first)
+			first = false;
+		else
+			esp_timer_delete(think_timeout_timer);
+		esp_timer_create(&think_timeout_pars, &think_timeout_timer);
+	}
 #endif
 }
 
@@ -928,8 +936,6 @@ extern "C" void app_main()
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
 	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
 	esp_timer_create(&led_red_timer_pars,   &led_red_timer  );
-
-	esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
