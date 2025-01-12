@@ -577,9 +577,7 @@ void main_task()
 	};
 
 	auto go_handler = [&global_cs](const libchess::UCIGoParameters & go_parameters) {
-#if defined(ESP32)
 		uint64_t start_ts = esp_timer_get_time();
-#endif
 
 		try {
 			for(auto & i: sp)
@@ -694,6 +692,8 @@ void main_task()
 
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
+
+			my_trace("info string had %d ms, used %.3f ms (including overhead)\n", think_time, (esp_timer_get_time() - start_ts) / 1000.);
 
 			// no longer thinking
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
