@@ -978,7 +978,9 @@ extern "C" void app_main()
 
 	gpio_set_level(LED_INTERNAL, 0);
 
-	allocate_threads(2);
+	esp_chip_info_t chip_info { };
+	esp_chip_info(&chip_info);
+	allocate_threads(chip_info.cores);
 
 	main_task();
 
