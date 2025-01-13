@@ -336,12 +336,15 @@ void stop_ponder()
 
 void delete_threads()
 {
-	work.reconfigure_threads = true;
+	{
+		std::unique_lock<std::mutex> lck(work.search_fen_lock);
+		work.reconfigure_threads = true;
 
-	for(auto & i: sp)
-		set_flag(&i->stop);
+		for(auto & i: sp)
+			set_flag(&i->stop);
 
-	work.search_cv.notify_all();
+		work.search_cv.notify_all();
+	}
 
 	for(auto & i: sp) {
 		i->thread_handle->join();
@@ -353,6 +356,7 @@ void delete_threads()
 
 	sp.clear();
 
+	// no locking required here: no threads running!
 	work.reconfigure_threads = false;
 }
 
