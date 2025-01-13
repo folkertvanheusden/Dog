@@ -568,6 +568,7 @@ void main_task()
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
+		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
 		if (!position_parameters.move_list())
 			return;
