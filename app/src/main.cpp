@@ -271,15 +271,17 @@ void searcher(const int i)
 		std::tie(best_move, best_score) = search_it(sp.at(i)->pos, local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, i, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		// notify finished
-		lck.lock();
+		{
+			std::unique_lock<std::mutex> lck(work.search_publish_lock);
 
-		if (i == 0) {
-			work.search_best_move  = best_move;
-			work.search_best_score = best_score;
+			if (i == 0) {
+				work.search_best_move  = best_move;
+				work.search_best_score = best_score;
+			}
+
+			work.search_count_running--;
+			work.search_cv_finished.notify_one();
 		}
-
-		work.search_count_running--;
-		work.search_cv_finished.notify_one();
 	}
 
 	printf("Thread %d finished\n", i);
