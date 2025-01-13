@@ -568,6 +568,7 @@ void main_task()
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
+		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
 		if (!position_parameters.move_list())
 			return;
@@ -706,10 +707,10 @@ void main_task()
 			if (sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS)
 				emit_statistics(global_cs, "global statistics");
 
+			global_cs.add(calculate_search_statistics());
+
 			if (allow_ponder)
 				start_ponder();
-
-			global_cs.add(calculate_search_statistics());
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
