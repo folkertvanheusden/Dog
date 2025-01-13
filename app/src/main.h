@@ -12,6 +12,7 @@
 typedef struct {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
+	std::mutex              cv_lock;
 } end_t;
 
 typedef struct

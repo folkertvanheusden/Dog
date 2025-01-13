@@ -570,7 +570,7 @@ void timer(const int think_time, end_t *const ei)
 		auto end_time = std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time};
 
 		std::mutex m;
-		std::unique_lock<std::mutex> lk(m);
+		std::unique_lock<std::mutex> lk(ei->cv_lock);
 
 		for(;!ei->flag;) {
 			if (ei->cv.wait_until(lk, end_time) == std::cv_status::timeout)

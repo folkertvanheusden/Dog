@@ -111,12 +111,14 @@ void my_trace(const char *const fmt, ...)
 
 void set_flag(end_t *const stop)
 {
+	std::unique_lock<std::mutex> lck(stop->cv_lock);
 	stop->flag = true;
 	stop->cv.notify_all();
 }
 
 void clear_flag(end_t *const stop)
 {
+	std::unique_lock<std::mutex> lck(stop->cv_lock);
 	stop->flag = false;
 }
 
