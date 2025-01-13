@@ -794,16 +794,30 @@ void hello() {
 
 void run_bench()
 {
-#if 0  // TODO
 	init_lmr();
 
-	memset(sp.at(0)->history, 0x00, history_malloc_size);
-
-	libchess::Move best_move  { 0 };
-	int            best_score { 0 };
+	allocate_threads(1);
 
 	uint64_t start_ts = esp_timer_get_time();
-	std::tie(best_move, best_score) = search_it(positiont1, 1<<31, true, sp.at(0), 10, 0, { }, true);
+	// put
+	{
+		std::unique_lock<std::mutex> lck(work.search_fen_lock);
+		work.search_think_time  = 1 << 31;
+		work.search_is_abs_time = true;
+		work.search_max_depth   = 10;
+		work.search_max_n_nodes.reset();
+		work.search_fen_version++;
+		work.search_best_move  = libchess::Move(0);
+		work.search_best_score = -32768;
+		work.search_output     = true;
+		work.search_cv.notify_all();
+	}
+	// get
+	{
+		std::unique_lock<std::mutex> lck(work.search_publish_lock);
+		while(work.search_best_move.value() == 0 || work.search_count_running != 0)
+			work.search_cv_finished.wait(lck);
+	}
 	uint64_t end_ts   = esp_timer_get_time();
 
 	uint64_t node_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
@@ -813,7 +827,8 @@ void run_bench()
 	printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
 	printf("Nodes searched  : %" PRIu64 "\n", node_count);
 	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
-#endif
+
+	delete_threads();
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
