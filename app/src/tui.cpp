@@ -556,7 +556,7 @@ void tui()
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
 				libchess::Move best_move  { 0 };
 				int            best_score { 0 };
-				clear_flag(&sp.at(0)->stop);
+				clear_flag(sp.at(0)->stop);
 				std::tie(best_move, best_score) = search_it(sp.at(0)->pos, think_time, true, sp.at(0), -1, 0, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(sp.at(0)->pos, best_move, colors);

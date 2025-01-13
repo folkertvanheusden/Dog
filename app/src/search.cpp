@@ -31,7 +31,7 @@ static uint8_t lmr_reductions[N_LMR_DEPTH][N_LMR_MOVES];
 void init_lmr()
 {
 #if !defined(ESP32)
-for(int depth=0; depth<N_LMR_DEPTH; depth++) {
+for(int depth=1; depth<N_LMR_DEPTH; depth++) {
 	for(int n_played=0; n_played<N_LMR_MOVES; n_played++) {
 		constexpr double lmr_mul  = 0.5;
 		constexpr double lmr_base = 1.0;
@@ -184,7 +184,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 
 int qs(libchess::Position & pos, int alpha, const int beta, const int qsdepth, search_pars_t & sp, const int thread_nr)
 {
-	if (sp.stop.flag)
+	if (sp.stop->flag)
 		return 0;
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	if (qsdepth > sp.md) {
@@ -293,7 +293,7 @@ void update_history(search_pars_t & sp, const int index, const int bonus)
 
 int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, const int thread_nr)
 {
-	if (sp.stop.flag)
+	if (sp.stop->flag)
 		return 0;
 
 	if (depth == 0)
@@ -533,7 +533,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 			best_score = 0;
 	}
 
-	if (sp.stop.flag == false) {
+	if (sp.stop->flag == false) {
 		sp.cs.data.tt_store++;
 
 		tt_entry_flag flag = EXACT;
@@ -614,7 +614,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 			think_timeout_timer = new std::thread([search_time, sp] {
 					set_thread_name("searchtotimer");
-					timer(search_time, &sp->stop);
+					timer(search_time, sp->stop);
 				});
 #else
 			esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
@@ -650,7 +650,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 #endif
 			int score = search(pos, max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, thread_nr);
 
-			if (sp->stop.flag) {
+			if (sp->stop->flag) {
 #if !defined(__ANDROID__)
 				if (thread_nr == 0 && output)
 					my_trace("info string stop flag set\n");
@@ -793,7 +793,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 
 	if (thread_nr == 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-		set_flag(&sp->stop);
+		set_flag(sp->stop);
 
 		if (think_timeout_timer) {
 			think_timeout_timer->join();

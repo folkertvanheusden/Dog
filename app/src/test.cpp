@@ -56,7 +56,7 @@ void tests()
 		libchess::Position p { entry.first };
 		my_assert(p.fen() == entry.first);
 
-		clear_flag(&sp.at(0)->stop);
+		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
@@ -72,7 +72,7 @@ void tests()
 		printf("move sorting & generation test\n");
 		libchess::Position p { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
 
-		clear_flag(&sp.at(0)->stop);
+		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 
 		libchess::MoveList move_list = p.pseudo_legal_move_list();
@@ -499,7 +499,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 	printf("Loaded %zu tests\n", n);
 
 	for(size_t i=0; i<n; i++) {
-		clear_flag(&sp.at(0)->stop);
+		clear_flag(sp.at(0)->stop);
 		auto rc  = search_it(positions.at(i).first, search_time, false, sp.at(0), -1, 0, { }, false);
 
 		bool hit = abs(rc.second) >= 9800;

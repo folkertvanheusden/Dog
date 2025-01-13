@@ -123,7 +123,7 @@ void clear_flag(end_t *const stop)
 auto stop_handler = []()
 {
 	for(auto & i: sp)
-		set_flag(&i->stop);
+		set_flag(i->stop);
 #if !defined(__ANDROID__)
 	my_trace("# stop_handler invoked\n");
 #endif
@@ -262,7 +262,7 @@ void searcher(const int i)
 
 		work.search_count_running++;
 
-		clear_flag(&sp.at(i)->stop);
+		clear_flag(sp.at(i)->stop);
 		lck.unlock();
 
 		// search!
@@ -293,10 +293,10 @@ void start_ponder()
 	std::unique_lock<std::mutex> lck(work.search_fen_lock);
 	assert(work.search_count_running == 0);
 
-	clear_flag(&sp.at(0)->stop);
+	clear_flag(sp.at(0)->stop);
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
-		clear_flag(&sp.at(i)->stop);
+		clear_flag(sp.at(i)->stop);
 	}
 
 	work.search_think_time  = -1;
@@ -319,7 +319,7 @@ void stop_ponder()
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 		for(auto & i: sp)
-			set_flag(&i->stop);
+			set_flag(i->stop);
 
 		work.search_cv.notify_all();
 	}
@@ -341,7 +341,7 @@ void delete_threads()
 		work.reconfigure_threads = true;
 
 		for(auto & i: sp)
-			set_flag(&i->stop);
+			set_flag(i->stop);
 
 		work.search_cv.notify_all();
 	}
@@ -349,7 +349,7 @@ void delete_threads()
 	for(auto & i: sp) {
 		i->thread_handle->join();
 		delete i->thread_handle;
-
+		delete i->stop;
 		free(i->history);
 		delete i;
 	}
@@ -365,7 +365,7 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)) }));
+		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)), new end_t }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
@@ -461,7 +461,7 @@ int check_min_stack_size(const int nr, search_pars_t & sp)
 	my_trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	if (level < 768) {
-		set_flag(&sp.stop);
+		set_flag(sp.stop);
 		start_blink(led_red_timer);
 
 		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
@@ -588,7 +588,7 @@ void main_task()
 
 		try {
 			for(auto & i: sp)
-				clear_flag(&i->stop);
+				clear_flag(i->stop);
 			for(auto & i: sp)
 				i->md = 1;
 			reset_search_statistics();

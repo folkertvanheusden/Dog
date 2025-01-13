@@ -20,11 +20,12 @@ typedef struct
 
 	int16_t *const history;
 
+	end_t     *stop;
+
 	chess_stats cs;
 
 	uint16_t  md;
 
-	end_t     stop;
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	char      move[5];
 	int       score;
