@@ -18,7 +18,7 @@ struct pos {
 	bool     turn;
 };
 
-static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(struct pos & pos, unsigned *results, unsigned wdl)
+static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(unsigned *results, unsigned wdl)
 {
 	unsigned selected_move = 0;
 	int      best_dtz      = 1000;
@@ -130,23 +130,23 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	std::optional<std::pair<libchess::Move, int> > m;
 
-	m = get_best_dtz_move(pos, results, TB_WIN);
+	m = get_best_dtz_move(results, TB_WIN);
 	if (m.has_value())
 		return { { m.value().first, 10000 - m.value().second } };
 
-	m = get_best_dtz_move(pos, results, TB_CURSED_WIN);
+	m = get_best_dtz_move(results, TB_CURSED_WIN);
 	if (m.has_value())
 		return { { m.value().first, 10000 - m.value().second } };
 
-	m = get_best_dtz_move(pos, results, TB_DRAW);
+	m = get_best_dtz_move(results, TB_DRAW);
 	if (m.has_value())
 		return { { m.value().first, - m.value().second } };  // Dog doesn't like draws
 
-	m = get_best_dtz_move(pos, results, TB_BLESSED_LOSS);
+	m = get_best_dtz_move(results, TB_BLESSED_LOSS);
 	if (m.has_value())
 		return { { m.value().first, -(10000 - m.value().second) } };
 
-	m = get_best_dtz_move(pos, results, TB_LOSS);
+	m = get_best_dtz_move(results, TB_LOSS);
 	if (m.has_value())
 		return { { m.value().first, -(10000 - m.value().second) } };
 
