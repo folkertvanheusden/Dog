@@ -959,12 +959,6 @@ int main(int argc, char *argv[])
 	hello();
 
 #if !defined(__ANDROID__)
-	// for openbench
-	if (argc == 2 && strcmp(argv[1], "bench") == 0) {
-		run_bench();
-		return 0;
-	}
-
 	int thread_count =  1;
 	int c            = -1;
 	while((c = getopt(argc, argv, "t:pT:s:u:UR:rH:Q:h")) != -1) {
@@ -1015,6 +1009,11 @@ int main(int argc, char *argv[])
 		}
 	}
 #endif
+	// for openbench
+	if (optind < argc && strcmp(argv[optind], "bench") == 0) {
+		run_bench();
+		return 0;
+	}
 
 	if (my_trace_file.empty() == false)
 		my_trace("# tracing to file enabled\n");
