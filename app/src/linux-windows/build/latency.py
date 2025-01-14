@@ -10,7 +10,9 @@ if len(sys.argv) != 2:
     print('Chess program name missing')
     sys.exit(1)
 
-diffs = []
+cmds = ('uci', 'isready', 'go')
+
+diffs = dict()
 lts = dict()
 
 for line in sys.stdin.readlines():
@@ -32,24 +34,35 @@ for line in sys.stdin.readlines():
         arrow = parts.index('<---')
         from_engine = False
 
+    cmd = parts[arrow + 1]
+
     if from_engine:
         if name in lts:
-            diffs.append((ts - lts[name]).total_seconds())
+            referring_cmd = lts[name][0]
+            if not referring_cmd in diffs:
+                diffs[referring_cmd] = []
+            diffs[referring_cmd].append((ts - lts[name][1]).total_seconds())
             del lts[name]
     else:
-        if parts[arrow + 1] in ('uci', 'isready', 'go'):
-            lts[name] = ts
+        lts[name] = (cmd, ts)
 
-print(f'average: {statistics.mean(diffs) * 1000000:.0f} us')
-print(f'median : {statistics.median(diffs) * 1000000:.0f} us')
-print(f'stdev  : {statistics.stdev(diffs) * 1000000:.0f} us')
-print(f'min    : {min(diffs) * 1000000:.0f} us')
-print(f'max    : {max(diffs) * 1000000:.0f} us')
+for cmd in diffs:
+    if len(diffs[cmd]) == 0:
+        continue
+    print(f' -=]* {cmd } *[=-')
+    print(f'#      : {len(diffs[cmd])}')
+    print(f'average: {statistics.mean(diffs[cmd]) * 1000000:.0f} us')
+    print(f'median : {statistics.median(diffs[cmd]) * 1000000:.0f} us')
+    print(f'stdev  : {statistics.stdev(diffs[cmd]) * 1000000:.0f} us')
+    print(f'min    : {min(diffs[cmd]) * 1000000:.0f} us')
+    print(f'max    : {max(diffs[cmd]) * 1000000:.0f} us')
 
-import termplotlib as tpl
-import numpy as np
+    import termplotlib as tpl
+    import numpy as np
 
-counts, bin_edges = np.histogram(diffs, bins=25)
-fig = tpl.figure()
-fig.hist(counts, bin_edges, grid=[120, 25], force_ascii=False, orientation="horizontal")
-fig.show()
+    counts, bin_edges = np.histogram(diffs[cmd], bins=25)
+    fig = tpl.figure()
+    fig.hist(counts, bin_edges, grid=[120, 25], force_ascii=False, orientation='horizontal')
+    fig.show()
+
+    print()
