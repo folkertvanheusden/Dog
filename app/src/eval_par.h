@@ -98,7 +98,7 @@ public:
 	eval_par(const std::vector<libchess::TunableParameter> & params);
 	~eval_par();
 
-	std::map<std::string, int *> m {
+	std::map<const std::string, int *> m {
 		{ "tune_bishop_count", &bishop_count },
 		{ "tune_too_many_pawns", &too_many_pawns },
 		{ "tune_zero_pawns", &zero_pawns },
