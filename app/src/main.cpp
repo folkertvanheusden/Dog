@@ -224,19 +224,19 @@ std::istream is(&i);
 // TODO replace by messages
 struct {
 	std::mutex              search_fen_lock;
-	bool                    reconfigure_threads { false };
+	bool                    reconfigure_threads  { false };
 	std::condition_variable search_cv;
-	int                     search_version     { -1 };
-	int                     search_think_time  { 0  };
-	bool                    search_is_abs_time { false };
+	int                     search_version       { -1    };
+	int                     search_think_time    { 0     };
+	bool                    search_is_abs_time   { false };
 	int                     search_max_depth;
 	std::optional<uint64_t> search_max_n_nodes;
 	std::mutex              search_publish_lock;
 	std::condition_variable search_cv_finished;
-	libchess::Move          search_best_move   { 0  };
-	int                     search_best_score  { 0  };
-	bool                    search_output      { false };
-	int                     search_count_running { 0 };
+	libchess::Move          search_best_move     { 0     };
+	int                     search_best_score    { 0     };
+	bool                    search_output        { false };
+	int                     search_count_running { 0     };
 } work;
 
 void searcher(const int i)
@@ -246,9 +246,9 @@ void searcher(const int i)
 	int last_fen_version = -1;
 
 	for(;;) {
-		std::unique_lock<std::mutex> lck(work.search_fen_lock);
+		std::unique_lock<std::mutex> search_lck(work.search_fen_lock);
 		while(work.search_version == last_fen_version && work.reconfigure_threads == false)
-			work.search_cv.wait(lck);
+			work.search_cv.wait(search_lck);
 
 		if (work.reconfigure_threads)
 			break;
@@ -261,10 +261,13 @@ void searcher(const int i)
 		auto local_search_max_n_nodes = work.search_max_n_nodes;
 		bool local_search_output      = work.search_output;
 
-		work.search_count_running++;
+		{
+			std::unique_lock<std::mutex> publish_lck(work.search_publish_lock);
+			work.search_count_running++;
+		}
 
 		clear_flag(sp.at(i)->stop);
-		lck.unlock();
+		search_lck.unlock();
 
 		// search!
 		libchess::Move best_move  { 0 };
@@ -273,7 +276,7 @@ void searcher(const int i)
 
 		// notify finished
 		{
-			std::unique_lock<std::mutex> lck(work.search_publish_lock);
+			std::unique_lock<std::mutex> publish_lck(work.search_publish_lock);
 
 			if (i == 0) {
 				work.search_best_move  = best_move;
@@ -292,7 +295,6 @@ void start_ponder()
 {
 	my_trace("# start ponder\n");
 	std::unique_lock<std::mutex> lck(work.search_fen_lock);
-	assert(work.search_count_running == 0);
 
 	clear_flag(sp.at(0)->stop);
 	for(size_t i=1; i<sp.size(); i++) {
