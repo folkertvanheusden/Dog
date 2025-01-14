@@ -402,8 +402,10 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 	}
 
 #if defined(linux)
-	wboard = pos.color_bb(libchess::constants::WHITE);
-	bboard = pos.color_bb(libchess::constants::BLACK);
+	if (thread_nr == 1) {
+		wboard = pos.color_bb(libchess::constants::WHITE);
+		bboard = pos.color_bb(libchess::constants::BLACK);
+	}
 #endif
 
 	///// null move
