@@ -89,3 +89,5 @@ void start_ponder();
 void stop_ponder();
 void set_thread_name(std::string name);
 chess_stats calculate_search_statistics();
+void allocate_threads(const int n);
+void delete_threads();

@@ -23,6 +23,8 @@ void tests()
 	my_assert(sizeof(int) == 4);
 	printf("Ok\n");
 
+	allocate_threads(1);
+
 	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
 	// - mate in 1
 	const std::vector<std::pair<std::string, std::string> > mate_in_1 {
@@ -450,6 +452,8 @@ void tests()
 
 		printf("Ok\n");
 	}
+
+	delete_threads();
 }
 
 void run_tests()
