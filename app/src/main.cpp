@@ -590,10 +590,6 @@ void main_task()
 		uint64_t start_ts = esp_timer_get_time();
 
 		try {
-			for(auto & i: sp)
-				clear_flag(i->stop);
-			for(auto & i: sp)
-				i->md = 1;
 			reset_search_statistics();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
@@ -673,6 +669,11 @@ void main_task()
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
+
+					for(auto & i: sp) {
+						clear_flag(i->stop);
+						i->md = 1;
+					}
 
 					for(size_t i=1; i<sp.size(); i++)
 						sp.at(i)->pos = sp.at(0)->pos;
