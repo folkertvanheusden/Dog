@@ -226,8 +226,7 @@ struct {
 	std::mutex              search_fen_lock;
 	bool                    reconfigure_threads { false };
 	std::condition_variable search_cv;
-	std::string             search_fen;
-	int                     search_fen_version { -1 };
+	int                     search_version     { -1 };
 	int                     search_think_time  { 0  };
 	bool                    search_is_abs_time { false };
 	int                     search_max_depth;
@@ -248,13 +247,13 @@ void searcher(const int i)
 
 	for(;;) {
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
-		while(work.search_fen_version == last_fen_version && work.reconfigure_threads == false)
+		while(work.search_version == last_fen_version && work.reconfigure_threads == false)
 			work.search_cv.wait(lck);
 
 		if (work.reconfigure_threads)
 			break;
 
-		last_fen_version = work.search_fen_version;
+		last_fen_version = work.search_version;
 
 		int  local_search_think_time  = work.search_think_time;
 		bool local_search_is_abs_time = work.search_is_abs_time;
@@ -305,7 +304,7 @@ void start_ponder()
 	work.search_is_abs_time = false;
 	work.search_max_depth   = -1;
 	work.search_max_n_nodes.reset();
-	work.search_fen_version++;
+	work.search_version++;
 	work.search_best_move  = libchess::Move(0);
 	work.search_best_score = -32768;
 	work.search_output     = false;
@@ -680,7 +679,7 @@ void main_task()
 					work.search_is_abs_time = is_absolute_time;
 					work.search_max_depth   = depth.has_value() ? depth.value() : -1;
 					work.search_max_n_nodes.reset();
-					work.search_fen_version++;
+					work.search_version++;
 					work.search_best_move  = libchess::Move(0);
 					work.search_best_score = -32768;
 					work.search_output     = true;
@@ -913,7 +912,7 @@ void run_bench()
 			work.search_is_abs_time = true;
 			work.search_max_depth   = 10;
 			work.search_max_n_nodes.reset();
-			work.search_fen_version++;
+			work.search_version++;
 			work.search_best_move  = libchess::Move(0);
 			work.search_best_score = -32768;
 			work.search_output     = false;
