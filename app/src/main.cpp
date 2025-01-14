@@ -549,7 +549,7 @@ void main_task()
 
 	auto help_handler = [](std::istringstream&) {
 		printf("Apart from the standard UCI commands, the following can be used:\n");
-		printf("play         play game upto the end. optional parameter is think time\n");
+		printf("play         play game upto the end. optional parameter is think time or depth if preceeded with \"depth\"\n");
 		printf("eval         show evaluation score\n");
 		printf("fen          show fen of current position\n");
 		printf("d / display  show current board layout\n");
@@ -584,6 +584,85 @@ void main_task()
 
 		for (auto & move_str : position_parameters.move_list()->move_list())
 			sp.at(0)->pos.make_move(*libchess::Move::from(move_str));
+	};
+
+	auto play_handler = [](std::istringstream& line_stream) {
+		try {
+			std::optional<int> think_time;
+			std::optional<int> max_depth;
+
+			try {
+				std::string temp;
+				line_stream >> temp;
+
+				if (temp == "depth") {
+					line_stream >> temp;
+					max_depth = std::stoi(temp);
+				}
+				else {
+					think_time = std::stoi(temp);
+				}
+			}
+			catch(...) {
+				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
+			}
+
+			chess_stats cs_sum;
+			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
+				reset_search_statistics();
+
+				clear_flag(sp.at(0)->stop);
+				for(size_t i=1; i<sp.size(); i++) {
+					sp.at(i)->pos = sp.at(0)->pos;
+					clear_flag(sp.at(i)->stop);
+				}
+
+#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+				sp1.md = 1;
+				sp2.md = 1;
+				start_blink(led_green_timer);
+#endif
+
+				// put
+				{
+					std::unique_lock<std::mutex> lck(work.search_fen_lock);
+					work.search_think_time  = think_time.has_value() ? think_time.value() : -1;
+					work.search_is_abs_time = true;
+					work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
+					work.search_max_n_nodes.reset();
+					work.search_version++;
+					work.search_best_move  = libchess::Move(0);
+					work.search_best_score = -32768;
+					work.search_output     = true;
+					work.search_cv.notify_all();
+				}
+				// get
+				{
+					std::unique_lock<std::mutex> lck(work.search_publish_lock);
+					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
+						work.search_cv_finished.wait(lck);
+				}
+#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
+				stop_blink(led_green_timer, &led_green);
+#endif
+				cs_sum.add(calculate_search_statistics());
+
+				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
+
+				sp.at(0)->pos.make_move(work.search_best_move);
+			}
+
+			printf("\nFinished.\n");
+
+			emit_statistics(cs_sum, "global statistics");
+		}
+		catch(const std::exception& e) {
+#if defined(__ANDROID__)
+			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what());
+#else
+			printf("# EXCEPTION in main: %s\n", e.what());
+#endif
+		}
 	};
 
 	auto go_handler = [&global_cs](const libchess::UCIGoParameters & go_parameters) {
@@ -750,6 +829,7 @@ void main_task()
 	uci_service->register_go_handler      (go_handler);
 	uci_service->register_stop_handler    (stop_handler);
 
+	uci_service->register_handler("play",       play_handler, true);
 	uci_service->register_handler("eval",       eval_handler, true);
 	uci_service->register_handler("fen",        fen_handler, true);
 	uci_service->register_handler("d",          display_handler, true);
