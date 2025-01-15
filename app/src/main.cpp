@@ -490,6 +490,17 @@ void gpio_set_level(int a, int b)
 }
 #endif
 
+void prepare_threads_state()
+{
+	clear_flag(sp.at(0)->stop);
+	sp.at(0)->md = 1;
+	for(size_t i=1; i<sp.size(); i++) {
+		sp.at(i)->pos = sp.at(0)->pos;
+		sp.at(i)->md  = 1;
+		clear_flag(sp.at(i)->stop);
+	}
+}
+
 void reset_search_statistics()
 {
         for(auto & i: sp)
@@ -611,15 +622,9 @@ void main_task()
 			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				reset_search_statistics();
 
-				clear_flag(sp.at(0)->stop);
-				for(size_t i=1; i<sp.size(); i++) {
-					sp.at(i)->pos = sp.at(0)->pos;
-					clear_flag(sp.at(i)->stop);
-				}
+				prepare_threads_state();
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
-				sp1.md = 1;
-				sp2.md = 1;
 				start_blink(led_green_timer);
 #endif
 
@@ -749,13 +754,7 @@ void main_task()
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
-					for(auto & i: sp) {
-						clear_flag(i->stop);
-						i->md = 1;
-					}
-
-					for(size_t i=1; i<sp.size(); i++)
-						sp.at(i)->pos = sp.at(0)->pos;
+					prepare_threads_state();
 
 					work.search_think_time  = depth.has_value() && think_time == 0 ? -1 : think_time;
 					work.search_is_abs_time = is_absolute_time;
