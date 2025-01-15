@@ -186,7 +186,7 @@ int qs(libchess::Position & pos, int alpha, const int beta, const int qsdepth, s
 {
 	if (sp.stop->flag)
 		return 0;
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if defined(ESP32)
 	if (qsdepth > sp.md) {
 		if (check_min_stack_size(1, sp))
 			return 0;
@@ -300,15 +300,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 		return qs(pos, alpha, beta, max_depth, sp, thread_nr);
 
 	int d = max_depth - depth;
-
+#if defined(ESP32)
 	if (d > sp.md) {
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 		if (check_min_stack_size(0, sp))
 			return 0;
-#endif
-
 		sp.md = d;
 	}
+#endif
 
 	sp.cs.data.nodes++;
 
@@ -645,7 +643,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 		uint64_t previous_node_count = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
-#if defined(linux)
+#if defined(ESP32)
 			sp->md = 0;
 #endif
 			int score = search(pos, max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, thread_nr);

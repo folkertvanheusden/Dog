@@ -24,8 +24,9 @@ typedef struct
 	end_t     *stop;
 
 	chess_stats cs;
-
+#if defined(ESP32)
 	uint16_t  md;
+#endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	char      move[5];

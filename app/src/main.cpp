@@ -493,10 +493,14 @@ void gpio_set_level(int a, int b)
 void prepare_threads_state()
 {
 	clear_flag(sp.at(0)->stop);
+#if defined(ESP32)
 	sp.at(0)->md = 1;
+#endif
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
+#if defined(ESP32)
 		sp.at(i)->md  = 1;
+#endif
 		clear_flag(sp.at(i)->stop);
 	}
 }

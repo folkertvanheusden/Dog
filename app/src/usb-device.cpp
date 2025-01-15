@@ -103,9 +103,6 @@ void usb_disp(const std::string & device)
 	pollfd fds[] { { fd, POLLIN, 0  } };
 
 	for(;;) {
-		if (!send_disp_cmd(fd, myformat("depth %d\n", sp.at(0)->md)))
-			break;
-
 		if (!send_disp_cmd(fd, myformat("move %s\n", sp.at(0)->move)))
 			break;
 
