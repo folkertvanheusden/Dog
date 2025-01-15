@@ -457,7 +457,7 @@ void show_esp32_info()
 }
 
 int64_t esp_start_ts = 0;
-int check_min_stack_size(const int nr, search_pars_t & sp)
+int check_min_stack_size(const int nr, const search_pars_t & sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 

@@ -20,8 +20,8 @@ typedef struct
 	const eval_par & parameters;
 	int16_t *const   history;
 	end_t           *stop;
-	int              thread_nr;
-	chess_stats      cs;
+	const int        thread_nr;
+	chess_stats cs;
 #if defined(ESP32)
 	uint16_t  md;
 #endif
