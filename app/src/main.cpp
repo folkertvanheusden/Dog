@@ -373,7 +373,7 @@ void allocate_threads(const int n)
 	}
 #if defined(ESP32)
 	if (n > 0) {
-		think_timeout_pars.arg = &sp.at(0)->stop;
+		think_timeout_pars.arg = sp.at(0)->stop;
 		static bool first = true;
 		if (first)
 			first = false;
