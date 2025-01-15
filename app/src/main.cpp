@@ -1192,6 +1192,8 @@ extern "C" void app_main()
 	esp_chip_info(&chip_info);
 	allocate_threads(chip_info.cores);
 
+	allow_ponder = true;
+
 	main_task();
 
 	start_blink(led_red_timer);
