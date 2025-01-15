@@ -618,6 +618,8 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
 			}
 
+			stop_ponder();
+
 			chess_stats cs_sum;
 			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
 				reset_search_statistics();
