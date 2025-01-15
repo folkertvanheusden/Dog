@@ -12,19 +12,12 @@ typedef enum { NOTVALID = 0, EXACT = 1, LOWERBOUND = 2, UPPERBOUND = 3 } tt_entr
 
 typedef struct __PRAGMA_PACKED__
 {
-        uint64_t hash;
-
-        union u {
-                struct {
-                        int16_t score;
-                        uint8_t flags  : 2;
-                        uint8_t filler : 6;
-                        uint8_t depth  : 8;
-                        uint32_t m;
-                } _data;
-
-                uint64_t data;
-        } data_;
+	uint16_t hash;
+	int16_t  score;
+	uint8_t  depth  : 8;
+	uint32_t m      : 18;
+	uint8_t  flags  : 2;
+	uint8_t  filler : 4;
 } tt_entry;
 
 class tt

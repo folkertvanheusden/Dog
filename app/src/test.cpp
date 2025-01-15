@@ -316,11 +316,10 @@ void tests()
 			auto record1 = tti.lookup(2);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
-			my_assert((data1.hash ^ data1.data_.data) == 2);
-			my_assert(libchess::Move(data1.data_._data.m) == *libchess::Move::from("e2e4"));
-			my_assert(data1.data_._data.depth == 3);
-			my_assert(data1.data_._data.score == 4);
-			my_assert(data1.data_._data.flags == EXACT);
+			my_assert(libchess::Move(data1.m) == *libchess::Move::from("e2e4"));
+			my_assert(data1.depth == 3);
+			my_assert(data1.score == 4);
+			my_assert(data1.flags == EXACT);
 		}
 
 		printf("Ok\n");
