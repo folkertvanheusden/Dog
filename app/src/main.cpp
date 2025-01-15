@@ -406,7 +406,7 @@ auto allow_ponder_handler = [](const bool value) {
 
 auto commerial_option_handler = [](const std::string & value) { };
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if defined(ESP32)
 extern "C" {
 void vApplicationMallocFailedHook()
 {
@@ -630,7 +630,7 @@ void main_task()
 
 				prepare_threads_state();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if defined(ESP32)
 				start_blink(led_green_timer);
 #endif
 
@@ -653,7 +653,7 @@ void main_task()
 					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 				}
-#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
+#if defined(ESP32)
 				stop_blink(led_green_timer, &led_green);
 #endif
 				cs_sum.add(calculate_search_statistics());
@@ -684,7 +684,7 @@ void main_task()
 
 			stop_ponder();
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if defined(ESP32)
 			esp_start_ts = start_ts;
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
@@ -791,7 +791,7 @@ void main_task()
 			my_trace("info string had %d ms, used %.3f ms (including overhead)\n", think_time, (esp_timer_get_time() - start_ts) / 1000.);
 
 			// no longer thinking
-#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
+#if defined(ESP32)
 			stop_blink(led_green_timer, &led_green);
 #endif
 #if defined(__ANDROID__)
