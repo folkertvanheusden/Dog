@@ -86,8 +86,10 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	uint64_t   index = fastrange(hash, n_entries);
 	tt_entry & cur   = entries[index];
 
-	if (cur.hash == uint16_t(hash))
+	if (cur.hash == uint16_t(hash)) {
+		assert(cur.flags != NOTVALID);
 		return cur;
+	}
 
 	return { };
 }
