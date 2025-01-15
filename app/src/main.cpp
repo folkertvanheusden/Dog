@@ -619,7 +619,7 @@ void main_task()
 				}
 			}
 			catch(...) {
-				printf("No or invalid think time (ms) given, using %d instead\n", think_time);
+				printf("No or invalid think time (ms) given, using %d instead\n", think_time.value());
 			}
 
 			stop_ponder();
