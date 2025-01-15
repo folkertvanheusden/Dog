@@ -9,6 +9,14 @@ e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
 master
+	Results of Dog-2b40aa9-master-LC7569dd6 vs Dog-5bbcc76-master-LC7569dd6 (8+0.08, 1t, 256MB - 1MB, lichess-big3-resolved.epd):
+	Elo: -25.12 +/- 11.76, nElo: -60.51 +/- 28.23
+	LOS: 0.00 %, DrawRatio: 75.95 %, PairsRatio: 0.37
+	Games: 582, Wins: 199, Losses: 241, Draws: 142, Points: 270.0 (46.39 %)
+	Ptnml(0-2): [11, 40, 221, 18, 1], WL/DD Ratio: 4.26
+	LLR: -2.95 (-2.94, 2.94) [0.00, 10.00]
+
+master
 	Results of Dog-359c9ef-master-LC7569dd6 vs Dog-5bbcc76-master-LC7569dd6 (8+0.08, 1t, 256MB - 1MB, lichess-big3-resolved.epd):
 	Elo: -24.78 +/- 11.92, nElo: -57.16 +/- 27.39
 	LOS: 0.00 %, DrawRatio: 74.11 %, PairsRatio: 0.36
