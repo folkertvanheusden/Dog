@@ -55,14 +55,14 @@ void tests()
 
 	for(auto & entry: underpromotions) {
 		printf("Testing \"%s\" for underpromotions\n", entry.first.c_str());
-		libchess::Position p { entry.first };
-		my_assert(p.fen() == entry.first);
+		sp.at(0)->pos = libchess::Position { entry.first };
+		my_assert(sp.at(0)->pos.fen() == entry.first);
 
 		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(p, 100, false, sp.at(0), -1, { }, false);
+		std::tie(best_move, best_score) = search_it(100, false, sp.at(0), -1, { }, false);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -72,14 +72,14 @@ void tests()
 	// - move sorting & generation
 	{
 		printf("move sorting & generation test\n");
-		libchess::Position p { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
+		sp.at(0)->pos = libchess::Position { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
 
 		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 
-		libchess::MoveList move_list = p.pseudo_legal_move_list();
+		libchess::MoveList move_list = sp.at(0)->pos.pseudo_legal_move_list();
 		my_assert(move_list.size() == 7);
-		sort_movelist_compare smc(p, *sp.at(0));
+		sort_movelist_compare smc(*sp.at(0));
 		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
 
 		int prev_v = 32767;
@@ -503,7 +503,8 @@ void test_mate_finder(const std::string & filename, const int search_time)
 
 	for(size_t i=0; i<n; i++) {
 		clear_flag(sp.at(0)->stop);
-		auto rc  = search_it(positions.at(i).first, search_time, false, sp.at(0), -1, { }, false);
+		sp.at(0)->pos = positions.at(i).first;
+		auto rc  = search_it(search_time, false, sp.at(0), -1, { }, false);
 
 		bool hit = abs(rc.second) >= 9800;
 		mates_found += hit;
