@@ -21,8 +21,6 @@ public:
 
 void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
 
-bool is_insufficient_material_draw(const libchess::Position & pos);
-
 void init_lmr();
 bool is_insufficient_material_draw(const libchess::Position & pos);
 int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t & sp, const int thread_nr);
