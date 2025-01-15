@@ -290,7 +290,7 @@ void update_history(const search_pars_t & sp, const int index, const int bonus)
 	sp.history[index] += final_value;
 }
 
-int search(int8_t depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp)
+int search(int depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp)
 {
 	if (sp.stop->flag)
 		return 0;
@@ -632,7 +632,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
 
-		int8_t  max_depth = 1;
+		int     max_depth = 1;
 
 		libchess::Move cur_move { 0 };
 
