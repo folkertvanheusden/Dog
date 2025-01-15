@@ -299,12 +299,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 	if (depth == 0)
 		return qs(pos, alpha, beta, max_depth, sp);
 
-	int d = max_depth - depth;
+	const int csd = max_depth - depth;
 #if defined(ESP32)
-	if (d > sp.md) {
+	if (csd > sp.md) {
 		if (check_min_stack_size(0, sp))
 			return 0;
-		sp.md = d;
+		sp.md = csd;
 	}
 #endif
 
@@ -317,7 +317,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 	}
 
 	const int  start_alpha = alpha;
-	const int  csd         = max_depth - depth;
 	const bool is_pv       = alpha != beta -1;
 
 	// TT //
@@ -340,22 +339,24 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
-				*m = libchess::Move(0);
-
-				if (is_root_position) {
-					if (tt_move.has_value()) {
-						if (pos.is_legal_move(tt_move.value()) == false)
-							sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
-						else
+				if (tt_move.has_value()) {
+					if (is_root_position) {
+						if (pos.is_legal_move(tt_move.value())) {
 							*m = tt_move.value();  // move in TT is valid
+							return work_score;
+						}
+
+						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+						// do NOT return
 					}
+					else {
+						*m = tt_move.value();  // not used directly, only for move ordening
+						return work_score;
+					}
+				}
+				else if (!is_root_position) {
 					return work_score;
 				}
-
-				if (tt_move.has_value())
-					*m = tt_move.value();  // not used directly, only for move ordening
-
-				return work_score;
 			}
 		}
 	}
@@ -412,12 +413,12 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 		sp.cs.data.n_null_move++;
 
 		pos.make_null_move();
-		libchess::Move ignore;
+		libchess::Move ignore { };
 		int nmscore = -search(pos, depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
 		pos.unmake_move();
 
                 if (nmscore >= beta) {
-			libchess::Move ignore2;
+			libchess::Move ignore2 { };
 			int verification = search(pos, depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
