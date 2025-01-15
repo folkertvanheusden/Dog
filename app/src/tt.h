@@ -8,7 +8,7 @@
 
 #define __PRAGMA_PACKED__ __attribute__ ((__packed__))
 
-typedef enum { EXACT = 0, LOWERBOUND = 1, UPPERBOUND = 2, NOTVALID = 3 } tt_entry_flag;
+typedef enum { NOTVALID = 0, EXACT = 1, LOWERBOUND = 2, UPPERBOUND = 3 } tt_entry_flag;
 
 typedef struct __PRAGMA_PACKED__
 {
