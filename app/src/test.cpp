@@ -62,7 +62,7 @@ void tests()
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 		libchess::Move best_move  { 0 };
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(p, 100, false, sp.at(0), -1, 0, { }, false);
+		std::tie(best_move, best_score) = search_it(p, 100, false, sp.at(0), -1, { }, false);
 		
 		my_assert(best_move == *libchess::Move::from(entry.second));
 
@@ -504,7 +504,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 
 	for(size_t i=0; i<n; i++) {
 		clear_flag(sp.at(0)->stop);
-		auto rc  = search_it(positions.at(i).first, search_time, false, sp.at(0), -1, 0, { }, false);
+		auto rc  = search_it(positions.at(i).first, search_time, false, sp.at(0), -1, { }, false);
 
 		bool hit = abs(rc.second) >= 9800;
 		mates_found += hit;
