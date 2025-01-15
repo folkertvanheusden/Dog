@@ -102,14 +102,8 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	}
 	else {
 		int index = history_index(sp.pos.side_to_move(), from_type, move.to_square());
-		int hist_val = sp.history[index] * 256;
-		assert(abs(hist_val) < (1 << 19));
-		score += hist_val;
+		score += sp.history[index];
 	}
-
-	int psq_add = -psq(move.from_square(), piece_from->color(), from_type).first + psq(move.to_square(), piece_from->color(), to_type).first;
-	assert(abs(psq_add) < 256);
-	score += psq_add;
 
 	return score;
 }
