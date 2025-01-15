@@ -671,6 +671,8 @@ void main_task()
 		try {
 			reset_search_statistics();
 
+			stop_ponder();
+
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			esp_start_ts = start_ts;
 			stop_blink(led_red_timer, &led_red);
@@ -743,8 +745,6 @@ void main_task()
 
 			// main search
 			if (!has_best) {
-				stop_ponder();
-
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
