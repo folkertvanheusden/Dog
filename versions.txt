@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+tt8b
+	Results of Dog-2b80513-tt8b-LC7569dd6_1MB vs Dog-2b40aa9-master-LC7569dd6_1MB (8+0.08, 1t, 1MB, lichess-big3-resolved.epd):
+	Elo: 4.99 +/- 3.97, nElo: 11.69 +/- 9.30
+	LOS: 99.31 %, DrawRatio: 75.46 %, PairsRatio: 1.22
+	Games: 5362, Wins: 2095, Losses: 2018, Draws: 1249, Points: 2719.5 (50.72 %)
+	Ptnml(0-2): [48, 248, 2023, 303, 59], WL/DD Ratio: 4.80
+	LLR: 2.97 (-2.94, 2.94) [0.00, 10.00]
+
 no-qs-sort
 	Results of Dog-df02ed9-no-qs-sort-LC7569dd6 vs Dog-5bbcc76-master-LC7569dd6 (8+0.08, 1t, 256MB - 1MB, lichess-big3-resolved.epd):
 	Elo: -31.50 +/- 14.01, nElo: -66.17 +/- 29.25
