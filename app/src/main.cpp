@@ -368,7 +368,7 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
+		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
@@ -382,6 +382,14 @@ void allocate_threads(const int n)
 		esp_timer_create(&think_timeout_pars, &think_timeout_timer);
 	}
 #endif
+}
+
+void prepare_history()
+{
+	for(auto & i: sp) {
+		for(size_t k=0; k<history_size; k++)
+			i->history[k] /= 4;
+	}
 }
 
 auto thread_count_handler = [](const int value)  {
@@ -995,7 +1003,7 @@ void run_bench()
 		{
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			sp.at(0)->pos = libchess::Position(fen);
-			memset(sp.at(0)->history, 0x00, history_malloc_size);
+			prepare_history();
 			work.search_think_time  = 1 << 31;
 			work.search_is_abs_time = true;
 			work.search_max_depth   = 10;

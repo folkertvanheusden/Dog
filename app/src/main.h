@@ -41,8 +41,8 @@ extern std::vector<search_pars_t *> sp;
 uint64_t esp_timer_get_time();
 #endif
 
-constexpr size_t history_size        = 2 * 6 * 64;
-constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
+constexpr const size_t history_size        = 2 * 6 * 64;
+constexpr const size_t history_malloc_size = sizeof(int16_t) * history_size;
 
 #include "inbuf.h"
 #include "tt.h"
@@ -86,6 +86,7 @@ void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 void start_ponder();
 void stop_ponder();
+void prepare_history();
 void set_thread_name(std::string name);
 chess_stats calculate_search_statistics();
 void allocate_threads(const int n);

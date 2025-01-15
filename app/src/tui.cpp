@@ -564,6 +564,8 @@ void tui()
 				sp.at(0)->pos.make_move(best_move);
 				moves_played.push_back(best_move);
 				scores.push_back(best_score);
+
+				prepare_history();
 			}
 
 			my_printf("\n");
