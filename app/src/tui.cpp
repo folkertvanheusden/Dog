@@ -571,8 +571,6 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
-
-			prepare_history();
 		}
 	}
 
