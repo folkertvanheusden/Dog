@@ -278,7 +278,7 @@ int qs(libchess::Position & pos, int alpha, const int beta, const int qsdepth, s
 	return best_score;
 }
 
-void update_history(search_pars_t & sp, const int index, const int bonus)
+void update_history(const search_pars_t & sp, const int index, const int bonus)
 {
 	constexpr int max_history = 1023;
 	constexpr int min_history = -max_history;
