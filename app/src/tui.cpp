@@ -433,6 +433,8 @@ void tui()
 			if (line.empty())
 				continue;
 
+			stop_ponder();
+
 			auto parts = split(line, " ");
 			if (parts[0] == "help")
 				help();
@@ -517,8 +519,6 @@ void tui()
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else {
-				stop_ponder();
-
 				bool valid = false;
 				std::optional<libchess::Move> move;
 				move = libchess::Move::from(parts[0]);
@@ -571,9 +571,9 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
-		}
 
-		stop_ponder();
+			prepare_history();
+		}
 	}
 
 	delete pb;
