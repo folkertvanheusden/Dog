@@ -86,7 +86,7 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	uint64_t   index = fastrange(hash, n_entries);
 	tt_entry & cur   = entries[index];
 
-	if (cur.hash == (hash & 0xffff))
+	if (cur.hash == uint16_t(hash))
 		return cur;
 
 	return { };
@@ -99,7 +99,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n.depth = uint8_t(d);
 	n.flags = f;
 	n.m     = m.value();
-	n.hash  = hash & 0xffff;
+	n.hash  = uint16_t(hash);
 
 	uint64_t index = fastrange(hash, n_entries);
 	entries[index] = n;
@@ -112,7 +112,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	tt_entry n { };
 
-	if (e->hash == (hash & 0xffff)) {
+	if (e->hash == uint16_t(hash)) {
 		tt_entry & cur = entries[index];
 		n.m = cur.m;
 	}
@@ -120,7 +120,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
-	n.hash  = hash & 0xffff;
+	n.hash  = uint16_t(hash);
 
 	entries[index] = n;
 }
