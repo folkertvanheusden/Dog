@@ -271,11 +271,11 @@ void tt_lookup()
 		my_printf("None\n");
 	else {
 		const char *const flag_names[] = { "invalid", "exact", "lowerbound", "upperbound" };
-		my_printf("Score: %.2f (%s)\n", te.value().data_._data.score / 100., flag_names[te.value().data_._data.flags]);
-		my_printf("Depth: %d\n", te.value().data_._data.depth);
+		my_printf("Score: %.2f (%s)\n", te.value().score / 100., flag_names[te.value().flags]);
+		my_printf("Depth: %d\n", te.value().depth);
 		std::optional<libchess::Move> tt_move;
-		if (te.value().data_._data.m)
-			tt_move = libchess::Move(te.value().data_._data.m);
+		if (te.value().m)
+			tt_move = libchess::Move(te.value().m);
 		if (tt_move.has_value() && sp.at(0)->pos.is_legal_move(tt_move.value()))
 			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
 	}

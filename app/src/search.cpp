@@ -328,13 +328,13 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, const int16_t 
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.tt_hit++;
-		if (te.value().data_._data.m)  // move stored in TT?
-			tt_move = libchess::Move(te.value().data_._data.m);
+		if (te.value().m)  // move stored in TT?
+			tt_move = libchess::Move(te.value().m);
 
-		if (te.value().data_._data.depth >= depth && !is_pv) {
-			int score      = te.value().data_._data.score;
+		if (te.value().depth >= depth && !is_pv) {
+			int score      = te.value().score;
 			int work_score = eval_from_tt(score, csd);
-			auto flag      = te.value().data_._data.flags;
+			auto flag      = te.value().flags;
                         bool use       = flag == EXACT ||
                                         (flag == LOWERBOUND && work_score >= beta) ||
                                         (flag == UPPERBOUND && work_score <= alpha);

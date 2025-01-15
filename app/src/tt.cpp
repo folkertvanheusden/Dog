@@ -11,7 +11,7 @@
 #include "tt.h"
 
 
-static_assert(sizeof(tt_entry) == 16, "tt_entry must be 16 bytes in size");
+static_assert(sizeof(tt_entry) == 8, "tt_entry must be 8 bytes in size");
 
 tt tti;
 
@@ -86,7 +86,7 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	uint64_t   index = fastrange(hash, n_entries);
 	tt_entry & cur   = entries[index];
 
-	if ((cur.hash ^ cur.data_.data) == hash)
+	if (cur.hash == (hash & 0xffff))
 		return cur;
 
 	return { };
@@ -94,17 +94,15 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
-	uint64_t        index = fastrange(hash, n_entries);
-	tt_entry *const e     = &entries[index];
+	tt_entry n { };
+	n.score = int16_t(score);
+	n.depth = uint8_t(d);
+	n.flags = f;
+	n.m     = m.value();
+	n.hash  = hash & 0xffff;
 
-	tt_entry::u n { };
-	n._data.score = int16_t(score);
-	n._data.depth = uint8_t(d);
-	n._data.flags = f;
-	n._data.m     = m.value();
-
-	e->hash       = hash ^ n.data;
-	e->data_.data = n.data;
+	uint64_t index = fastrange(hash, n_entries);
+	entries[index] = n;
 }
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
@@ -112,16 +110,19 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	uint64_t        index = fastrange(hash, n_entries);
 	tt_entry *const e     = &entries[index];
 
-	tt_entry::u n { };
-	n._data.score = int16_t(score);
-	n._data.depth = uint8_t(d);
-	n._data.flags = f;
-	tt_entry & cur = entries[index];
-	if ((cur.hash ^ cur.data_.data) == hash)
-		n._data.m = cur.data_._data.m;
+	tt_entry n { };
 
-	e->hash       = hash ^ n.data;
-	e->data_.data = n.data;
+	if (e->hash == (hash & 0xffff)) {
+		tt_entry & cur = entries[index];
+		n.m = cur.m;
+	}
+
+	n.score = int16_t(score);
+	n.depth = uint8_t(d);
+	n.flags = f;
+	n.hash  = hash & 0xffff;
+
+	entries[index] = n;
 }
 
 int tt::get_per_mille_filled()
@@ -145,7 +146,7 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 		if (!te.has_value())
 			break;
 
-		libchess::Move cur_move = libchess::Move(te.value().data_._data.m);
+		libchess::Move cur_move = libchess::Move(te.value().m);
 		if (!work.is_legal_move(cur_move))
 			break;
 
