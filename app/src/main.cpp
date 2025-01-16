@@ -346,6 +346,9 @@ void stop_ponder()
 	}
 
 	my_trace("# ponder stopped\n");
+	auto stats = calculate_search_statistics();
+	if (stats.data.nodes || stats.data.qnodes)
+		emit_statistics(stats, "ponder statistics");
 }
 
 void delete_threads()
