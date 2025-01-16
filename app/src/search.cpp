@@ -652,8 +652,8 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				break;
 			}
 
-			auto     counts      = calculate_search_statistics();
-			uint64_t cur_n_nodes = counts.data.nodes + counts.data.qnodes;
+			auto     counts      = simple_search_statistics();
+			uint64_t cur_n_nodes = counts.first;
 			node_counts.push_back(cur_n_nodes - previous_node_count);
 			previous_node_count  = cur_n_nodes;
 
@@ -732,13 +732,13 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 									max_depth, mate_moves,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-									counts.data.syzygy_query_hits, pv_str.c_str());
+									counts.second, pv_str.c_str());
 						}
 						else {
 							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
 									max_depth, score,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-									counts.data.syzygy_query_hits, pv_str.c_str());
+									counts.second, pv_str.c_str());
 						}
 					}
 				}

@@ -510,6 +510,18 @@ chess_stats calculate_search_statistics()
         return out;
 }
 
+std::pair<uint64_t, uint64_t> simple_search_statistics()
+{
+	uint64_t syzygy_query_hits = 0, nodes_visited = 0;
+
+        for(auto & i: sp) {
+		syzygy_query_hits += i->cs.data.syzygy_query_hits;
+		nodes_visited += i->cs.data.nodes + i->cs.data.qnodes;
+	}
+
+	return { nodes_visited, syzygy_query_hits };
+}
+
 void main_task()
 {
 	libchess::UCIService *uci_service = new libchess::UCIService("Dog v3.0", "Folkert van Heusden", std::cout, is);
