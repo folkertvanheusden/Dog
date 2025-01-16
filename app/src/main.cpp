@@ -398,12 +398,6 @@ auto hash_size_handler = [](const int value)  {
 
 bool allow_ponder         = false;
 auto allow_ponder_handler = [](const bool value) {
-	if (allow_ponder != value) {
-		if (value)
-			start_ponder();
-		else
-			stop_ponder();
-	}
 	allow_ponder = value;
 	printf("# Ponder %s\n", value ? "enabled" : "disabled");
 };
@@ -588,8 +582,6 @@ void main_task()
 		global_cs.reset();
 		tti.reset();
 		printf("# --- New game ---\n");
-		if (allow_ponder)
-			start_ponder();
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
