@@ -231,7 +231,6 @@ struct {
 	bool                    search_is_abs_time   { false };
 	int                     search_max_depth;
 	std::optional<uint64_t> search_max_n_nodes;
-	std::mutex              search_publish_lock;
 	std::condition_variable search_cv_finished;
 	libchess::Move          search_best_move     { 0     };
 	int                     search_best_score    { 0     };
@@ -261,10 +260,7 @@ void searcher(const int i)
 		auto local_search_max_n_nodes = work.search_max_n_nodes;
 		bool local_search_output      = work.search_output;
 
-		{
-			std::unique_lock<std::mutex> publish_lck(work.search_publish_lock);
-			work.search_count_running++;
-		}
+		work.search_count_running++;
 
 		clear_flag(sp.at(i)->stop);
 		search_lck.unlock();
@@ -275,17 +271,15 @@ void searcher(const int i)
 		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		// notify finished
-		{
-			std::unique_lock<std::mutex> publish_lck(work.search_publish_lock);
+		search_lck.lock();
 
-			if (i == 0) {
-				work.search_best_move  = best_move;
-				work.search_best_score = best_score;
-			}
-
-			work.search_count_running--;
-			work.search_cv_finished.notify_one();
+		if (i == 0) {
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
 		}
+
+		work.search_count_running--;
+		work.search_cv_finished.notify_one();
 	}
 
 	printf("Thread %d finished\n", i);
@@ -336,10 +330,6 @@ void stop_ponder()
 			set_flag(i->stop);
 
 		work.search_cv.notify_all();
-	}
-
-	{
-		std::unique_lock<std::mutex> lck(work.search_publish_lock);
 
 		while(work.search_count_running != 0)
 			work.search_cv_finished.wait(lck);
@@ -593,11 +583,10 @@ void main_task()
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
-		if (!position_parameters.move_list())
-			return;
-
-		for (auto & move_str : position_parameters.move_list()->move_list())
-			sp.at(0)->pos.make_move(*libchess::Move::from(move_str));
+		if (position_parameters.move_list()) {
+			for (auto & move_str : position_parameters.move_list()->move_list())
+				sp.at(0)->pos.make_move(*libchess::Move::from(move_str));
+		}
 	};
 
 	auto play_handler = [](std::istringstream& line_stream) {
@@ -648,7 +637,7 @@ void main_task()
 				}
 				// get
 				{
-					std::unique_lock<std::mutex> lck(work.search_publish_lock);
+					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 				}
@@ -774,7 +763,7 @@ void main_task()
 
 				// get
 				{
-					std::unique_lock<std::mutex> lck(work.search_publish_lock);
+					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
@@ -1007,7 +996,7 @@ void run_bench()
 		}
 		// get
 		{
-			std::unique_lock<std::mutex> lck(work.search_publish_lock);
+			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 				work.search_cv_finished.wait(lck);
 		}
