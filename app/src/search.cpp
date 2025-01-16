@@ -402,17 +402,17 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= nm_reduce_depth && !in_check && !is_root_position && null_move_depth < 2) {
+	if (depth >= 2 && !in_check && !is_root_position && null_move_depth < 2) {
 		sp.cs.data.n_null_move++;
 
 		sp.pos.make_null_move();
 		libchess::Move ignore { };
-		int nmscore = -search(depth - nm_reduce_depth, -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
+		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
 		sp.pos.unmake_move();
 
                 if (nmscore >= beta) {
 			libchess::Move ignore2 { };
-			int verification = search(depth - nm_reduce_depth, beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
+			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
 				return abs(nmscore) >= 9800 ? beta : nmscore;
