@@ -56,12 +56,8 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(unsigned
 				to_type = 'n'; break;
 		}
 
-		char move_str[6] { char('a' + (from & 7)), char('1' + (from >> 3)), char('a' + (to & 7)), char('1' + (to >> 3)) };
-		if (to_type)
-			move_str[5] = to_type;
-
+		char move_str[6] { char('a' + (from & 7)), char('1' + (from >> 3)), char('a' + (to & 7)), char('1' + (to >> 3)), to_type };
 		auto move = libchess::Move::from(move_str);
-
 		if (move.has_value())
 			rc = std::pair{ move.value(), best_dtz };
 	}
