@@ -359,7 +359,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	////////
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	if (with_syzygy) {
+	if (with_syzygy && !is_root_position) {
 		// check piece count
 		unsigned counts = sp.pos.occupancy_bb().popcount();
 
