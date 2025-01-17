@@ -14,6 +14,7 @@ void tests()
 #define my_assert(x) \
 	if (!(x)) { \
 		fprintf(stderr, "assert fail at line %d (%s) in %s\n", __LINE__, __func__, __FILE__); \
+		delete_threads(); \
 		exit(1); \
 	}
 
