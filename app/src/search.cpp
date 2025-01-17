@@ -649,7 +649,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 #if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
 #endif
-					printf("info depth %d score cp %d\n", max_depth - 1, best_score);
+					printf("info depth %d score cp %d hashfull %d\n", max_depth - 1, best_score, tti.get_per_mille_filled());
 				}
 				break;
 			}
@@ -730,16 +730,16 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 					if (output) {
 						if (abs(score) > 9800) {
 							int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv%s\n",
 									max_depth, mate_moves,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-									counts.second, pv_str.c_str());
+									counts.second, tti.get_per_mille_filled(), pv_str.c_str());
 						}
 						else {
-							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " pv%s\n",
+							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv%s\n",
 									max_depth, score,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-									counts.second, pv_str.c_str());
+									counts.second, tti.get_per_mille_filled(), pv_str.c_str());
 						}
 					}
 				}
