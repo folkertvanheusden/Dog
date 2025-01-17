@@ -645,12 +645,12 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
 
 			if (sp->stop->flag) {
+				if (sp->thread_nr == 0 && output) {
 #if !defined(__ANDROID__)
-				if (sp->thread_nr == 0 && output)
 					my_trace("info string stop flag set\n");
 #endif
-				if (sp->thread_nr == 0 && output)
 					printf("info depth %d score cp %d\n", max_depth - 1, best_score);
+				}
 				break;
 			}
 
@@ -710,7 +710,6 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 
 #if defined(linux)
 				strncpy(sp->move, best_move.to_str().c_str(), 4);
-
 				sp->score = score;
 #endif
 
