@@ -640,6 +640,8 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 #if defined(ESP32)
 			sp->md = 0;
 #endif
+			if (max_depth >= 4)
+				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
 
 			if (sp->stop->flag) {
@@ -763,6 +765,8 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 						my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
+
+				sp->best_moves[max_depth] = best_move;
 
 				max_depth++;
 			}

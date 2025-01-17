@@ -32,6 +32,8 @@ typedef struct
 #endif
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
 
+	libchess::Move best_moves[128];
+
 	std::thread *thread_handle;
 } search_pars_t;
 
