@@ -21,20 +21,20 @@ typedef struct
 	int16_t *const   history;
 	end_t           *stop;
 	const int        thread_nr;
-	chess_stats cs;
+	chess_stats      cs;
 #if defined(ESP32)
-	uint16_t  md;
+	uint16_t         md;
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	char      move[5];
-	int       score;
+	char             move[5];
+	int              score;
 #endif
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
 
-	libchess::Move best_moves[128];
+	libchess::Move     best_moves[128];
 
-	std::thread *thread_handle;
+	std::thread       *thread_handle;
 } search_pars_t;
 
 extern std::vector<search_pars_t *> sp;
@@ -79,7 +79,7 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, search_pars_t & sp);
+int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #endif
 
