@@ -1178,13 +1178,13 @@ extern "C" void app_main()
 
 	hello();
 
-	gpio_set_level(LED_INTERNAL, 0);
-
 	esp_chip_info_t chip_info { };
 	esp_chip_info(&chip_info);
 	allocate_threads(chip_info.cores);
 
 	allow_ponder = true;
+
+	gpio_set_level(LED_INTERNAL, 0);
 
 	main_task();
 
