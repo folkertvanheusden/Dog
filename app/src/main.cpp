@@ -271,7 +271,7 @@ void searcher(const int i)
 		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		if (sp.at(i)->stop->flag == false)
-			my_trace("# Thread %d prematurely stopped with move %s (%d): %s\n", best_move.to_str().c_str(), best_score);
+			my_trace("# Thread %d prematurely stopped with move %s (%d)\n", i, best_move.to_str().c_str(), best_score);
 
 		// notify finished
 		search_lck.lock();
