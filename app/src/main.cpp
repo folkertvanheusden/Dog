@@ -91,7 +91,7 @@ void my_trace(const char *const fmt, ...)
 		vprintf(fmt, ap);
 		va_end(ap);
 	}
-#if defined(linux) || defined(_WIN32) || defined(__APPLE__)
+#if !defined(ESP32)
 	if (my_trace_file.empty() == false) {
 		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
