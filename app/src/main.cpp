@@ -874,7 +874,11 @@ void hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+#if defined(GIT_VERSION)
+	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_VERSION "\n\n");
+#else
 	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+#endif
 	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
 #endif
 }
