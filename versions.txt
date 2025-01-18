@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+master versus v2.8-noponder
+	Results of Dog-36affcd-master-LC7569dd6 vs Dog-v2.8-noponder (8+0.08, 1t, 256MB - 1MB, lichess-big3-resolved.epd):
+	Elo: 3.02 +/- 2.21, nElo: 7.07 +/- 5.18
+	LOS: 99.63 %, DrawRatio: 75.62 %, PairsRatio: 1.12
+	Games: 17278, Wins: 6701, Losses: 6551, Draws: 4026, Points: 8714.0 (50.43 %)
+	Ptnml(0-2): [156, 839, 6533, 921, 190], WL/DD Ratio: 4.77
+	LLR: 2.97 (-2.94, 2.94) [0.00, 10.00]
+
 endgameNM
 	Results of Dog-59bea39-endgameNM-LC7569dd6 vs Dog-36affcd-master-LC7569dd6 (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
 	Elo: -9.51 +/- 7.99, nElo: -22.07 +/- 18.52
