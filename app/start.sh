@@ -5,4 +5,5 @@
         -dontReuseEngine off \
         -program ./run.sh \
         -resign off \
+	-book /home/folkert/bin/data/dc-3200.bin \
         -logging on
