@@ -270,7 +270,7 @@ void searcher(const int i)
 		int            best_score { 0 };
 		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
-		if (sp.at(i)->stop->flag == false)
+		if (i > 0 && sp.at(i)->stop->flag == false)
 			my_trace("# Thread %d prematurely stopped with move %s (%d): %s\n", best_move.to_str().c_str(), best_score);
 
 		// notify finished
@@ -406,6 +406,10 @@ auto allow_ponder_handler = [](const bool value) {
 };
 
 auto commerial_option_handler = [](const std::string & value) { };
+
+auto opponent_option_handler = [](const std::string & value) {
+	my_trace("# Playing against %s\n", value.c_str());
+};
 
 #if defined(ESP32)
 extern "C" {
@@ -826,6 +830,8 @@ void main_task()
 	uci_service->register_option(allow_tracing_option);
 	libchess::UCIStringOption commerial_option("UCI_EngineAbout", "https://vanheusden.com/chess/Dog/", commerial_option_handler);
 	uci_service->register_option(commerial_option);
+	libchess::UCIStringOption opponent_option("UCI_Opponent", "", opponent_option_handler);
+	uci_service->register_option(opponent_option);
 
 	uci_service->register_position_handler(position_handler);
 	uci_service->register_go_handler      (go_handler);
