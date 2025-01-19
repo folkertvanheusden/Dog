@@ -270,15 +270,16 @@ void searcher(const int i)
 		int            best_score { 0 };
 		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
-		if (i > 0 && sp.at(i)->stop->flag == false)
-			my_trace("# Thread %d prematurely stopped with move %s (%d): %s\n", best_move.to_str().c_str(), best_score);
-
 		// notify finished
 		search_lck.lock();
 
 		if (i == 0) {
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
+
+			// stop other threads
+			for(auto & thread_pars : sp)
+				set_flag(thread_pars->stop);
 		}
 
 		work.search_count_running--;
