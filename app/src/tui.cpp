@@ -537,7 +537,6 @@ void tui()
 			else if (parts[0] == "eval") {
 				if (parts.size() == 2) {
 					uint64_t duration = std::stoi(parts[1]) * 1000;
-					my_printf("Duration: %d ms\n", duration / 1000);
 
 					{
 						uint64_t t_start = esp_timer_get_time();
