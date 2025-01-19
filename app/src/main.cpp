@@ -95,6 +95,14 @@ void my_trace(const char *const fmt, ...)
 	if (my_trace_file.empty() == false) {
 		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
+			uint64_t now = esp_timer_get_time();  // is gettimeofday
+			time_t t = now / 1000000;
+			tm *tm = localtime(&t);
+			fprintf(fh, "[%d] %04d-%02d-%02d %02d:%02d:%02d.%06d ", getpid(),
+					tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+					tm->tm_hour, tm->tm_min, tm->tm_sec,
+					now % 1000000);
+
 			va_list ap { };
 			va_start(ap, fmt);
 			vfprintf(fh, fmt, ap);
@@ -130,6 +138,15 @@ auto stop_handler = []()
 	my_trace("# stop_handler invoked\n");
 #endif
 };
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
+uint64_t esp_timer_get_time()
+{
+	timeval tv { };
+	gettimeofday(&tv, nullptr);
+	return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+#endif
 
 void think_timeout(void *arg)
 {

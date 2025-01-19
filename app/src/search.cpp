@@ -549,15 +549,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	return best_score;
 }
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-uint64_t esp_timer_get_time()
-{
-	timeval tv;
-	gettimeofday(&tv, nullptr);
-	return tv.tv_sec * 1000000 + tv.tv_usec;
-}
-#endif
-
 void timer(const int think_time, end_t *const ei)
 {
 	if (think_time > 0) {
