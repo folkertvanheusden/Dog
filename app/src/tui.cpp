@@ -13,6 +13,7 @@
 #include "main.h"
 #include "main.h"
 #include "max-ascii.h"
+#include "nnue.h"
 #include "san.h"
 #include "search.h"
 #include "str.h"
@@ -59,6 +60,29 @@ uint64_t do_perft(libchess::Position &pos, int depth)
 	}
 
 	return count;
+}
+
+int nnue_evaluate(const libchess::Position & pos)
+{
+	Eval e;
+
+        for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+                libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
+                while (piece_bb_w) {
+                        libchess::Square sq = piece_bb_w.forward_bitscan();
+                        piece_bb_w.forward_popbit();
+			e.add_piece(type, sq, true);
+                }
+
+                libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
+                while (piece_bb_b) {
+                        libchess::Square sq = piece_bb_b.forward_bitscan();
+                        piece_bb_b.forward_popbit();
+			e.add_piece(type, sq, false);
+                }
+        }
+
+        return e.evaluate(pos.side_to_move() == libchess::constants::WHITE);
 }
 
 void perft(libchess::Position &pos, int depth)
@@ -512,7 +536,9 @@ void tui()
 			}
 			else if (parts[0] == "eval") {
 				int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
-				my_printf("evaluation score: %.2f\n", score / 100.);
+				my_printf("old evaluation score: %.2f\n", score / 100.);
+				int nnue_score = nnue_evaluate(sp.at(0)->pos);
+				my_printf("new nnue evaluation score: %.2f\n", nnue_score / 100.);
 			}
 			else if (parts[0] == "tt")
 				tt_lookup();

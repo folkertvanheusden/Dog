@@ -71,6 +71,7 @@ add_executable(
   ../main.cpp
   ../max.cpp
   ../max-ascii.cpp
+  ../nnue.cpp
   ../psq.cpp
   ../san.cpp
   ../search.cpp
