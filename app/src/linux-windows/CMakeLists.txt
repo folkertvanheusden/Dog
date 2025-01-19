@@ -67,7 +67,6 @@ add_executable(
   Dog
   ../book.cpp
   ../eval.cpp
-  ../eval_par.cpp
   ../main.cpp
   ../max.cpp
   ../max-ascii.cpp
@@ -81,7 +80,6 @@ add_executable(
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
-  ../tuner.cpp
   ../usb-device.cpp
   ../fathom/src/tbprobe.c
 )

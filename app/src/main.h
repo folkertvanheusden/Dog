@@ -5,7 +5,7 @@
 #include <thread>
 #include <libchess/Position.h>
 
-#include "eval_par.h"
+#include "nnue.h"
 #include "stats.h"
 
 
@@ -17,8 +17,8 @@ typedef struct {
 
 typedef struct
 {
-	const eval_par & parameters;
-	int16_t *const   history;
+	Eval            *eval;
+	int16_t   *const history;
 	end_t           *stop;
 	const int        thread_nr;
 	chess_stats      cs;

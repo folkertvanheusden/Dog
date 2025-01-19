@@ -1,3 +1,5 @@
+#pragma once
+
 constexpr int HIDDEN_SIZE = 128;
 constexpr int SCALE = 400;
 constexpr std::int16_t QA = 255;

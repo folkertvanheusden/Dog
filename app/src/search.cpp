@@ -3,11 +3,11 @@
 #include <sys/time.h>
 #endif
 #include <cinttypes>
+#include <cmath>
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
 #include "eval.h"
-#include "eval_par.h"
 #include "inbuf.h"
 #include "main.h"
 #include "max-ascii.h"
@@ -20,7 +20,6 @@
 #include "test.h"
 #include "tt.h"
 #include "tui.h"
-#include "tuners.h"
 
 
 #if !defined(ESP32)
@@ -75,27 +74,26 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	if (sp.pos.is_promotion_move(move)) {
 		to_type = *move.promotion_piece_type();
 
-		int piece_val = eval_piece(to_type, sp.parameters);
+		int piece_val = to_type;
 		assert(piece_val < 2048);
 		score  += piece_val << 19;
 	}
 
 	if (sp.pos.is_capture_move(move)) {
 		if (move.type() == libchess::Move::Type::ENPASSANT) {
-			assert(sp.parameters.pawn < 2048);
-			score += sp.parameters.pawn << 19;
+			score += libchess::constants::PAWN << 19;
 		}
 		else {
 			auto piece_to = sp.pos.piece_on(move.to_square());
 
 			// victim
-			int victim_val = eval_piece(piece_to->type(), sp.parameters);
+			int victim_val = piece_to->type();
 			assert(victim_val < 2048);
 			score += victim_val << 19;
 		}
 
 		if (from_type != libchess::constants::KING) {
-			int add = (eval_piece(libchess::constants::QUEEN, sp.parameters) - eval_piece(from_type, sp.parameters)) * 256;
+			int add = (libchess::constants::QUEEN - from_type) * 256;
 			assert(abs(add) < (1 << 19));
 			score += add;
 		}
@@ -188,7 +186,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	}
 #endif
 	if (qsdepth >= 127)
-		return eval(sp.pos, sp.parameters);
+		return nnue_evaluate(sp.eval, sp.pos);
 
 	sp.cs.data.qnodes++;
 
@@ -200,17 +198,18 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	bool in_check   = sp.pos.in_check();
 	if (!in_check) {
 		// standing pat
-		best_score = eval(sp.pos, sp.parameters);
+		best_score = nnue_evaluate(sp.eval, sp.pos);
 		if (best_score > alpha && best_score >= beta) {
 			sp.cs.data.n_standing_pat++;
 			return best_score;
 		}
-
+/* TODO
 		int BIG_DELTA = sp.parameters.big_delta;
 		if (sp.pos.previous_move().has_value() && sp.pos.is_promotion_move(sp.pos.previous_move().value()))
 			BIG_DELTA += sp.parameters.big_delta_promotion;
 		if (best_score < alpha - BIG_DELTA)
 			return alpha;
+*/
 		if (alpha < best_score)
 			alpha = best_score;
 	}
@@ -227,9 +226,9 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 		if (!in_check && sp.pos.is_capture_move(move)) {
 			auto piece_to    = sp.pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? sp.parameters.pawn : eval_piece(piece_to->type(), sp.parameters);
+			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? libchess::constants::PAWN : piece_to->type();
 			auto piece_from  = sp.pos.piece_on(move.from_square());
-			int  eval_killer = eval_piece(piece_from->type(), sp.parameters);
+			int  eval_killer = piece_from->type();
 			if (eval_killer > eval_target && sp.pos.attackers_to(move.to_square(), !sp.pos.side_to_move()))
 				continue;
 		}
@@ -262,7 +261,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
-			best_score = eval(sp.pos, sp.parameters);
+			best_score = nnue_evaluate(sp.eval, sp.pos);
 	}
 
 	assert(best_score >= -10000);
@@ -384,7 +383,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
 		sp.cs.data.n_static_eval++;
-		int staticeval = eval(sp.pos, sp.parameters);
+		int staticeval = nnue_evaluate(sp.eval, sp.pos);
 
 		// static null pruning (reverse futility pruning)
 		if (staticeval - depth * 121 > beta) {
@@ -774,7 +773,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 		if (output)
 			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 #endif
-		best_score = eval(sp->pos, sp->parameters);
+		best_score = nnue_evaluate(sp->eval, sp->pos);
 	}
 
 	if (sp->thread_nr == 0) {

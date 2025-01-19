@@ -49,10 +49,10 @@
 #include <libchess/UCIService.h>
 
 #include "eval.h"
-#include "eval_par.h"
 #include "inbuf.h"
 #include "main.h"
 #include "max-ascii.h"
+#include "nnue.h"
 #include "psq.h"
 #include "search.h"
 #include "str.h"
@@ -63,7 +63,6 @@ bool with_syzygy = false;
 #include "test.h"
 #include "tt.h"
 #include "tui.h"
-#include "tuners.h"
 
 
 std::vector<search_pars_t *> sp;
@@ -376,6 +375,7 @@ void delete_threads()
 
 	for(auto & i: sp) {
 		i->thread_handle->join();
+		delete i->eval;
 		delete i->thread_handle;
 		delete i->stop;
 		free(i->history);
@@ -393,7 +393,7 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ default_parameters, reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
+		sp.push_back(new search_pars_t({ new Eval(), reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
@@ -553,7 +553,7 @@ void main_task()
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
-		int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
+		int score = nnue_evaluate(sp.at(0)->eval, sp.at(0)->pos);
 		printf("# eval: %d\n", score);
 	};
 
@@ -602,8 +602,11 @@ void main_task()
 
 	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
 		stop_ponder();
-		for(auto & i: sp)
+		for(auto & i: sp) {
 			memset(i->history, 0x00, history_malloc_size);
+			delete i->eval;
+			i->eval = new Eval();
+		}
 		global_cs.reset();
 		tti.reset();
 		printf("# --- New game ---\n");
@@ -748,7 +751,7 @@ void main_task()
 				if (think_time > limit_duration_min)
 					think_time = limit_duration_min;
 
-				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, phase: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), game_phase(sp.at(0)->pos, default_parameters), moves_to_go, tti.get_per_mille_filled());
+				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), moves_to_go, tti.get_per_mille_filled());
 			}
 
 			libchess::Move best_move  { 0 };
@@ -1021,6 +1024,8 @@ void run_bench()
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			sp.at(0)->pos = libchess::Position(fen);
 			memset(sp.at(0)->history, 0x00, history_malloc_size);
+			delete sp.at(0)->eval;
+			sp.at(0)->eval = new Eval();
 			work.search_think_time  = 1 << 31;
 			work.search_is_abs_time = true;
 			work.search_max_depth   = 10;
@@ -1061,7 +1066,6 @@ void help()
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
 	printf("-u x  USB display device\n");
-	printf("-T x  tune using epd file\n");
 	printf("-R x  my_trace to file\n");
 	printf("-r    enable tracing to screen\n");
 	printf("-U    run unit tests\n");
@@ -1079,12 +1083,7 @@ int main(int argc, char *argv[])
 #if !defined(__ANDROID__)
 	int thread_count =  1;
 	int c            = -1;
-	while((c = getopt(argc, argv, "t:pT:s:u:UR:rH:Q:h")) != -1) {
-		if (c == 'T') {
-			tune(optarg);
-			return 0;
-		}
-
+	while((c = getopt(argc, argv, "t:ps:u:UR:rH:Q:h")) != -1) {
 		if (c == 'U') {
 			run_tests();
 			return 1;
