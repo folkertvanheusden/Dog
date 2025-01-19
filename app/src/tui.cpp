@@ -535,10 +535,38 @@ void tui()
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
-				my_printf("old evaluation score: %.2f\n", score / 100.);
-				int nnue_score = nnue_evaluate(sp.at(0)->pos);
-				my_printf("new nnue evaluation score: %.2f\n", nnue_score / 100.);
+				if (parts.size() == 2) {
+					uint64_t duration = std::stoi(parts[1]) * 1000;
+					my_printf("Duration: %d ms\n", duration / 1000);
+
+					{
+						uint64_t t_start = esp_timer_get_time();
+						uint32_t n = 0;
+						do {
+							eval(sp.at(0)->pos, sp.at(0)->parameters);
+							n++;
+						}
+						while(esp_timer_get_time() - t_start <= duration);
+						my_printf("Old eval: %.2f/s\n", n * 1000. / duration);
+					}
+
+					{
+						uint64_t t_start = esp_timer_get_time();
+						uint32_t n = 0;
+						do {
+							nnue_evaluate(sp.at(0)->pos);
+							n++;
+						}
+						while(esp_timer_get_time() - t_start <= duration);
+						my_printf("New nnue eval: %.2f/s\n", n * 1000. / duration);
+					}
+				}
+				else {
+					int score = eval(sp.at(0)->pos, sp.at(0)->parameters);
+					my_printf("old evaluation score: %.2f\n", score / 100.);
+					int nnue_score = nnue_evaluate(sp.at(0)->pos);
+					my_printf("new nnue evaluation score: %.2f\n", nnue_score / 100.);
+				}
 			}
 			else if (parts[0] == "tt")
 				tt_lookup();
