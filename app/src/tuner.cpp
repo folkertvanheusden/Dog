@@ -11,7 +11,6 @@
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 void tune(std::string file)
 {
-#if 0 // TODO
 	auto normalized_results = libchess::NormalizedResult<libchess::Position>::parse_epd(file, [](const std::string& fen) { return *libchess::Position::from_fen(fen); });
 	printf("%zu EPDs loaded\n", normalized_results.size());
 
@@ -24,20 +23,21 @@ void tune(std::string file)
 		[&history, &cs](std::vector<libchess::NormalizedResult<libchess::Position> > & positions, const std::vector<libchess::TunableParameter> & params) {
 			eval_par cur(params);
 
-			search_pars_t sp { cur, false, history, cs };
-			sp.stop       = new end_t();
-			sp.stop->flag = false;
+			auto history = reinterpret_cast<int16_t *>(malloc(history_malloc_size));
+			auto stop    = new end_t;
 
 #pragma omp parallel for
 			for(auto &p: positions) {
-				auto & pos = p.position();
-				int score = qs(pos, -32767, 32767, 0, sp, 0);
-				if (pos.side_to_move() != libchess::constants::WHITE)
+				search_pars_t sp_local { cur, history, stop };
+				sp_local.pos = p.position();
+				int score = qs(-32767, 32767, 0, sp_local);
+				if (sp_local.pos.side_to_move() != libchess::constants::WHITE)
 					score = -score;
 				p.set_result(score);
 			}
 
-			delete sp.stop;
+			delete stop;
+			free(history);
 		}};
 
 
@@ -68,6 +68,5 @@ void tune(std::string file)
 			fprintf(fh, "%s=%d\n", parameter.name().c_str(), parameter.value());
 		fclose(fh);
 	}
-#endif
 }
 #endif
