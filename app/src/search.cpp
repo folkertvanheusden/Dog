@@ -186,7 +186,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	}
 #endif
 	if (qsdepth >= 127)
-		return nnue_evaluate(sp.eval, sp.pos);
+		return nnue_evaluate(sp.pos);
 
 	sp.cs.data.qnodes++;
 
@@ -198,7 +198,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	bool in_check   = sp.pos.in_check();
 	if (!in_check) {
 		// standing pat
-		best_score = nnue_evaluate(sp.eval, sp.pos);
+		best_score = nnue_evaluate(sp.pos);
 		if (best_score > alpha && best_score >= beta) {
 			sp.cs.data.n_standing_pat++;
 			return best_score;
@@ -261,7 +261,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
-			best_score = nnue_evaluate(sp.eval, sp.pos);
+			best_score = nnue_evaluate(sp.pos);
 	}
 
 	assert(best_score >= -10000);
@@ -383,7 +383,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
 		sp.cs.data.n_static_eval++;
-		int staticeval = nnue_evaluate(sp.eval, sp.pos);
+		int staticeval = nnue_evaluate(sp.pos);
 
 		// static null pruning (reverse futility pruning)
 		if (staticeval - depth * 121 > beta) {
@@ -773,7 +773,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 		if (output)
 			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 #endif
-		best_score = nnue_evaluate(sp->eval, sp->pos);
+		best_score = nnue_evaluate(sp->pos);
 	}
 
 	if (sp->thread_nr == 0) {

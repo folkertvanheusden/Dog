@@ -17,9 +17,8 @@ typedef struct {
 
 typedef struct
 {
-	Eval            *eval;
-	int16_t   *const history;
-	end_t           *stop;
+	int16_t   *const history { nullptr };
+	end_t           *stop    { nullptr };
 	const int        thread_nr;
 	chess_stats      cs;
 #if defined(ESP32)
@@ -34,7 +33,7 @@ typedef struct
 
 	libchess::Move     best_moves[128];
 
-	std::thread       *thread_handle;
+	std::thread       *thread_handle { nullptr };
 } search_pars_t;
 
 extern std::vector<search_pars_t *> sp;

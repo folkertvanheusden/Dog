@@ -61,29 +61,6 @@ uint64_t do_perft(libchess::Position &pos, int depth)
 	return count;
 }
 
-static int slow_nnue_evaluate(const libchess::Position & pos)
-{
-	Eval e;
-
-        for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
-                libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
-                while (piece_bb_w) {
-                        libchess::Square sq = piece_bb_w.forward_bitscan();
-                        piece_bb_w.forward_popbit();
-			e.add_piece(type, sq, true);
-                }
-
-                libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
-                while (piece_bb_b) {
-                        libchess::Square sq = piece_bb_b.forward_bitscan();
-                        piece_bb_b.forward_popbit();
-			e.add_piece(type, sq, false);
-                }
-        }
-
-        return e.evaluate(pos.side_to_move() == libchess::constants::WHITE);
-}
-
 void perft(libchess::Position &pos, int depth)
 {
 	my_printf("Perft for fen: %s\n", pos.fen().c_str());
@@ -230,7 +207,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
-	auto start_score = slow_nnue_evaluate(pos);
+	auto start_score = nnue_evaluate(pos);
 
 	if (colors) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
@@ -245,7 +222,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = slow_nnue_evaluate(pos);
+			int  cur_score = nnue_evaluate(pos);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
@@ -480,8 +457,6 @@ void tui()
 			else if (parts[0] == "new") {
 				stop_ponder();
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
-				delete sp.at(0)->eval;
-				sp.at(0)->eval = new Eval();
 				tti.reset();
 				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
 				moves_played.clear();
@@ -536,7 +511,7 @@ void tui()
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int nnue_score = slow_nnue_evaluate(sp.at(0)->pos);
+				int nnue_score = nnue_evaluate(sp.at(0)->pos);
 				my_printf("evaluation score: %.2f\n", nnue_score / 100.);
 			}
 			else if (parts[0] == "tt")
@@ -553,7 +528,7 @@ void tui()
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
 						sp.at(0)->pos.make_move(move.value());
 						moves_played.push_back(move.value());
-						scores.push_back(nnue_evaluate(sp.at(0)->eval, sp.at(0)->pos));
+						scores.push_back(nnue_evaluate(sp.at(0)->pos));
 						valid = true;
 					}
 				}
@@ -575,7 +550,7 @@ void tui()
 
 				sp.at(0)->pos.make_move(move.value());
 				moves_played.push_back(move.value());
-				scores.push_back(nnue_evaluate(sp.at(0)->eval, sp.at(0)->pos));
+				scores.push_back(nnue_evaluate(sp.at(0)->pos));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);

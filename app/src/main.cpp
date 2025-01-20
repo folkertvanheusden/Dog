@@ -375,7 +375,6 @@ void delete_threads()
 
 	for(auto & i: sp) {
 		i->thread_handle->join();
-		delete i->eval;
 		delete i->thread_handle;
 		delete i->stop;
 		free(i->history);
@@ -393,7 +392,7 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ new Eval(), reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
+		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
 #if defined(ESP32)
@@ -553,7 +552,7 @@ void main_task()
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
-		int score = nnue_evaluate(sp.at(0)->eval, sp.at(0)->pos);
+		int score = nnue_evaluate(sp.at(0)->pos);
 		printf("# eval: %d\n", score);
 	};
 
@@ -602,11 +601,8 @@ void main_task()
 
 	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
 		stop_ponder();
-		for(auto & i: sp) {
+		for(auto & i: sp)
 			memset(i->history, 0x00, history_malloc_size);
-			delete i->eval;
-			i->eval = new Eval();
-		}
 		global_cs.reset();
 		tti.reset();
 		printf("# --- New game ---\n");
@@ -1024,8 +1020,6 @@ void run_bench()
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			sp.at(0)->pos = libchess::Position(fen);
 			memset(sp.at(0)->history, 0x00, history_malloc_size);
-			delete sp.at(0)->eval;
-			sp.at(0)->eval = new Eval();
 			work.search_think_time  = 1 << 31;
 			work.search_is_abs_time = true;
 			work.search_max_depth   = 10;
