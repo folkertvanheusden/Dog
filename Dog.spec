@@ -1,5 +1,5 @@
 Name:       Dog
-Version:    2.9
+Version:    3.0
 Release:    0
 Summary:    A chess playing program
 License:    MIT
