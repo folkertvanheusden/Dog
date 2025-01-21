@@ -6,6 +6,7 @@
 import chess
 import chess.engine
 import getopt
+import json
 import os
 import random
 import socket
@@ -13,13 +14,16 @@ import sys
 import threading
 import time
 
-    
+
+host = 'dog.vanheusden.com'
+port = 31250
 proc = None
 node_count = 5000
 file = None
 nth = 1
 
 def help():
+    print(f'-H x  host to send data to (default: {host})')
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print('-f x  file to write to, pid will be added to the filename')
@@ -39,6 +43,8 @@ for o, a in opts:
         proc = a
     elif o == '-d':
         node_count = float(a)
+    elif o == '-h':
+        host = a
     elif o == '-f':
         file = a
     elif o == '-t':
@@ -65,6 +71,11 @@ def thread(proc):
 
     engine1 = chess.engine.SimpleEngine.popen_uci(proc)
     engine2 = chess.engine.SimpleEngine.popen_uci(proc)
+
+    name1 = engine1.id['name']
+    name2 = engine2.id['name']
+
+    print(name1, name2)
 
     while True:
         b = chess.Board()
@@ -104,6 +115,22 @@ def thread(proc):
             count += len(fens)
             gcount += 1
             lock.release()
+
+            if host != None:
+                j = { 'name1': name1, 'name2': name2, 'node-count': node_count, 'host': socket.gethostname() }
+                j['data'] = {'result': result, 'fens': fens }
+
+                while True:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    try:
+                        s.connect((host, port))
+                        s.send(json.dumps(j).encode('ascii'))
+                        s.close()
+                        break
+                    except Exception as e:
+                        print(f'failure: {e}')
+                        time.sleep(1)
+                    s.close()
 
     engine2.quit()
     engine1.quit()
