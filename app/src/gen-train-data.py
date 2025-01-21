@@ -80,7 +80,7 @@ def thread(proc):
     while True:
         b = chess.Board()
 
-        for i in range(random.randint(1, 32)):
+        for i in range(random.choice((8, 9))):
             moves = [m for m in b.legal_moves]
             b.push(random.choice(moves))
             if b.outcome() != None:
