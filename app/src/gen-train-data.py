@@ -8,6 +8,7 @@ import chess.engine
 import getopt
 import os
 import random
+import socket
 import sys
 import threading
 import time
@@ -50,7 +51,7 @@ if proc == None or file == None:
     help()
     sys.exit(1)
 
-file = f'{file}.{os.getpid()}'
+file = f'{file}.{os.getpid()}.{socket.gethostname()}'
 
 lock = threading.Lock()
 
