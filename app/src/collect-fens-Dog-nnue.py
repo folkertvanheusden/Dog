@@ -60,8 +60,8 @@ while True:
 
             cur = con.cursor()
             for fen in j['data']['fens']:
-                cur.execute('INSERT INTO fens(fen, result, nodes, name1, name2, host, addr) VALUES(?, ?, ?, ?, ?, ?, ?)',
-                            (fen, j['data']['result'], j['node-count'], j['name1'], j['name2'], j['host'], str(addr)))
+                cur.execute('INSERT INTO fens(fen, result, nodes, name1, name2, host, addr, score) VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+                            (fen['fen'], j['data']['result'], fen['node-count'], j['name1'], j['name2'], j['host'], str(addr), fen['score']))
             cur.close()
 
             gcount += 1
