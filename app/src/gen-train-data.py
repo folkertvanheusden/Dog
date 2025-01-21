@@ -90,12 +90,12 @@ def thread(proc):
         first = True
         was_capture = False
         while b.outcome() == None:
+            store_fen = None
             if first:
                 first = False
             elif b.is_check() == False and was_capture == False:
-                fen = b.fen()
-                fens.append(fen)
-                #print(fen)
+                store_fen = b.fen()
+
             if b.turn == chess.WHITE:
                 result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
                 was_capture = b.is_capture(result.move)
@@ -104,11 +104,17 @@ def thread(proc):
                 result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
+
+            if store_fen != None:
+                score = result.info['score'].white().score()
+                cur_node_count = result.info['nodes']
+                fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
+
         if len(fens) > 0:
             result = b.outcome().result()
             str_ = ''
             for fen in fens:
-                str_ += f'{fen}|0|{result}\n'
+                str_ += f'{fen}|{score}|{result}\n'
             lock.acquire()
             with open(file, 'a+') as fh:
                 fh.write(str_)
@@ -117,7 +123,7 @@ def thread(proc):
             lock.release()
 
             if host != None:
-                j = { 'name1': name1, 'name2': name2, 'node-count': node_count, 'host': socket.gethostname() }
+                j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
                 j['data'] = {'result': result, 'fens': fens }
 
                 while True:
