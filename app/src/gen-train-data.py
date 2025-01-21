@@ -61,18 +61,21 @@ while True:
 
     fens = []
     first = True
+    was_capture = False
     while b.outcome() == None:
         if first:
             first = False
-        else:
+        elif b.is_check() == False and was_capture == False:
             fen = b.fen()
             fens.append(fen)
             print(fen)
         if b.turn == chess.WHITE:
             result = engine1.play(b, chess.engine.Limit(time=duration), info=chess.engine.INFO_ALL)
+            was_capture = b.is_capture(result.move)
             b.push(result.move)
         else:
             result = engine2.play(b, chess.engine.Limit(time=duration), info=chess.engine.INFO_ALL)
+            was_capture = b.is_capture(result.move)
             b.push(result.move)
     if len(fens) > 0:
         result = b.outcome().result()
