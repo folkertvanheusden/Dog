@@ -14,13 +14,13 @@ import time
 
     
 proc = None
-duration = 0.1
+node_count = 5000
 file = None
 nth = 1
 
 def help():
     print('-e x  chess-program (UCI) to use')
-    print('-d x  how long to think per move')
+    print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print('-f x  file to write to, pid will be added to the filename')
     print('-t x  # threads')
     print('-h    this help')
@@ -37,7 +37,7 @@ for o, a in opts:
     if o == '-e':
         proc = a
     elif o == '-d':
-        duration = float(a)
+        node_count = float(a)
     elif o == '-f':
         file = a
     elif o == '-t':
@@ -78,11 +78,11 @@ def thread(proc):
                 fens.append(fen)
                 print(fen)
             if b.turn == chess.WHITE:
-                result = engine1.play(b, chess.engine.Limit(time=duration), info=chess.engine.INFO_ALL)
+                result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
             else:
-                result = engine2.play(b, chess.engine.Limit(time=duration), info=chess.engine.INFO_ALL)
+                result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
         if len(fens) > 0:
