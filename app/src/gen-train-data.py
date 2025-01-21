@@ -54,7 +54,12 @@ file = f'{file}.{os.getpid()}'
 
 lock = threading.Lock()
 
+count = 0
+
 def thread(proc):
+    global count
+    global lock
+
     engine1 = chess.engine.SimpleEngine.popen_uci(proc)
     engine2 = chess.engine.SimpleEngine.popen_uci(proc)
 
@@ -76,7 +81,7 @@ def thread(proc):
             elif b.is_check() == False and was_capture == False:
                 fen = b.fen()
                 fens.append(fen)
-                print(fen)
+                #print(fen)
             if b.turn == chess.WHITE:
                 result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
                 was_capture = b.is_capture(result.move)
@@ -93,6 +98,7 @@ def thread(proc):
             lock.acquire()
             with open(file, 'a+') as fh:
                 fh.write(str_)
+            count += len(fens)
             lock.release()
 
     engine2.quit()
@@ -103,6 +109,14 @@ for i in range(0, nth):
     t = threading.Thread(target=thread, args=(proc,))
     threads.append(t)
     t.start()
+
+start = time.time()
+while True:
+    time.sleep(1)
+    lock.acquire()
+    c = count
+    lock.release()
+    print(c / (time.time() - start), c)
 
 for t in threads:
     t.join()
