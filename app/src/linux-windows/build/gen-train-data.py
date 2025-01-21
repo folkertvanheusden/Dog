@@ -81,6 +81,10 @@ if fen_file != None:
         line = line.rstrip('\n')
         parts = line.split()
         c9 = parts.index('c9')
+        if c9 == -1:
+            err += 1
+            continue
+        c9 = parts[c9 + 1][1:-1]
         if c9 == '1-0':
             result = '1'
         elif c9 == '0-1':
@@ -101,41 +105,51 @@ if fen_file != None:
 
     print(f'# ok: {ok}, errors: {err}')
 
+print('Starting calculation...')
+
 engine = chess.engine.SimpleEngine.popen_uci(proc)
 proc_name = engine.id['name']
 
 t = time.time()
-
+n = 0
 while True:
     cur = con.cursor()
-    cur.execute('SELECT fen FROM fens WHERE score IS NULL ORDER BY RANDOM() LIMIT 1')
-    fen = cur.fetchone()
+    cur.execute('''
+SELECT fen FROM fens JOIN
+    (SELECT rowid as rid FROM fens
+        WHERE random() % 1000 = 0  -- Reduce rowids by 1000x
+        ORDER BY random() LIMIT 1000) AS srid
+    ON fens.rowid = srid.rid
+''')
+    fens = cur.fetchall()
     cur.close()
-    if fen == None:
-        break
-    fen = fen[0]
-
-    try:
-        print(fen)
-        b = chess.Board(fen)
-        result = engine.play(b, chess.engine.Limit(nodes=node_limit), info=chess.engine.INFO_ALL)
-        score = result.info['score'].white().score()
-        node_count = result.info['nodes']
-        print(f'\t{node_count} -> {score} ({proc_name})')
-
-        cur = con.cursor()
-        cur.execute('UPDATE fens SET set_by=?, score=?, nodes=? WHERE fen=?', (proc_name, score, node_count, fen))
-        cur.close()
-        print(fen, result)
-    except Exception as e:
-        print(result.info)
-        print(e)
+    if len(fens) == 0:
         break
 
-    now = time.time()
-    if now - t >= 30:
-        con.commit()
-        t = now
+    err = 0
+    for fen in fens:
+        fen = fen[0]
+
+        try:
+            b = chess.Board(fen)
+            result = engine.play(b, chess.engine.Limit(nodes=node_limit), info=chess.engine.INFO_ALL)
+            score = result.info['score'].white().score()
+            node_count = result.info['nodes']
+
+            cur = con.cursor()
+            cur.execute('UPDATE fens SET set_by=?, score=?, nodes=? WHERE fen=?', (proc_name, score, node_count, fen))
+            cur.close()
+
+            n += 1
+        except Exception as e:
+            print(fen, result.info, e)
+            err += 1
+    if err == len(fens):
+        break
+
+    print(f'Total: {n}, {n / (time.time() - t)} per second')
+
+    con.commit()
 
 con.commit()
 con.close()
