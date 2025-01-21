@@ -105,7 +105,7 @@ def thread(proc):
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
 
-            if store_fen != None:
+            if store_fen != None and 'score' in result.info and result.info['score'].is_mate() == False and 'nodes' in result.info:
                 score = result.info['score'].white().score()
                 cur_node_count = result.info['nodes']
                 fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
