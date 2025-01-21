@@ -55,9 +55,11 @@ file = f'{file}.{os.getpid()}'
 lock = threading.Lock()
 
 count = 0
+gcount = 0
 
 def thread(proc):
     global count
+    global gcount
     global lock
 
     engine1 = chess.engine.SimpleEngine.popen_uci(proc)
@@ -99,6 +101,7 @@ def thread(proc):
             with open(file, 'a+') as fh:
                 fh.write(str_)
             count += len(fens)
+            gcount += 1
             lock.release()
 
     engine2.quit()
@@ -116,7 +119,8 @@ while True:
     lock.acquire()
     c = count
     lock.release()
-    print(c / (time.time() - start), c)
+    t_diff = time.time() - start
+    print(c / t_diff, c, gcount * 60 / t_diff)
 
 for t in threads:
     t.join()
