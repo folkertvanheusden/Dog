@@ -97,11 +97,11 @@ def thread(proc):
                 store_fen = b.fen()
 
             if b.turn == chess.WHITE:
-                result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
+                result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC)
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
             else:
-                result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_ALL)
+                result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC)
                 was_capture = b.is_capture(result.move)
                 b.push(result.move)
 
