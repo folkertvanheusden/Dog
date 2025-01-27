@@ -542,7 +542,7 @@ std::pair<uint64_t, uint64_t> simple_search_statistics()
 
 void main_task()
 {
-	libchess::UCIService *uci_service = new libchess::UCIService("Dog v3.0", "Folkert van Heusden", std::cout, is);
+	libchess::UCIService *uci_service = new libchess::UCIService("Dog v" DOG_VERSION, "Folkert van Heusden", std::cout, is);
 
 	std::ios_base::sync_with_stdio(true);
 	std::cout.setf(std::ios::unitbuf);
