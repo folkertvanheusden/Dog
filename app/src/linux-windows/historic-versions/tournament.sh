@@ -21,5 +21,6 @@ cutechess-cli \
 -engine cmd=./v2.6c proto=uci arg='-t 1' name='v2.6c' \
 -engine cmd=./v2.7 proto=uci arg='-t 1 -H 256' name='v2.7' \
 -engine cmd=./v2.8 proto=uci arg='-t 1 -H 256' name='v2.8' \
+-engine cmd=./v3.0 proto=uci arg='-t 1 -H 256' name='v3.0' \
 -seeds 2 \
 -concurrency 20 -each tc=8+0.08 book=/home/folkert/bin/data/dc-3200.bin -rounds 5000 -games 2 -bookmode disk -recover -pgnout historic-versions-t.pgn -site 'cutechess' -tournament gauntlet
