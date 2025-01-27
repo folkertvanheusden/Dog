@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+delta-pruning
+	Results of Dog-7717221-delta-pruning-LC7569dd6 vs Dog-v3.1 (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
+	Elo: -16.10 +/- 13.42, nElo: -39.36 +/- 32.76
+	LOS: 0.93 %, DrawRatio: 78.24 %, PairsRatio: 0.52
+	Games: 432, Wins: 143, Losses: 163, Draws: 126, Points: 206.0 (47.69 %)
+	Ptnml(0-2): [7, 24, 169, 14, 2], WL/DD Ratio: 2.84
+	LLR: -1.54 (-2.94, 2.94) [0.00, 10.00]
+
 master versus v2.8-noponder
 	Results of Dog-36affcd-master-LC7569dd6 vs Dog-v2.8-noponder (8+0.08, 1t, 256MB - 1MB, lichess-big3-resolved.epd):
 	Elo: 3.02 +/- 2.21, nElo: 7.07 +/- 5.18
