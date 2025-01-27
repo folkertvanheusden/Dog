@@ -13,27 +13,28 @@ struct Network {
 
 	int evaluate(const Accumulator& us, const Accumulator& them) const {
 		static_assert(sizeof(Network) == 197440);
+		static_assert(sizeof(int) == 4);
 
 		int output = 0;
 
 		// side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(us.vals[i], std::int16_t{0}, QA);
-			std::int16_t weight = input * this->output_weights[0].vals[i];
-			output += int{input} * int{weight};
+			int input = std::clamp(us.vals[i], std::int16_t{0}, QA);
+			int weight = input * this->output_weights[0].vals[i];
+			output += input * weight;
 		}
 
 		// not side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(them.vals[i], std::int16_t{0}, QA);
-			std::int16_t weight = input * this->output_weights[1].vals[i];
-			output += int{input} * int{weight};
+			int input = std::clamp(them.vals[i], std::int16_t{0}, QA);
+			int weight = input * this->output_weights[1].vals[i];
+			output += input * weight;
 		}
 
-		output /= int{QA};
+		output /= QA;
 		output += this->output_bias;
 		output *= SCALE;
-		output /= int{QA} * int{QB};
+		output /= QA * QB;
 
 		return output;
 	}
