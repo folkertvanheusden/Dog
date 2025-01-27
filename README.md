@@ -1,9 +1,6 @@
 Dog was written by Folkert van Heusden.
 Licensed under the MIT license.
 
-This program contains the NNUE network from Yukari (look for app/src/yukari_86582212.bin and
-app/src/weights.cpp). Please see yukari_86582212.bin-LICENSE.md for licensing details.
-
 
 Clone the git repo with the "--recursive" flag!
 
