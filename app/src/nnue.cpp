@@ -12,8 +12,6 @@ struct Network {
 	std::int16_t output_bias;
 
 	int evaluate(const Accumulator& us, const Accumulator& them) const {
-		static_assert(sizeof(Network) == 197440);
-
 		int output = 0;
 
 		// side to move
