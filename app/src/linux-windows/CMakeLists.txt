@@ -135,6 +135,8 @@ else()
 		target_link_libraries(Dog PRIVATE -fsanitize=memory Threads::Threads)
 	else()
 		target_link_libraries(Dog PRIVATE Threads::Threads)
+		target_link_libraries(Dog-avx PRIVATE Threads::Threads)
+		target_link_libraries(Dog-native PRIVATE Threads::Threads)
 	endif()
 endif()
 
