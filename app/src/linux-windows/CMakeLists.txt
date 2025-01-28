@@ -63,6 +63,11 @@ else()
 	MESSAGE("without LTO")
 endif()
 
+IF (WIN32 OR MSYS OR MINGW OR MSVC)
+	MESSAGE("Windows build")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields")
+ENDIF ()
+
 set(APP_SOURCES
   ../book.cpp
   ../eval.cpp
