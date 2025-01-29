@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+visualization
+	Results of Dog-cace83d-visualizations-LC7569dd6-native vs Dog-af14924-visualizations-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
+	Elo: -6.44 +/- 5.84, nElo: -19.68 +/- 17.85
+	LOS: 1.53 %, DrawRatio: 82.14 %, PairsRatio: 0.73
+	Games: 1456, Wins: 543, Losses: 570, Draws: 343, Points: 714.5 (49.07 %)
+	Ptnml(0-2): [8, 67, 598, 54, 1], WL/DD Ratio: 4.39
+	LLR: -2.95 (-2.94, 2.94) [0.00, 10.00]
+
 delta-pruning
 	Results of Dog-7717221-delta-pruning-LC7569dd6 vs Dog-v3.1 (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
 	Elo: -16.10 +/- 13.42, nElo: -39.36 +/- 32.76
