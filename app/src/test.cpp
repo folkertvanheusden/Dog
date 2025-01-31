@@ -33,11 +33,13 @@ void tests()
 		printf("NNUE incremental update test\n");
 
 		int before = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+		std::string before_str = sp.at(0)->pos.fen();
 
 		// depth 1
 		{
 			for(auto & move: sp.at(0)->pos.legal_move_list()) {
 				auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, move);
+				my_assert(sp.at(0)->pos.fen() != before_str);
 				unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions);
 				my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
 			}
@@ -46,8 +48,12 @@ void tests()
 		// depth 2
 		{
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D2, constants::D4, Move::Type::DOUBLE_PUSH });
-			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E7, constants::E6, Move::Type::NORMAL });
-			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
+			std::string before_str2 = sp.at(0)->pos.fen();
+			for(auto & move: sp.at(0)->pos.legal_move_list()) {
+				auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, move);
+				my_assert(sp.at(0)->pos.fen() != before_str2);
+				unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
+			}
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
 			my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
 		}
@@ -58,7 +64,9 @@ void tests()
 			init_move(&sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E5, constants::B8, Move::Type::NORMAL });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::F7, constants::F8, constants::ROOK, Move::Type::PROMOTION });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
 			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
@@ -70,6 +78,7 @@ void tests()
 			init_move(&sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::F7, constants::E8, constants::ROOK, Move::Type::CAPTURE_PROMOTION });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
 			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
 		}
@@ -80,6 +89,7 @@ void tests()
 			init_move(&sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E1, constants::G1, Move::Type::CASTLING });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
 			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
 		}
@@ -90,7 +100,9 @@ void tests()
 			init_move(&sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D7, constants::D5, Move::Type::NORMAL });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E5, constants::D6, Move::Type::ENPASSANT });
+			my_assert(sp.at(0)->pos.fen() != before_str);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
 			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
 			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
