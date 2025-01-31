@@ -98,7 +98,7 @@ add_executable(
   ${APP_SOURCES}
 )
 
-target_compile_options(Dog-avx PRIVATE -mavx -march=rocketlake -O3)
+target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3)
 
 add_executable(
   Dog-native
