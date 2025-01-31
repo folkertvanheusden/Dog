@@ -703,7 +703,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (sp->thread_nr == 0) {
+				if (sp->thread_nr == 0 && output) {
 					std::string pv_str = gen_pv_str_from_tt(sp->pos, best_move);
 
 					double      ebf     = calculate_EBF(node_counts);
@@ -712,21 +712,19 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 						ebf_str = "ebf " + ebf_str + " ";
 
 					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
-					if (output) {
-						std::string score_str;
-						if (abs(score) > 9800) {
-							int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-							score_str = "score mate " + std::to_string(mate_moves);
-						}
-						else {
-							score_str = "score cp " + std::to_string(score);
-						}
-
-						printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
-								max_depth, score_str.c_str(),
-								cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-								counts.second, tti.get_per_mille_filled(), pv_str.c_str());
+					std::string score_str;
+					if (abs(score) > 9800) {
+						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
+						score_str = "score mate " + std::to_string(mate_moves);
 					}
+					else {
+						score_str = "score cp " + std::to_string(score);
+					}
+
+					printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
+							max_depth, score_str.c_str(),
+							cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
+							counts.second, tti.get_per_mille_filled(), pv_str.c_str());
 				}
 
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
