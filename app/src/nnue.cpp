@@ -57,6 +57,33 @@ Eval::Eval() : white{NNUE->feature_bias}, black{NNUE->feature_bias}
 {
 }
 
+void Eval::reset()
+{
+	this->white = NNUE->feature_bias;
+	this->black = NNUE->feature_bias;
+}
+
+void Eval::set(libchess::Position & pos)
+{
+	reset();
+
+        for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+                libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
+                while (piece_bb_w) {
+                        libchess::Square sq = piece_bb_w.forward_bitscan();
+                        piece_bb_w.forward_popbit();
+                        add_piece(type, sq, true);
+                }
+
+                libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
+                while (piece_bb_b) {
+                        libchess::Square sq = piece_bb_b.forward_bitscan();
+                        piece_bb_b.forward_popbit();
+                        add_piece(type, sq, false);
+                }
+        }
+}
+
 int Eval::evaluate(bool white_to_move) const
 {
 	if (white_to_move) {

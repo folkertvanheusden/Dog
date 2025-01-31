@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libchess/Position.h>
+
 constexpr int HIDDEN_SIZE = 128;
 constexpr int SCALE = 400;
 constexpr std::int16_t QA = 255;
@@ -17,6 +19,9 @@ class Eval
 	Accumulator black;
 public:
 	Eval();
+
+	void reset();
+	void set(libchess::Position & pos);
 
 	int evaluate(bool white_to_move) const;
 	void add_piece(const int piece, const int square, const bool is_white);

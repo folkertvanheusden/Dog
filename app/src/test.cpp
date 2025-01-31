@@ -61,7 +61,7 @@ void tests()
 		// generic position & promotion
 		{
 			sp.at(0)->pos = Position("8/5P1k/8/4B1K1/8/1B6/2N5/8 w - - 0 1");
-			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E5, constants::B8, Move::Type::NORMAL });
 			my_assert(sp.at(0)->pos.fen() != before_str);
@@ -75,7 +75,7 @@ void tests()
 		// promotion with capture
 		{
 			sp.at(0)->pos = Position("4b3/5P1k/8/6K1/8/1B6/2N5/8 w - - 0 1");
-			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::F7, constants::E8, constants::ROOK, Move::Type::CAPTURE_PROMOTION });
 			my_assert(sp.at(0)->pos.fen() != before_str);
@@ -86,7 +86,7 @@ void tests()
 		// castling
 		{
 			sp.at(0)->pos = Position("rnbqkbnr/p1p1p1pp/1p1p1p2/8/4P3/3B3N/PPPP1PPP/RNBQK2R w KQkq - 0 4");
-			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E1, constants::G1, Move::Type::CASTLING });
 			my_assert(sp.at(0)->pos.fen() != before_str);
@@ -97,7 +97,7 @@ void tests()
 		// en-passant
 		{
 			sp.at(0)->pos = Position("rnbqkbnr/p1ppp1pp/1p3p2/4P3/8/3B3N/PPPP1PPP/RNBQK2R b KQkq - 0 1");
-			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D7, constants::D5, Move::Type::NORMAL });
 			my_assert(sp.at(0)->pos.fen() != before_str);
@@ -339,7 +339,7 @@ void tests()
 
 		for(auto & test: san_parsing_tests) {
 			libchess::Position pos(std::get<0>(test));
-			init_move(&sp.at(0)->ev, pos);
+			init_move(sp.at(0)->ev, pos);
 			my_assert(nnue_evaluate(sp.at(0)->ev, pos) == std::get<3>(test));
 		}
 

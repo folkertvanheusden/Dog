@@ -309,7 +309,7 @@ void prepare_threads_state()
 #endif
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
-		init_move(&sp.at(i)->ev, sp.at(i)->pos);
+		init_move(sp.at(i)->ev, sp.at(i)->pos);
 #if defined(ESP32)
 		sp.at(i)->md  = 1;
 #endif
@@ -612,7 +612,7 @@ void main_task()
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
-		init_move(&sp.at(0)->ev, sp.at(0)->pos);
+		init_move(sp.at(0)->ev, sp.at(0)->pos);
 		if (position_parameters.move_list()) {
 			for (auto & move_str : position_parameters.move_list()->move_list())
 				make_move(sp.at(0)->ev, sp.at(0)->pos, *libchess::Move::from(move_str));
