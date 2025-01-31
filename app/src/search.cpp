@@ -580,6 +580,30 @@ std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Mov
 	return pv_str;
 }
 
+void emit_result(const libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
+{
+	std::string pv_str     = gen_pv_str_from_tt(pos, best_move);
+	double      ebf        = calculate_EBF(node_counts);
+	std::string ebf_str    = ebf >= 0 ? std::to_string(ebf) : "";
+	if (ebf_str.empty() == false)
+		ebf_str = "ebf " + ebf_str + " ";
+
+	uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
+	std::string score_str;
+	if (abs(best_score) > 9800) {
+		int mate_moves = (10000 - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
+		score_str = "score mate " + std::to_string(mate_moves);
+	}
+	else {
+		score_str = "score cp " + std::to_string(best_score);
+	}
+
+	printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
+			max_depth, score_str.c_str(),
+			nodes.first, ebf_str.c_str(), thought_ms, uint64_t(nodes.first * 1000 / use_thought_ms),
+			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
+}
+
 std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
@@ -631,18 +655,18 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
 
+			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
 				if (sp->thread_nr == 0 && output) {
 #if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
 #endif
-					std::string pv_str = gen_pv_str_from_tt(sp->pos, best_move);
-					printf("info depth %d score cp %d hashfull %d pv %s\n", max_depth - 1, best_score, tti.get_per_mille_filled(), pv_str.c_str());
+					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
 				}
 				break;
 			}
 
-			auto     counts      = simple_search_statistics();
 			uint64_t cur_n_nodes = counts.first;
 			node_counts.push_back(cur_n_nodes - previous_node_count);
 			previous_node_count  = cur_n_nodes;
@@ -696,31 +720,10 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				best_move  = cur_move;
 				best_score = score;
 
-				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
+				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (sp->thread_nr == 0 && output) {
-					std::string pv_str = gen_pv_str_from_tt(sp->pos, best_move);
-
-					double      ebf     = calculate_EBF(node_counts);
-					std::string ebf_str = ebf >= 0 ? std::to_string(ebf) : "";
-					if (ebf_str.empty() == false)
-						ebf_str = "ebf " + ebf_str + " ";
-
-					uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
-					std::string score_str;
-					if (abs(score) > 9800) {
-						int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-						score_str = "score mate " + std::to_string(mate_moves);
-					}
-					else {
-						score_str = "score cp " + std::to_string(score);
-					}
-
-					printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
-							max_depth, score_str.c_str(),
-							cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
-							counts.second, tti.get_per_mille_filled(), pv_str.c_str());
-				}
+				if (sp->thread_nr == 0 && output)
+					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
 
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
 				    (thought_ms >= search_time && is_absolute_time == true)) {
