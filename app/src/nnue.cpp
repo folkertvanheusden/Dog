@@ -86,9 +86,9 @@ void Eval::set(libchess::Position & pos)
 
 int Eval::evaluate(bool white_to_move) const
 {
-	if (white_to_move) {
+	if (white_to_move)
 		return NNUE->evaluate(this->white, this->black);
-	}
+
 	return NNUE->evaluate(this->black, this->white);
 }
 
@@ -97,7 +97,8 @@ void Eval::add_piece(const int piece, const int square, const bool is_white)
 	if (is_white) {
 		NNUE->add_feature(this->white, 64 * piece + square);
 		NNUE->add_feature(this->black, 64 * (6 + piece) + (square ^ 56));
-	} else {
+	}
+	else {
 		NNUE->add_feature(this->black, 64 * piece + (square ^ 56));
 		NNUE->add_feature(this->white, 64 * (6 + piece) + square);
 	}
@@ -108,7 +109,8 @@ void Eval::remove_piece(const int piece, const int square, const bool is_white)
 	if (is_white) {
 		NNUE->remove_feature(this->white, 64 * piece + square);
 		NNUE->remove_feature(this->black, 64 * (6 + piece) + (square ^ 56));
-	} else {
+	}
+	else {
 		NNUE->remove_feature(this->black, 64 * piece + (square ^ 56));
 		NNUE->remove_feature(this->white, 64 * (6 + piece) + square);
 	}
