@@ -63,8 +63,12 @@ else()
 	MESSAGE("without LTO")
 endif()
 
-add_executable(
-  Dog
+IF (WIN32 OR MSYS OR MINGW OR MSVC)
+	MESSAGE("Windows build")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields")
+ENDIF ()
+
+set(APP_SOURCES
   ../book.cpp
   ../eval.cpp
   ../main.cpp
@@ -74,14 +78,38 @@ add_executable(
   ../psq.cpp
   ../san.cpp
   ../search.cpp
+  ../state_exporter.cpp
   ../stats.cpp
   ../str.cpp
   ../syzygy.cpp
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
-  ../usb-device.cpp
   ../fathom/src/tbprobe.c
+)
+
+add_executable(
+  Dog
+  ${APP_SOURCES}
+)
+
+add_executable(
+  Dog-avx
+  ${APP_SOURCES}
+)
+
+target_compile_options(Dog-avx PRIVATE -mavx -march=rocketlake -O3)
+
+add_executable(
+  Dog-native
+  ${APP_SOURCES}
+)
+
+target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3)
+
+add_executable(
+    Dog-stats-prober
+    ../emit_stats.cpp
 )
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -112,10 +140,15 @@ else()
 		target_link_libraries(Dog PRIVATE -fsanitize=memory Threads::Threads)
 	else()
 		target_link_libraries(Dog PRIVATE Threads::Threads)
+		target_link_libraries(Dog-avx PRIVATE Threads::Threads)
+		target_link_libraries(Dog-native PRIVATE Threads::Threads)
 	endif()
 endif()
 
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
 

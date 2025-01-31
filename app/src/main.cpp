@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "usb-device.h"
+#include "state_exporter.h"
 #else
 #include <driver/uart.h>
 #include <driver/gpio.h>
@@ -66,13 +66,9 @@ bool with_syzygy = false;
 
 
 std::vector<search_pars_t *> sp;
+state_exporter              *se { nullptr };
 
-std::thread *usb_disp_thread { nullptr };
-
-#if defined(linux) || defined(__APPLE__)
-uint64_t wboard { 0 };
-uint64_t bboard { 0 };
-#endif
+static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
 std::string my_trace_file;
@@ -356,13 +352,13 @@ void stop_ponder()
 	}
 
 	my_trace("# ponder stopped\n");
-	auto stats = calculate_search_statistics();
-	if (stats.data.nodes || stats.data.qnodes)
-		emit_statistics(stats, "ponder statistics");
 }
 
 void delete_threads()
 {
+	if (se)
+		se->clear();
+
 	{
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
 		work.reconfigure_threads = true;
@@ -395,6 +391,8 @@ void allocate_threads(const int n)
 		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 	}
+	if (se)
+		se->set(sp.at(0));
 #if defined(ESP32)
 	if (n > 0) {
 		think_timeout_pars.arg = sp.at(0)->stop;
@@ -680,8 +678,6 @@ void main_task()
 			}
 
 			printf("\nFinished.\n");
-
-			emit_statistics(cs_sum, "global statistics");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -816,9 +812,6 @@ void main_task()
 #if defined(__ANDROID__)
 			__android_log_print(ANDROID_LOG_INFO, APPNAME, "Performed move %s for position %s", best_move.to_str().c_str(), sp.at(0)->pos.fen().c_str());
 #endif
-
-			if (sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS)
-				emit_statistics(global_cs, "global statistics");
 
 			global_cs.add(calculate_search_statistics());
 
@@ -1060,7 +1053,6 @@ void help()
 	printf("-p    allow pondering\n");
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
-	printf("-u x  USB display device\n");
 	printf("-R x  my_trace to file\n");
 	printf("-r    enable tracing to screen\n");
 	printf("-U    run unit tests\n");
@@ -1078,7 +1070,7 @@ int main(int argc, char *argv[])
 #if !defined(__ANDROID__)
 	int thread_count =  1;
 	int c            = -1;
-	while((c = getopt(argc, argv, "t:ps:u:UR:rH:Q:h")) != -1) {
+	while((c = getopt(argc, argv, "t:ps:UR:rH:Q:h")) != -1) {
 		if (c == 'U') {
 			run_tests();
 			return 1;
@@ -1104,10 +1096,6 @@ int main(int argc, char *argv[])
 
 			with_syzygy = true;
 		}
-#if !defined(_WIN32) && !defined(__APPLE__)
-		else if (c == 'u')
-			usb_disp_thread = new std::thread(usb_disp, optarg);
-#endif
 		else if (c == 'R')
 			my_trace_file = optarg;
                 else if (c == 'r')
@@ -1127,6 +1115,10 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+#if !defined(_WIN32)
+	se = new state_exporter(20);
+#endif
+
 	if (my_trace_file.empty() == false)
 		my_trace("# tracing to file enabled\n");
 
@@ -1134,9 +1126,9 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
-
 	main_task();
+
+	delete se;
 
 	if (with_syzygy)
 		fathom_deinit();

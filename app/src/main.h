@@ -17,10 +17,11 @@ typedef struct {
 
 typedef struct
 {
-	int16_t   *const history { nullptr };
-	end_t           *stop    { nullptr };
+	int16_t   *const history  { nullptr };
+	end_t           *stop     { nullptr };
 	const int        thread_nr;
 	chess_stats      cs;
+	uint32_t         cur_move { 0       };
 #if defined(ESP32)
 	uint16_t         md;
 #endif
@@ -52,8 +53,6 @@ extern bool               trace_enabled;
 extern inbuf              i;
 extern std::istream       is;
 extern tt                 tti;
-extern uint64_t           bboard;
-extern uint64_t           wboard;
 extern bool               with_syzygy;
 
 #if defined(ESP32)

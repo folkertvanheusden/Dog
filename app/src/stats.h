@@ -1,9 +1,10 @@
+#pragma once
 #include <cstdint>
 
 class chess_stats
 {
 public:
-	struct {
+	struct _data_ {
 		uint32_t  nodes;
 		uint32_t  qnodes;
 		uint32_t  n_standing_pat;

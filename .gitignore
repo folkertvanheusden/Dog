@@ -1,4 +1,5 @@
 app/.pio
 app/sdkconfig.esp32
 app/src/linux-windows/build
+app/src/linux-windows/buildMingw64
 app/src/linux-windows/historic-versions

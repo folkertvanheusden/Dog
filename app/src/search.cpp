@@ -392,13 +392,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		}
 	}
 
-#if defined(linux)
-	if (sp.thread_nr == 1) {
-		wboard = sp.pos.color_bb(libchess::constants::WHITE);
-		bboard = sp.pos.color_bb(libchess::constants::BLACK);
-	}
-#endif
-
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= 2 && !in_check && !is_root_position && null_move_depth < 2) {
@@ -440,6 +433,8 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	for(auto move : move_list) {
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
+
+		sp.cur_move = move.value();
 
                 bool is_lmr = false;
                 int  score  = -10000;
@@ -571,16 +566,6 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
 {
         size_t n = node_counts.size();
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
-}
-
-void emit_statistics(const chess_stats & counts, const std::string & header)
-{
-	my_trace("# * %s *\n", header.c_str());
-	my_trace("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts.data.nodes, counts.data.qnodes, double(counts.data.qnodes)/counts.data.nodes, counts.data.n_draws * 100. / counts.data.nodes, counts.data.n_standing_pat * 100. / counts.data.qnodes);
-	my_trace("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts.data.tt_hit * 100. / counts.data.tt_query, counts.data.tt_query / double(counts.data.tt_store), counts.data.syzygy_query_hits * 100. / counts.data.syzygy_queries);
-	my_trace("# avg bco index: %.2f, qs bco index: %.2f, qsearlystop: %.2f%%\n", counts.data.n_moves_cutoff / double(counts.data.nmc_nodes), counts.data.n_qmoves_cutoff / double(counts.data.nmc_qnodes), counts.data.n_qs_early_stop * 100. / counts.data.qnodes);
-	my_trace("# null move co: %.2f%%, LMR co: %.2f%%, static eval co: %.2f%%\n", counts.data.n_null_move_hit * 100. / counts.data.n_null_move, counts.data.n_lmr_hit * 100.0 / counts.data.n_lmr, counts.data.n_static_eval_hit * 100. / counts.data.n_static_eval);
-	my_trace("# avg a/b distance: %.2f/%.2f\n", counts.data.alpha_distance / double(counts.data.n_alpha_distances), counts.data.beta_distance / double(counts.data.n_beta_distances));
 }
 
 std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
@@ -760,13 +745,6 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				max_depth++;
 			}
 		}
-
-#if !defined(__ANDROID__)
-		if (sp->thread_nr == 0 && output) {
-			auto counts = calculate_search_statistics();
-			emit_statistics(counts, "move statistics");
-		}
-#endif
 	}
 	else {
 #if !defined(__ANDROID__)
