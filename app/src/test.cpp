@@ -36,9 +36,11 @@ void tests()
 
 		// depth 1
 		{
-			auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D2, constants::D4, Move::Type::DOUBLE_PUSH });
-			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions);
-			my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+			for(auto & move: sp.at(0)->pos.legal_move_list()) {
+				auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, move);
+				unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions);
+				my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+			}
 		}
 
 		// depth 2
