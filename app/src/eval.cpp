@@ -46,16 +46,19 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 		case Move::Type::NORMAL:
 		case Move::Type::DOUBLE_PUSH:
 			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
+			assert(*moving_pt == constants::PAWN || move.type() != Move::Type::DOUBLE_PUSH);
 			break;
 		case Move::Type::CAPTURE:
 			remove_piece(e, to_square, *captured_pt, !is_white, &actions);
 			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
 			break;
 		case Move::Type::ENPASSANT:
+			assert(*moving_pt == constants::PAWN);
 			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions);
 			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, is_white, &actions);
 			break;
 		case Move::Type::CASTLING:
+			assert(*moving_pt == constants::KING);
 			move_piece(e, from_square, to_square, constants::KING, is_white, &actions);
 			switch (to_square) {
 				case constants::C1:
@@ -78,10 +81,14 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			}
 			break;
 		case Move::Type::PROMOTION:
+			assert(*moving_pt == constants::PAWN);
+			assert(*promotion_pt != constants::PAWN);
 			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
 			break;
 		case Move::Type::CAPTURE_PROMOTION:
+			assert(*moving_pt == constants::PAWN);
+			assert(*promotion_pt != constants::PAWN);
 			remove_piece(e, to_square,  *captured_pt,    !is_white, &actions);
 			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
