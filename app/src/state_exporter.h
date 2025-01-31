@@ -1,5 +1,4 @@
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <thread>
 
@@ -18,10 +17,10 @@ private:
 
 public:
 	struct _export_structure_ {
-		std::mutex              lock;
-		std::condition_variable cv;
-		chess_stats::_data_     counters;
-		uint32_t                cur_move;
+		std::mutex           lock;
+		volatile int         revision;
+		chess_stats::_data_  counters;
+		uint32_t             cur_move;
 	} *pdata { nullptr };
 
 public:

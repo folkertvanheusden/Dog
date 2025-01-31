@@ -1,12 +1,22 @@
 #include <string>
+#include <unistd.h>
 #include <sys/shm.h>
 
 #include "state_exporter.h"
 
 
-void emit_statistics(const state_exporter::_export_structure_ *const counts, const std::string & header)
+void emit_statistics(state_exporter::_export_structure_ *const counts, const std::string & header)
 {
 	printf("# * %s *\n", header.c_str());
+
+	for(;;) {
+		std::unique_lock<std::mutex> lck(counts->lock);
+		if (counts->revision)
+			break;
+		lck.unlock();
+		usleep(101000);
+	}
+
 	printf("# %u search %u qs: qs/s=%.3f, draws: %.2f%%, standing pat: %.2f%%\n", counts->counters.nodes, counts->counters.qnodes, double(counts->counters.qnodes)/counts->counters.nodes, counts->counters.n_draws * 100. / counts->counters.nodes, counts->counters.n_standing_pat * 100. / counts->counters.qnodes);
 	printf("# %.2f%% tt hit, %.2f tt query/store, %.2f%% syzygy hit\n", counts->counters.tt_hit * 100. / counts->counters.tt_query, counts->counters.tt_query / double(counts->counters.tt_store), counts->counters.syzygy_query_hits * 100. / counts->counters.syzygy_queries);
 	printf("# avg bco index: %.2f, qs bco index: %.2f, qsearlystop: %.2f%%\n", counts->counters.n_moves_cutoff / double(counts->counters.nmc_nodes), counts->counters.n_qmoves_cutoff / double(counts->counters.nmc_qnodes), counts->counters.n_qs_early_stop * 100. / counts->counters.qnodes);

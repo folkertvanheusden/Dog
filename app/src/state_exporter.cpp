@@ -26,12 +26,14 @@ void state_exporter::set(search_pars_t *const sp)
 {
 	std::unique_lock<std::mutex> lck(lock);
 	this->sp = sp;
+	pdata->revision = 0;
 }
 
 void state_exporter::clear()
 {
 	std::unique_lock<std::mutex> lck(lock);
 	sp = nullptr;
+	pdata->revision = 0;
 }
 
 void state_exporter::handler()
@@ -46,6 +48,6 @@ void state_exporter::handler()
 		std::unique_lock<std::mutex> lck_data(pdata->lock);
 		pdata->counters = sp->cs.data;
 		pdata->cur_move = sp->cur_move;
-		pdata->cv.notify_all();
+		pdata->revision++;
 	}
 }
