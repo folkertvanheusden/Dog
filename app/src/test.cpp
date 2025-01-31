@@ -314,20 +314,33 @@ void tests()
 	}
 
 	// san
+	std::vector<std::tuple<const std::string, const std::string, const std::string, int> > san_parsing_tests {
+		{ "7r/3r1p1p/6p1/1p6/2B5/5PP1/1Q5P/1K1k4 b - - 0 38", "bxc4", "7r/3r1p1p/6p1/8/2p5/5PP1/1Q5P/1K1k4 w - - 0 39", -212 },
+		{ "2n1r1n1/1p1k1p2/6pp/R2pP3/3P4/8/5PPP/2R3K1 b - - 0 30", "Nge7", "2n1r3/1p1knp2/6pp/R2pP3/3P4/8/5PPP/2R3K1 w - - 1 31", 270 },
+		{ "8/5p2/1kn1r1n1/1p1pP3/6K1/8/4R3/5R2 b - - 9 60", "Ngxe5+", "8/5p2/1kn1r3/1p1pn3/6K1/8/4R3/5R2 w - - 0 61", 1218 },
+		{ "r3k2r/pp1bnpbp/1q3np1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R b KQkq - 5 15", "Ng8", "r3k1nr/pp1bnpbp/1q4p1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R w KQkq - 6 16", 313 },
+	};
+
 	{
 		printf("SAN parsing test\n");
 
-		std::vector<std::tuple<const std::string, const std::string, const std::string> > tests {
-			{ "7r/3r1p1p/6p1/1p6/2B5/5PP1/1Q5P/1K1k4 b - - 0 38", "bxc4", "7r/3r1p1p/6p1/8/2p5/5PP1/1Q5P/1K1k4 w - - 0 39" },
-			{ "2n1r1n1/1p1k1p2/6pp/R2pP3/3P4/8/5PPP/2R3K1 b - - 0 30", "Nge7", "2n1r3/1p1knp2/6pp/R2pP3/3P4/8/5PPP/2R3K1 w - - 1 31" },
-			{ "8/5p2/1kn1r1n1/1p1pP3/6K1/8/4R3/5R2 b - - 9 60", "Ngxe5+", "8/5p2/1kn1r3/1p1pn3/6K1/8/4R3/5R2 w - - 0 61" },
-			{ "r3k2r/pp1bnpbp/1q3np1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R b KQkq - 5 15", "Ng8", "r3k1nr/pp1bnpbp/1q4p1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R w KQkq - 6 16" },
-		};
-
-		for(auto & test: tests) {
-			Position pos(std::get<0>(test));
+		for(auto & test: san_parsing_tests) {
+			libchess::Position pos(std::get<0>(test));
 			pos.make_move(SAN_to_move(std::get<1>(test), pos).value());
 			my_assert(std::get<2>(test) == pos.fen());
+		}
+
+		printf("OK\n");
+	}
+
+	// NNUE eval (using san parsing data)
+	{
+		printf("NNUE evaluation test\n");
+
+		for(auto & test: san_parsing_tests) {
+			libchess::Position pos(std::get<0>(test));
+			init_move(&sp.at(0)->ev, pos);
+			my_assert(nnue_evaluate(sp.at(0)->ev, pos) == std::get<3>(test));
 		}
 
 		printf("OK\n");
