@@ -78,13 +78,13 @@ set(APP_SOURCES
   ../psq.cpp
   ../san.cpp
   ../search.cpp
+  ../state_exporter.cpp
   ../stats.cpp
   ../str.cpp
   ../syzygy.cpp
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
-  ../usb-device.cpp
   ../fathom/src/tbprobe.c
 )
 
@@ -106,6 +106,11 @@ add_executable(
 )
 
 target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3)
+
+add_executable(
+    Dog-stats-prober
+    ../emit_stats.cpp
+)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -143,6 +148,7 @@ endif()
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
 

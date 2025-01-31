@@ -15,3 +15,6 @@ v2.5b	% ok: 10.65, total processed: 6543, total queued: 6554, errors: 11, took: 
 v2.6c	% ok: 8.27, total processed: 6545, total queued: 6554, errors: 9, took: 103.908
 v2.7	% ok: 8.20, total processed: 6545, total queued: 6554, errors: 9, took: 103.407
 v2.8	% ok: 8.13, total processed: 6545, total queued: 6554, errors: 9, took: 103.303
+v2.9	% ok: 13.16, total processed: 6545, total queued: 6554, errors: 9, took: 103.279
+v3.0	% ok: 14.88, total processed: 6545, total queued: 6554, errors: 9, took: 103.317
+v3.1	% ok: 11.98, total processed: 6545, total queued: 6554, errors: 9, took: 103.314
