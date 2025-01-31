@@ -372,6 +372,7 @@ void delete_threads()
 	for(auto & i: sp) {
 		i->thread_handle->join();
 		delete i->thread_handle;
+		delete i->ev;
 		delete i->stop;
 		free(i->history);
 		delete i;
@@ -390,6 +391,7 @@ void allocate_threads(const int n)
 	for(int i=0; i<n; i++) {
 		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
+		sp.at(i)->ev = new Eval();
 	}
 	if (se)
 		se->set(sp.at(0));
@@ -550,7 +552,7 @@ void main_task()
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
-		int score = nnue_evaluate(sp.at(0)->pos);
+		int score = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
 		printf("# eval: %d\n", score);
 	};
 
@@ -611,7 +613,7 @@ void main_task()
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
 		if (position_parameters.move_list()) {
 			for (auto & move_str : position_parameters.move_list()->move_list())
-				sp.at(0)->pos.make_move(*libchess::Move::from(move_str));
+				make_move(sp.at(0)->ev, sp.at(0)->pos, *libchess::Move::from(move_str));
 		}
 	};
 
@@ -674,7 +676,7 @@ void main_task()
 
 				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
 
-				sp.at(0)->pos.make_move(work.search_best_move);
+				make_move(sp.at(0)->ev, sp.at(0)->pos, work.search_best_move);
 			}
 
 			printf("\nFinished.\n");

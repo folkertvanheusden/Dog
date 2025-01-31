@@ -27,10 +27,10 @@ typedef struct
 #endif
 
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
+	libchess::Move   best_moves[128];
 
-	libchess::Move     best_moves[128];
-
-	std::thread       *thread_handle { nullptr };
+	std::thread     *thread_handle { nullptr };
+	Eval            *ev            { nullptr };
 } search_pars_t;
 
 extern std::vector<search_pars_t *> sp;
