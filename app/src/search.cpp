@@ -568,6 +568,18 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
+std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Move & m)
+{
+	std::vector<libchess::Move> pv = get_pv_from_tt(p, m);
+	std::string pv_str;
+	for(auto & move : pv) {
+		if (pv_str.empty() == false)
+			pv_str += " ";
+		pv_str += move.to_str();
+	}
+	return pv_str;
+}
+
 std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
@@ -624,7 +636,8 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 #if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
 #endif
-					printf("info depth %d score cp %d hashfull %d\n", max_depth - 1, best_score, tti.get_per_mille_filled());
+					std::string pv_str = gen_pv_str_from_tt(sp->pos, best_move);
+					printf("info depth %d score cp %d hashfull %d pv %s\n", max_depth - 1, best_score, tti.get_per_mille_filled(), pv_str.c_str());
 				}
 				break;
 			}
@@ -691,10 +704,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0) {
-					std::vector<libchess::Move> pv = get_pv_from_tt(sp->pos, best_move);
-					std::string pv_str;
-					for(auto & move : pv)
-						pv_str += " " + move.to_str();
+					std::string pv_str = gen_pv_str_from_tt(sp->pos, best_move);
 
 					double      ebf     = calculate_EBF(node_counts);
 					std::string ebf_str = ebf >= 0 ? std::to_string(ebf) : "";
@@ -705,13 +715,13 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 					if (output) {
 						if (abs(score) > 9800) {
 							int mate_moves = (10000 - abs(score) + 1) / 2 * (score < 0 ? -1 : 1);
-							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv%s\n",
+							printf("info depth %d score mate %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 									max_depth, mate_moves,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 									counts.second, tti.get_per_mille_filled(), pv_str.c_str());
 						}
 						else {
-							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv%s\n",
+							printf("info depth %d score cp %d nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 									max_depth, score,
 									cur_n_nodes, ebf_str.c_str(), thought_ms, uint64_t(cur_n_nodes * 1000 / use_thought_ms),
 									counts.second, tti.get_per_mille_filled(), pv_str.c_str());
