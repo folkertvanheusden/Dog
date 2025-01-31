@@ -11,6 +11,8 @@
 
 void tests()
 {
+	using namespace libchess;
+
 #define my_assert(x) \
 	if (!(x)) { \
 		fprintf(stderr, "assert fail at line %d (%s) in %s\n", __LINE__, __func__, __FILE__); \
@@ -22,9 +24,78 @@ void tests()
 
 	printf("Size of int must be 32 bit\n");
 	my_assert(sizeof(int) == 4);
-	printf("Ok\n");
+	printf("OK\n");
 
 	allocate_threads(1);
+
+	// NNUE incremental
+	{
+		printf("NNUE incremental update test\n");
+
+		int before = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+
+		// depth 1
+		{
+			auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D2, constants::D4, Move::Type::DOUBLE_PUSH });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions);
+			my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		// depth 2
+		{
+			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D2, constants::D4, Move::Type::DOUBLE_PUSH });
+			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E7, constants::E6, Move::Type::NORMAL });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
+			my_assert(before == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		// generic position & promotion
+		{
+			sp.at(0)->pos = Position("8/5P1k/8/4B1K1/8/1B6/2N5/8 w - - 0 1");
+			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E5, constants::B8, Move::Type::NORMAL });
+			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::F7, constants::F8, constants::ROOK, Move::Type::PROMOTION });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
+			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		// promotion with capture
+		{
+			sp.at(0)->pos = Position("4b3/5P1k/8/6K1/8/1B6/2N5/8 w - - 0 1");
+			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::F7, constants::E8, constants::ROOK, Move::Type::CAPTURE_PROMOTION });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
+			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		// castling
+		{
+			sp.at(0)->pos = Position("rnbqkbnr/p1p1p1pp/1p1p1p2/8/4P3/3B3N/PPPP1PPP/RNBQK2R w KQkq - 0 4");
+			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E1, constants::G1, Move::Type::CASTLING });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
+			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		// en-passant
+		{
+			sp.at(0)->pos = Position("rnbqkbnr/p1ppp1pp/1p3p2/4P3/8/3B3N/PPPP1PPP/RNBQK2R b KQkq - 0 1");
+			init_move(&sp.at(0)->ev, sp.at(0)->pos);
+			int before2 = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+			auto undo_actions1 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::D7, constants::D5, Move::Type::NORMAL });
+			auto undo_actions2 = make_move(sp.at(0)->ev, sp.at(0)->pos, { constants::E5, constants::D6, Move::Type::ENPASSANT });
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions2);
+			unmake_move(sp.at(0)->ev, sp.at(0)->pos, undo_actions1);
+			my_assert(before2 == nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+		}
+
+		printf("OK\n");
+	}
 
 	// these are from https://github.com/kz04px/rawr/blob/master/tests/search.rs#L14
 	// - mate in 1
@@ -41,12 +112,12 @@ void tests()
 
 	for(auto & entry: mate_in_1) {
 		printf("Testing \"%s\" for mate-in-1\n", entry.first.c_str());
-		libchess::Position p { entry.first };
-		p.make_move(*libchess::Move::from(entry.second));
-		my_assert(p.game_state() == libchess::Position::GameState::CHECKMATE);
+		Position p { entry.first };
+		p.make_move(*Move::from(entry.second));
+		my_assert(p.game_state() == Position::GameState::CHECKMATE);
 	}
 
-	printf("Ok\n");
+	printf("OK\n");
 
 	// - underpromotions
 	const std::vector<std::pair<std::string, std::string> > underpromotions {
@@ -56,32 +127,32 @@ void tests()
 
 	for(auto & entry: underpromotions) {
 		printf("Testing \"%s\" for underpromotions\n", entry.first.c_str());
-		sp.at(0)->pos = libchess::Position { entry.first };
+		sp.at(0)->pos = Position { entry.first };
 		my_assert(sp.at(0)->pos.fen() == entry.first);
 
 		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
-		libchess::Move best_move  { 0 };
+		Move best_move  { 0 };
 		int            best_score { 0 };
 		std::tie(best_move, best_score) = search_it(100, false, sp.at(0), -1, { }, false);
 		
-		my_assert(best_move == *libchess::Move::from(entry.second));
+		my_assert(best_move == *Move::from(entry.second));
 
-		printf("Ok\n");
+		printf("OK\n");
 	}
 
 	// - move sorting & generation
 	{
 		printf("move sorting & generation test\n");
-		sp.at(0)->pos = libchess::Position { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
+		sp.at(0)->pos = Position { "rnbqkbnr/2p1p1pp/1p3p2/p2p4/Q1P1P3/8/PP1P1PPP/RNB1KBNR b KQkq - 0 1" };
 
 		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 
-		libchess::MoveList move_list = sp.at(0)->pos.pseudo_legal_move_list();
+		MoveList move_list = sp.at(0)->pos.pseudo_legal_move_list();
 		my_assert(move_list.size() == 7);
 		sort_movelist_compare smc(*sp.at(0));
-		move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+		move_list.sort([&smc](const Move move) { return smc.move_evaluater(move); });
 
 		int prev_v = 32767;
 		for(auto & m: move_list) {
@@ -90,7 +161,7 @@ void tests()
 			prev_v = cur_v;
 		}
 
-		printf("Ok\n");
+		printf("OK\n");
 	}
 
 	// tt
@@ -104,7 +175,7 @@ void tests()
 
 		// just set a record
 		{
-			tti.store(2, EXACT, 3, 4, *libchess::Move::from("e2e4"));
+			tti.store(2, EXACT, 3, 4, *Move::from("e2e4"));
 			my_assert(tti.lookup(0).has_value() == false);
 			my_assert(tti.lookup(1).has_value() == false);
 			my_assert(tti.lookup(2).has_value() == true);
@@ -112,28 +183,28 @@ void tests()
 			auto record1 = tti.lookup(2);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
-			my_assert(libchess::Move(data1.m) == *libchess::Move::from("e2e4"));
+			my_assert(Move(data1.m) == *Move::from("e2e4"));
 			my_assert(data1.depth == 3);
 			my_assert(data1.score == 4);
 			my_assert(data1.flags == EXACT);
 		}
 
-		printf("Ok\n");
+		printf("OK\n");
 	}
 
-	// bool is_insufficient_material_draw(const libchess::Position & pos)
+	// bool is_insufficient_material_draw(const Position & pos)
 	{
 		printf("is_insufficient_material_draw test\n");
 
 		// start position
 		{
-			libchess::Position p1 { libchess::constants::STARTPOS_FEN };
+			Position p1 { constants::STARTPOS_FEN };
 			my_assert(is_insufficient_material_draw(p1) == false);
 		}
 
 		// two kings
 		{
-			libchess::Position p1 { "8/8/8/2k5/8/5K2/8/8 w - - 0 1" };
+			Position p1 { "8/8/8/2k5/8/5K2/8/8 w - - 0 1" };
 			my_assert(is_insufficient_material_draw(p1) == true);
 		}
 
@@ -142,20 +213,20 @@ void tests()
 			std::vector<std::string> tests { "8/8/5p2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5R2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5Q2/2k5/8/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
 
 		// A king and more than one other type of piece is sufficient (e.g. knight + bishop).
 		{
-			libchess::Position p1 { "8/8/5nb1/2k5/8/5K2/8/8 w - - 0 1" };
+			Position p1 { "8/8/5nb1/2k5/8/5K2/8/8 w - - 0 1" };
 			my_assert(is_insufficient_material_draw(p1) == false);
 		}
 
 		// A king and two (or more) knights is sufficient.
 		{
-			libchess::Position p1 { "8/8/5nn1/2k5/8/5K2/8/8 w - - 0 1" };
+			Position p1 { "8/8/5nn1/2k5/8/5K2/8/8 w - - 0 1" };
 			my_assert(is_insufficient_material_draw(p1) == false);
 		}
 
@@ -164,7 +235,7 @@ void tests()
 			std::vector<std::string> tests { "8/8/5nR1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nB1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nN1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nP1/2k5/8/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
@@ -174,7 +245,7 @@ void tests()
 			std::vector<std::string> tests { "8/8/2b5/2k5/5N2/5K2/8/8 w - - 0 1", "8/8/2b5/2k5/5P2/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
@@ -193,7 +264,7 @@ void tests()
 				"3B3B/2B5/1B1B4/B6k/3B4/4B3/1K3B2/2B5 w - - 0 1"  // bishops on same color
 			};
 			for(auto & test: tests) {
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == true);
 			}
 		}
@@ -207,7 +278,7 @@ void tests()
 				"8/3k4/8/8/8/8/NNN5/1K6 w - - 0 1"
 			};
 			for(auto & test: tests) {
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
@@ -220,12 +291,12 @@ void tests()
 				"8/2nk4/8/8/8/8/1NN5/1K6 w - - 0 1",
 			};
 			for(auto & test: tests) {
-				libchess::Position p1 { test };
+				Position p1 { test };
 				my_assert(is_insufficient_material_draw(p1) == false);
 			}
 		}
 
-		printf("Ok\n");
+		printf("OK\n");
 	}
 
 	// san
@@ -240,12 +311,12 @@ void tests()
 		};
 
 		for(auto & test: tests) {
-			libchess::Position pos(std::get<0>(test));
+			Position pos(std::get<0>(test));
 			pos.make_move(SAN_to_move(std::get<1>(test), pos).value());
 			my_assert(std::get<2>(test) == pos.fen());
 		}
 
-		printf("Ok\n");
+		printf("OK\n");
 	}
 
 	delete_threads();

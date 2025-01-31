@@ -11,6 +11,28 @@ int nnue_evaluate(Eval *const e, const Position & pos)
         return e->evaluate(pos.side_to_move() == constants::WHITE);
 }
 
+void init_move(Eval **const e, libchess::Position & pos)
+{
+	delete *e;
+	*e = new Eval();
+
+        for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+                libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
+                while (piece_bb_w) {
+                        libchess::Square sq = piece_bb_w.forward_bitscan();
+                        piece_bb_w.forward_popbit();
+                        (*e)->add_piece(type, sq, true);
+                }
+
+                libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
+                while (piece_bb_b) {
+                        libchess::Square sq = piece_bb_b.forward_bitscan();
+                        piece_bb_b.forward_popbit();
+                        (*e)->add_piece(type, sq, false);
+                }
+        }
+}
+
 void remove_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::vector<undo_t> *const undos)
 {
 	e->remove_piece(pt, loc, is_white);
