@@ -696,11 +696,6 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				best_move  = cur_move;
 				best_score = score;
 
-#if defined(linux)
-				strncpy(sp->move, best_move.to_str().c_str(), 4);
-				sp->score = score;
-#endif
-
 				uint64_t   thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0 && output) {

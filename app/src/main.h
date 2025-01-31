@@ -26,10 +26,6 @@ typedef struct
 	uint16_t         md;
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	char             move[5];
-	int              score;
-#endif
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
 
 	libchess::Move     best_moves[128];
