@@ -62,7 +62,7 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 	auto captured_pt  = pos.piece_type_on(to_square  );
 	auto promotion_pt = move.promotion_piece_type();
 
-	bool is_white    = pos.color_of(from_square) == constants::WHITE;
+	bool is_white     = pos.side_to_move() == constants::WHITE;
 
 	switch(move.type()) {
 		case Move::Type::NORMAL:
