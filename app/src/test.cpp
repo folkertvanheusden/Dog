@@ -52,13 +52,13 @@ uint64_t do_nnue_verify_perft(Eval *const ev, libchess::Position &pos, int depth
         return count;
 }
 
-void nnue_verify_perft(Eval *const ev, libchess::Position &pos, const std::vector<long> & depths)
+void nnue_verify_perft(Eval *const ev, libchess::Position &pos, const std::vector<unsigned> & depths)
 {
 	ev->set(pos);
 	for(size_t i=0; i<depths.size(); i++) {
 		uint64_t result = do_nnue_verify_perft(ev, pos, i + 1, i + 1);
 		if (result != depths.at(i)) {
-			printf("Count mismatch, got %" PRIu64 ", expected %ld\n", result, depths.at(i));
+			printf("Count mismatch, got %" PRIu64 ", expected %u\n", result, depths.at(i));
 			my_assert(false);
 		}
 	}
@@ -79,22 +79,24 @@ void tests()
 	{
 		printf("NNUE perft\n");
 
-		std::vector<std::pair<std::string, std::vector<long> > > perfts {
+		const std::vector<std::pair<std::string, std::vector<unsigned> > > perfts {
 			{ constants::STARTPOS_FEN, { 20, 400, 8902, 197281, 4865609 } },
 			{ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", { 48, 2039, 97862, 4085603 } },
 			{ "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -", { 14, 191, 2812, 43238, 674624, 11030083 } },
 			{ "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", { 6, 264, 9467, 422333, 15833292 } },
 			{ "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", { 44, 1486, 62379, 2103487 } },
 			{ "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", { 46, 2079, 89890, 3894594 } },
+			{ "3k4/8/8/2PBb3/4p3/2K1N3/8/8 w - -", { 5, 90, 1950, 27716, 585553 } },
 		};
 
+		Eval *e = new Eval();
 		for(auto & record: perfts) {
-			Eval *e = new Eval();
+			printf("%s\n", record.first.c_str());
 			Position pos { record.first };
 			e->set(pos);
 			nnue_verify_perft(e, pos, record.second);
-			delete e;
 		}
+		delete e;
 
 		printf("OK\n");
 	}
@@ -295,7 +297,7 @@ void tests()
 
 		// A king + any(pawn, rook, queen) is sufficient.
 		{
-			std::vector<std::string> tests { "8/8/5p2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5R2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5Q2/2k5/8/5K2/8/8 w - - 0 1" };
+			const std::vector<std::string> tests { "8/8/5p2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5R2/2k5/8/5K2/8/8 w - - 0 1", "8/8/5Q2/2k5/8/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
 				Position p1 { test };
@@ -317,7 +319,7 @@ void tests()
 
 		// King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
 		{
-			std::vector<std::string> tests { "8/8/5nR1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nB1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nN1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nP1/2k5/8/5K2/8/8 w - - 0 1" };
+			const std::vector<std::string> tests { "8/8/5nR1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nB1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nN1/2k5/8/5K2/8/8 w - - 0 1", "8/8/5nP1/2k5/8/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
 				Position p1 { test };
@@ -327,7 +329,7 @@ void tests()
 
 		// King + bishop against king + any(knight, pawn) is sufficient.
 		{
-			std::vector<std::string> tests { "8/8/2b5/2k5/5N2/5K2/8/8 w - - 0 1", "8/8/2b5/2k5/5P2/5K2/8/8 w - - 0 1" };
+			const std::vector<std::string> tests { "8/8/2b5/2k5/5N2/5K2/8/8 w - - 0 1", "8/8/2b5/2k5/5P2/5K2/8/8 w - - 0 1" };
 			for(auto & test: tests) {
 				// printf(" %s\n", test.c_str());
 				Position p1 { test };
@@ -340,7 +342,7 @@ void tests()
 		// tests from https://github.com/toanth/motors/blob/main/gears/src/games/chess.rs#L1564-L1610
 		// insufficient
 		{
-			std::vector<std::string> tests { "8/4k3/8/8/8/8/8/2K5 w - - 0 1",
+			const std::vector<std::string> tests { "8/4k3/8/8/8/8/8/2K5 w - - 0 1",
 				"8/4k3/8/8/8/8/5N2/2K5 w - - 0 1",
 				"8/8/8/6k1/8/2K5/5b2/6b1 w - - 0 1",  // bishops on same color
 				"8/8/3B4/7k/8/8/1K6/6b1 w - - 0 1",
@@ -355,7 +357,7 @@ void tests()
 		}
 		// sufficient
 		{
-			std::vector<std::string> tests { "8/8/4k3/8/8/1K6/8/7R w - - 0 1",
+			const std::vector<std::string> tests { "8/8/4k3/8/8/1K6/8/7R w - - 0 1",
 				"5r2/3R4/4k3/8/8/1K6/8/8 w - - 0 1",
 				"8/8/4k3/8/8/1K6/8/6BB w - - 0 1",
 				"8/8/4B3/8/8/7K/8/6bk w - - 0 1",
@@ -369,7 +371,7 @@ void tests()
 		}
 		// sufficient but unreasonable
 		{
-			std::vector<std::string> tests { "6B1/8/8/6k1/8/2K5/8/6b1 w - - 0 1",
+			const std::vector<std::string> tests { "6B1/8/8/6k1/8/2K5/8/6b1 w - - 0 1",
 				"8/8/4B3/8/8/7K/8/6bk b - - 0 1",
 				"8/8/4B3/7k/8/8/1K6/6b1 w - - 0 1",
 				"8/3k4/8/8/8/8/1NN5/1K6 w - - 0 1",
@@ -385,7 +387,7 @@ void tests()
 	}
 
 	// san
-	std::vector<std::tuple<const std::string, const std::string, const std::string, int> > san_parsing_tests {
+	const std::vector<std::tuple<const std::string, const std::string, const std::string, int> > san_parsing_tests {
 		{ "7r/3r1p1p/6p1/1p6/2B5/5PP1/1Q5P/1K1k4 b - - 0 38", "bxc4", "7r/3r1p1p/6p1/8/2p5/5PP1/1Q5P/1K1k4 w - - 0 39", -212 },
 		{ "2n1r1n1/1p1k1p2/6pp/R2pP3/3P4/8/5PPP/2R3K1 b - - 0 30", "Nge7", "2n1r3/1p1knp2/6pp/R2pP3/3P4/8/5PPP/2R3K1 w - - 1 31", 270 },
 		{ "8/5p2/1kn1r1n1/1p1pP3/6K1/8/4R3/5R2 b - - 9 60", "Ngxe5+", "8/5p2/1kn1r3/1p1pn3/6K1/8/4R3/5R2 w - - 0 61", 1218 },
