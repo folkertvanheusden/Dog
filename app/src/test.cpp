@@ -20,8 +20,7 @@
 
 int get_nnue_score(libchess::Position &pos)
 {
-	Eval e;
-	e.set(pos);
+	Eval e(pos);
 	return nnue_evaluate(&e, pos);
 }
 
@@ -90,14 +89,13 @@ void tests()
 			{ "8/8/8/8/8/8/6k1/4K2R b K - 0 1", { 3, 32, 134, 2073, 10485, 179869 } },
 		};
 
-		Eval *e = new Eval();
 		for(auto & record: perfts) {
 			printf("Testing %s\n", record.first.c_str());
 			Position pos { record.first };
-			e->set(pos);
+			Eval *e = new Eval(pos);
 			nnue_verify_perft(e, pos, record.second);
+			delete e;
 		}
-		delete e;
 
 		printf("OK\n");
 	}

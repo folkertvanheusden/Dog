@@ -18,8 +18,9 @@ private:
 	Accumulator white;
 	Accumulator black;
 
-public:
 	Eval();
+
+public:
 	Eval(const libchess::Position & pos);
 
 	void reset();
