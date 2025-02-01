@@ -11,7 +11,7 @@ int nnue_evaluate(Eval *const e, const Position & pos)
         return e->evaluate(pos.side_to_move() == constants::WHITE);
 }
 
-void init_move(Eval *const e, libchess::Position & pos)
+void init_move(Eval *const e, const libchess::Position & pos)
 {
 	e->set(pos);
 }

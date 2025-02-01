@@ -10,6 +10,6 @@ struct undo_t
 	bool                is_white;
 };
 
-void                init_move  (Eval *const e, libchess::Position & pos);
+void                init_move  (Eval *const e, const libchess::Position & pos);
 void                unmake_move(Eval *const e, libchess::Position & pos, const std::vector<undo_t> & actions);
 std::vector<undo_t> make_move  (Eval *const e, libchess::Position & pos, const libchess::Move & move);
