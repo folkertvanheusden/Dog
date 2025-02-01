@@ -1016,6 +1016,7 @@ void run_bench()
 		{
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			sp.at(0)->pos = libchess::Position(fen);
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 			memset(sp.at(0)->history, 0x00, history_malloc_size);
 			work.search_think_time  = 1 << 31;
 			work.search_is_abs_time = true;
@@ -1033,6 +1034,7 @@ void run_bench()
 			while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 				work.search_cv_finished.wait(lck);
 		}
+		// printf("%s|%s|%d\n", fen.c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
 	}
 	uint64_t end_ts   = esp_timer_get_time();
 
