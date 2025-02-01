@@ -1,17 +1,15 @@
+#include <cinttypes>
 #include <thread>
 
 #include <libchess/Position.h>
 
 #include "eval.h"
 #include "main.h"
+#include "nnue.h"
 #include "san.h"
 #include "search.h"
 #include "str.h"
 
-
-void tests()
-{
-	using namespace libchess;
 
 #define my_assert(x) \
 	if (!(x)) { \
@@ -20,6 +18,56 @@ void tests()
 		exit(1); \
 	}
 
+int get_nnue_score(libchess::Position &pos)
+{
+	Eval e;
+	e.set(pos);
+	return nnue_evaluate(&e, pos);
+}
+
+uint64_t do_nnue_verify_perft(Eval *const ev, libchess::Position &pos, int depth, const int max_depth)
+{
+        libchess::MoveList move_list = pos.legal_move_list();
+        if (depth == 1)
+                return move_list.size();
+
+        uint64_t count = 0;
+        for(const libchess::Move & move: move_list) {
+		auto undo_actions = make_move(ev, pos, move);
+                count += do_nnue_verify_perft(ev, pos, depth - 1, max_depth);
+		unmake_move(ev, pos, undo_actions);
+
+		{
+			int a = 0, b = 0;
+			if ((a = get_nnue_score(pos)) != (b = nnue_evaluate(ev, pos))) {
+				printf("fail @ %d: %s %s (%d != %d)\n", depth, pos.fen().c_str(), move.to_str().c_str(), a, b);
+				for(auto & action: undo_actions) {
+					printf("%s: %s %c %s\n", action.is_put ? "ADD":"REM", action.location.to_str().c_str(), action.type.to_char(), action.is_white ? "white":"black");
+				}
+				my_assert(false);
+			}
+		}
+        }
+
+        return count;
+}
+
+void nnue_verify_perft(Eval *const ev, libchess::Position &pos, const std::vector<long> & depths)
+{
+	for(size_t i=0; i<depths.size(); i++) {
+		ev->set(pos);
+		uint64_t result = do_nnue_verify_perft(ev, pos, i + 1, i + 1);
+		if (result != depths.at(i)) {
+			printf("Count mismatch, got %" PRIu64 ", expected %ld\n", result, depths.at(i));
+			my_assert(false);
+		}
+	}
+}
+
+void tests()
+{
+	using namespace libchess;
+
 	set_thread_name("TESTS");
 
 	printf("Size of int must be 32 bit\n");
@@ -27,6 +75,29 @@ void tests()
 	printf("OK\n");
 
 	allocate_threads(1);
+
+	{
+		printf("NNUE perft\n");
+
+		std::vector<std::pair<std::string, std::vector<long> > > perfts {
+			{ constants::STARTPOS_FEN, { 20, 400, 8902, 197281, 4865609 } },
+			{ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", { 48, 2039, 97862, 4085603 } },
+			{ "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -", { 14, 191, 2812, 43238, 674624, 11030083 } },
+			{ "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", { 6, 264, 9467, 422333, 15833292 } },
+			{ "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", { 44, 1486, 62379, 2103487 } },
+			{ "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", { 46, 2079, 89890, 3894594 } },
+		};
+
+		for(auto & record: perfts) {
+			Eval *e = new Eval();
+			Position pos { record.first };
+			e->set(pos);
+			nnue_verify_perft(e, pos, record.second);
+			delete e;
+		}
+
+		printf("OK\n");
+	}
 
 	// NNUE incremental
 	{
@@ -319,6 +390,7 @@ void tests()
 		{ "2n1r1n1/1p1k1p2/6pp/R2pP3/3P4/8/5PPP/2R3K1 b - - 0 30", "Nge7", "2n1r3/1p1knp2/6pp/R2pP3/3P4/8/5PPP/2R3K1 w - - 1 31", 270 },
 		{ "8/5p2/1kn1r1n1/1p1pP3/6K1/8/4R3/5R2 b - - 9 60", "Ngxe5+", "8/5p2/1kn1r3/1p1pn3/6K1/8/4R3/5R2 w - - 0 61", 1218 },
 		{ "r3k2r/pp1bnpbp/1q3np1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R b KQkq - 5 15", "Ng8", "r3k1nr/pp1bnpbp/1q4p1/3p4/3N1P2/1PP1Q2P/P1B3P1/RNB1K2R w KQkq - 6 16", 313 },
+		{ libchess::constants::STARTPOS_FEN, "e4", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", 48 },  // -45 afterwards
 	};
 
 	{
