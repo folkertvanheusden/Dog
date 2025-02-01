@@ -392,7 +392,7 @@ void allocate_threads(const int n)
 	for(int i=0; i<n; i++) {
 		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
-		sp.at(i)->ev = new Eval();
+		sp.at(i)->ev = new Eval(sp.at(i)->pos);
 	}
 	if (se)
 		se->set(sp.at(0));
@@ -606,7 +606,6 @@ void main_task()
 			memset(i->history, 0x00, history_malloc_size);
 		global_cs.reset();
 		tti.reset();
-		printf("# --- New game ---\n");
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
@@ -640,7 +639,7 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time.value());
 			}
 
-			stop_ponder();
+			init_move(sp.at(0)->ev, sp.at(0)->pos);
 
 			chess_stats cs_sum;
 			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
