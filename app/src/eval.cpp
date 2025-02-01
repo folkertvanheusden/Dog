@@ -60,25 +60,27 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 		case Move::Type::ENPASSANT:
 			assert(*moving_pt == constants::PAWN);
 			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions);
-			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, is_white, &actions);
+			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, !is_white, &actions);
 			break;
 		case Move::Type::CASTLING:
 			assert(*moving_pt == constants::KING);
 			move_piece(e, from_square, to_square, constants::KING, is_white, &actions);
 			switch (to_square) {
 				case constants::C1:
-					move_piece(e, constants::A1, constants::D1, constants::ROOK, is_white, &actions);
+					assert(is_white);
+					move_piece(e, constants::A1, constants::D1, constants::ROOK, true, &actions);
 					break;
 				case constants::G1:
-					move_piece(e, constants::H1, constants::F1, constants::ROOK, is_white, &actions);
+					assert(is_white);
+					move_piece(e, constants::H1, constants::F1, constants::ROOK, true, &actions);
 					break;
 				case constants::C8:
 					assert(!is_white);
-					move_piece(e, constants::A8, constants::D8, constants::ROOK, is_white, &actions);
+					move_piece(e, constants::A8, constants::D8, constants::ROOK, false, &actions);
 					break;
 				case constants::G8:
 					assert(!is_white);
-					move_piece(e, constants::H8, constants::F8, constants::ROOK, is_white, &actions);
+					move_piece(e, constants::H8, constants::F8, constants::ROOK, false, &actions);
 					break;
 				default:
 					assert(false);
