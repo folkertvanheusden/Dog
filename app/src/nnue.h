@@ -14,9 +14,10 @@ struct Accumulator
 
 class Eval
 {
-	// season to taste
+private:
 	Accumulator white;
 	Accumulator black;
+
 public:
 	Eval();
 	Eval(const libchess::Position & pos);
