@@ -57,13 +57,18 @@ Eval::Eval() : white{NNUE->feature_bias}, black{NNUE->feature_bias}
 {
 }
 
+Eval::Eval(const libchess::Position & pos) : white{NNUE->feature_bias}, black{NNUE->feature_bias}
+{
+	set(pos);
+}
+
 void Eval::reset()
 {
 	this->white = NNUE->feature_bias;
 	this->black = NNUE->feature_bias;
 }
 
-void Eval::set(libchess::Position & pos)
+void Eval::set(const libchess::Position & pos)
 {
 	reset();
 

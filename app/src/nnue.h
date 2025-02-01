@@ -19,9 +19,10 @@ class Eval
 	Accumulator black;
 public:
 	Eval();
+	Eval(const libchess::Position & pos);
 
 	void reset();
-	void set(libchess::Position & pos);
+	void set(const libchess::Position & pos);
 
 	int evaluate(bool white_to_move) const;
 	void add_piece(const int piece, const int square, const bool is_white);
