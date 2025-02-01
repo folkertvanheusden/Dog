@@ -307,6 +307,7 @@ void prepare_threads_state()
 #if defined(ESP32)
 	sp.at(0)->md = 1;
 #endif
+	init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
 		init_move(sp.at(i)->nnue_eval, sp.at(i)->pos);
