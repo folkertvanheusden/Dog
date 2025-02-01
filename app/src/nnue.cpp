@@ -53,11 +53,12 @@ struct Network {
 
 const Network *const NNUE = reinterpret_cast<const Network *>(weights_data);
 
-Eval::Eval() : white{NNUE->feature_bias}, black{NNUE->feature_bias}
+Eval::Eval()
 {
+	reset();
 }
 
-Eval::Eval(const libchess::Position & pos) : white{NNUE->feature_bias}, black{NNUE->feature_bias}
+Eval::Eval(const libchess::Position & pos)
 {
 	set(pos);
 }
