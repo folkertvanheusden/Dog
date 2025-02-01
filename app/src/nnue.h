@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libchess/Position.h>
+
 constexpr int HIDDEN_SIZE = 256;
 constexpr int SCALE = 400;
 constexpr std::int16_t QA = 255;
@@ -12,11 +14,17 @@ struct Accumulator
 
 class Eval
 {
-	// season to taste
+private:
 	Accumulator white;
 	Accumulator black;
-public:
+
 	Eval();
+
+public:
+	Eval(const libchess::Position & pos);
+
+	void reset();
+	void set(const libchess::Position & pos);
 
 	int evaluate(bool white_to_move) const;
 	void add_piece(const int piece, const int square, const bool is_white);

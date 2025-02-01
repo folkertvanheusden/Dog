@@ -51,15 +51,48 @@ struct Network {
 
 const Network *const NNUE = reinterpret_cast<const Network *>(weights_data);
 
-Eval::Eval() : white{NNUE->feature_bias}, black{NNUE->feature_bias}
+Eval::Eval()
 {
+	reset();
+}
+
+Eval::Eval(const libchess::Position & pos)
+{
+	set(pos);
+}
+
+void Eval::reset()
+{
+	this->white = NNUE->feature_bias;
+	this->black = NNUE->feature_bias;
+}
+
+void Eval::set(const libchess::Position & pos)
+{
+	reset();
+
+        for(libchess::PieceType type : libchess::constants::PIECE_TYPES) {
+                libchess::Bitboard piece_bb_w = pos.piece_type_bb(type, libchess::constants::WHITE);
+                while (piece_bb_w) {
+                        libchess::Square sq = piece_bb_w.forward_bitscan();
+                        piece_bb_w.forward_popbit();
+                        add_piece(type, sq, true);
+                }
+
+                libchess::Bitboard piece_bb_b = pos.piece_type_bb(type, libchess::constants::BLACK);
+                while (piece_bb_b) {
+                        libchess::Square sq = piece_bb_b.forward_bitscan();
+                        piece_bb_b.forward_popbit();
+                        add_piece(type, sq, false);
+                }
+        }
 }
 
 int Eval::evaluate(bool white_to_move) const
 {
-	if (white_to_move) {
+	if (white_to_move)
 		return NNUE->evaluate(this->white, this->black);
-	}
+
 	return NNUE->evaluate(this->black, this->white);
 }
 
@@ -68,7 +101,8 @@ void Eval::add_piece(const int piece, const int square, const bool is_white)
 	if (is_white) {
 		NNUE->add_feature(this->white, 64 * piece + square);
 		NNUE->add_feature(this->black, 64 * (6 + piece) + (square ^ 56));
-	} else {
+	}
+	else {
 		NNUE->add_feature(this->black, 64 * piece + (square ^ 56));
 		NNUE->add_feature(this->white, 64 * (6 + piece) + square);
 	}
@@ -79,7 +113,8 @@ void Eval::remove_piece(const int piece, const int square, const bool is_white)
 	if (is_white) {
 		NNUE->remove_feature(this->white, 64 * piece + square);
 		NNUE->remove_feature(this->black, 64 * (6 + piece) + (square ^ 56));
-	} else {
+	}
+	else {
 		NNUE->remove_feature(this->black, 64 * piece + (square ^ 56));
 		NNUE->remove_feature(this->white, 64 * (6 + piece) + square);
 	}

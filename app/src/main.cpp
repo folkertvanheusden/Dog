@@ -307,8 +307,10 @@ void prepare_threads_state()
 #if defined(ESP32)
 	sp.at(0)->md = 1;
 #endif
+	init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
+		init_move(sp.at(i)->nnue_eval, sp.at(i)->pos);
 #if defined(ESP32)
 		sp.at(i)->md  = 1;
 #endif
@@ -372,6 +374,7 @@ void delete_threads()
 	for(auto & i: sp) {
 		i->thread_handle->join();
 		delete i->thread_handle;
+		delete i->nnue_eval;
 		delete i->stop;
 		free(i->history);
 		delete i;
@@ -390,6 +393,7 @@ void allocate_threads(const int n)
 	for(int i=0; i<n; i++) {
 		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
+		sp.at(i)->nnue_eval = new Eval(sp.at(i)->pos);
 	}
 	if (se)
 		se->set(sp.at(0));
@@ -550,7 +554,7 @@ void main_task()
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
-		int score = nnue_evaluate(sp.at(0)->pos);
+		int score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 		printf("# eval: %d\n", score);
 	};
 
@@ -603,15 +607,15 @@ void main_task()
 			memset(i->history, 0x00, history_malloc_size);
 		global_cs.reset();
 		tti.reset();
-		printf("# --- New game ---\n");
 	};
 
 	auto position_handler = [](const libchess::UCIPositionParameters & position_parameters) {
 		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
+		init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 		if (position_parameters.move_list()) {
 			for (auto & move_str : position_parameters.move_list()->move_list())
-				sp.at(0)->pos.make_move(*libchess::Move::from(move_str));
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, *libchess::Move::from(move_str));
 		}
 	};
 
@@ -636,7 +640,7 @@ void main_task()
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time.value());
 			}
 
-			stop_ponder();
+			init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 
 			chess_stats cs_sum;
 			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
@@ -674,7 +678,7 @@ void main_task()
 
 				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
 
-				sp.at(0)->pos.make_move(work.search_best_move);
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, work.search_best_move);
 			}
 
 			printf("\nFinished.\n");
@@ -1013,6 +1017,7 @@ void run_bench()
 		{
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
 			sp.at(0)->pos = libchess::Position(fen);
+			init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 			memset(sp.at(0)->history, 0x00, history_malloc_size);
 			work.search_think_time  = 1 << 31;
 			work.search_is_abs_time = true;
@@ -1030,6 +1035,7 @@ void run_bench()
 			while(work.search_best_move.value() == 0 || work.search_count_running != 0)
 				work.search_cv_finished.wait(lck);
 		}
+		// printf("%s|%s|%d\n", fen.c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
 	}
 	uint64_t end_ts   = esp_timer_get_time();
 
