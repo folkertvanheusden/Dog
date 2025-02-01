@@ -54,8 +54,8 @@ uint64_t do_nnue_verify_perft(Eval *const ev, libchess::Position &pos, int depth
 
 void nnue_verify_perft(Eval *const ev, libchess::Position &pos, const std::vector<long> & depths)
 {
+	ev->set(pos);
 	for(size_t i=0; i<depths.size(); i++) {
-		ev->set(pos);
 		uint64_t result = do_nnue_verify_perft(ev, pos, i + 1, i + 1);
 		if (result != depths.at(i)) {
 			printf("Count mismatch, got %" PRIu64 ", expected %ld\n", result, depths.at(i));
