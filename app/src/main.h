@@ -30,7 +30,7 @@ typedef struct
 	libchess::Move   best_moves[128];
 
 	std::thread     *thread_handle { nullptr };
-	Eval            *ev            { nullptr };
+	Eval            *nnue_eval     { nullptr };
 } search_pars_t;
 
 extern std::vector<search_pars_t *> sp;

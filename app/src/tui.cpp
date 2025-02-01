@@ -203,11 +203,11 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 		my_printf("Move number: %d, color: %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
 }
 
-void emit_pv(Eval *const ev, const libchess::Position & pos, const libchess::Move & best_move, const bool colors)
+void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const bool colors)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
-	auto start_score = nnue_evaluate(ev, pos);
+	auto start_score = nnue_evaluate(nnue_eval, pos);
 
 	if (colors) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
@@ -222,7 +222,7 @@ void emit_pv(Eval *const ev, const libchess::Position & pos, const libchess::Mov
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(ev, pos);
+			int  cur_score = nnue_evaluate(nnue_eval, pos);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
@@ -511,7 +511,7 @@ void tui()
 				scores.pop_back();
 			}
 			else if (parts[0] == "eval") {
-				int nnue_score = nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos);
+				int nnue_score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 				my_printf("evaluation score: %.2f\n", nnue_score / 100.);
 			}
 			else if (parts[0] == "tt")
@@ -526,9 +526,9 @@ void tui()
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
-						auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, move.value());
+						auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 						moves_played.push_back(move.value());
-						scores.push_back(nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+						scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 						valid = true;
 					}
 				}
@@ -548,9 +548,9 @@ void tui()
 			if (move.has_value()) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
-				auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, move.value());
+				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 				moves_played.push_back(move.value());
-				scores.push_back(nnue_evaluate(sp.at(0)->ev, sp.at(0)->pos));
+				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 			}
 			else {
 				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
@@ -559,9 +559,9 @@ void tui()
 				clear_flag(sp.at(0)->stop);
 				std::tie(best_move, best_score) = search_it(think_time, true, sp.at(0), -1, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
-				emit_pv(sp.at(0)->ev, sp.at(0)->pos, best_move, colors);
+				emit_pv(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move, colors);
 
-				auto undo_actions = make_move(sp.at(0)->ev, sp.at(0)->pos, best_move);
+				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				moves_played.push_back(best_move);
 				scores.push_back(best_score);
 			}
