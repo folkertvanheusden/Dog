@@ -205,7 +205,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (te.value().m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().m);
 
-		if (te.value().depth >= qsdepth) {
+		/*if (te.value().depth >= qsdepth) */{
 			int score      = te.value().score;
 			int work_score = eval_from_tt(score, qsdepth);
 			auto flag      = te.value().flags;
@@ -296,7 +296,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	assert(best_score >= -10000);
 	assert(best_score <=  10000);
 
-	if (sp.stop->flag == false) {
+	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
 		sp.cs.data.tt_store++;
 
 		tt_entry_flag flag = EXACT;
@@ -308,11 +308,11 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		int work_score = eval_to_tt(best_score, qsdepth);
 
 		if (best_score > start_alpha && m.has_value())
-			tti.store(hash, flag, qsdepth, work_score, m.value());
+			tti.store(hash, flag, 0, work_score, m.value());
 		else if (tt_move.has_value())
-			tti.store(hash, flag, qsdepth, work_score, tt_move.value());
+			tti.store(hash, flag, 0, work_score, tt_move.value());
 		else
-			tti.store(hash, flag, qsdepth, work_score);
+			tti.store(hash, flag, 0, work_score);
 	}
 
 	return best_score;
