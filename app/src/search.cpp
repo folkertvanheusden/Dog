@@ -198,10 +198,10 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	std::optional<libchess::Move> tt_move { };
 	uint64_t       hash        = sp.pos.hash();
 	std::optional<tt_entry> te = tti.lookup(hash);
-	sp.cs.data.tt_query++;
+	sp.cs.data.qtt_query++;
 
         if (te.has_value()) {  // TT hit?
-		sp.cs.data.tt_hit++;
+		sp.cs.data.qtt_hit++;
 		if (te.value().m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().m);
 
@@ -291,7 +291,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	assert(best_score <=  10000);
 
 	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
-		sp.cs.data.tt_store++;
+		sp.cs.data.qtt_store++;
 
 		tt_entry_flag flag = EXACT;
 		if (best_score <= start_alpha)

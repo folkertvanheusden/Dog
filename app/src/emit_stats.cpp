@@ -20,7 +20,8 @@ void emit_statistics(state_exporter::_export_structure_ *const counts, const std
 
 	printf("Search nodes: %u, qs nodes: %u, ratio: %.3f\n", counts->counters.nodes, counts->counters.qnodes, double(counts->counters.qnodes)/counts->counters.nodes);
 	printf("draws: %.2f%% (%u), standing pat: %.2f%% (%u)\n", counts->counters.n_draws * 100. / counts->counters.nodes, counts->counters.n_draws, counts->counters.n_standing_pat * 100. / counts->counters.qnodes, counts->counters.n_standing_pat);
-	printf("%u tt query, %u ttstore, %.2f%% hit, query/store factor: %.2f\n", counts->counters.tt_query, counts->counters.tt_store, counts->counters.tt_hit * 100. / counts->counters.tt_query, counts->counters.tt_query / double(counts->counters.tt_store));
+	printf("%u tt query, %u ttstore, %.2f%% hit, query/store factor: %.2f, invalid: %.2f%% (%u)\n", counts->counters.tt_query, counts->counters.tt_store, counts->counters.tt_hit * 100. / counts->counters.tt_query, counts->counters.tt_query / double(counts->counters.tt_store), counts->counters.tt_invalid * 100. / counts->counters.tt_query, counts->counters.tt_invalid);
+	printf("%u qtt query, %u qttstore, %.2f%% hit, query/store factor: %.2f\n", counts->counters.qtt_query, counts->counters.qtt_store, counts->counters.qtt_hit * 100. / counts->counters.qtt_query, counts->counters.qtt_query / double(counts->counters.qtt_store));
 	printf("Syzygy queries: %u, hits: %.2f%%\n", counts->counters.syzygy_queries, counts->counters.syzygy_query_hits * 100. / counts->counters.syzygy_queries);
 	printf("Average beta-cutoff index: %.2f, QS beta-cutoff index: %.2f\n", counts->counters.n_moves_cutoff / double(counts->counters.nmc_nodes), counts->counters.n_qmoves_cutoff / double(counts->counters.nmc_qnodes));
 	printf("QS early stop: %.2f%% (%u)\n", counts->counters.n_qs_early_stop * 100. / counts->counters.qnodes, counts->counters.n_qs_early_stop);
