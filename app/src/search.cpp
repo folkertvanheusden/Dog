@@ -205,7 +205,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (te.value().m)  // move stored in TT?
 			tt_move = libchess::Move(te.value().m);
 
-		/*if (te.value().depth >= qsdepth) */{
+		{
 			int score      = te.value().score;
 			int work_score = eval_from_tt(score, qsdepth);
 			auto flag      = te.value().flags;
@@ -228,13 +228,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 			sp.cs.data.n_standing_pat++;
 			return best_score;
 		}
-/* TODO
-		int BIG_DELTA = sp.parameters.big_delta;
-		if (sp.pos.previous_move().has_value() && sp.pos.is_promotion_move(sp.pos.previous_move().value()))
-			BIG_DELTA += sp.parameters.big_delta_promotion;
-		if (best_score < alpha - BIG_DELTA)
-			return alpha;
-*/
+
 		if (alpha < best_score)
 			alpha = best_score;
 	}
