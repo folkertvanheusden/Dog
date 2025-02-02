@@ -193,6 +193,31 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))
 		return 0;
 
+	// TT //
+	int            start_alpha = alpha;
+	std::optional<libchess::Move> tt_move { };
+	uint64_t       hash        = sp.pos.hash();
+	std::optional<tt_entry> te = tti.lookup(hash);
+	sp.cs.data.tt_query++;
+
+        if (te.has_value()) {  // TT hit?
+		sp.cs.data.tt_hit++;
+		if (te.value().m)  // move stored in TT?
+			tt_move = libchess::Move(te.value().m);
+
+		{
+			int score      = te.value().score;
+			int work_score = eval_from_tt(score, qsdepth);
+			auto flag      = te.value().flags;
+                        bool use       = flag == EXACT ||
+                                        (flag == LOWERBOUND && work_score >= beta) ||
+                                        (flag == UPPERBOUND && work_score <= alpha);
+			if (use)
+				return work_score;
+		}
+	}
+	////////
+
 	int  best_score = -32767;
 
 	bool in_check   = sp.pos.in_check();
@@ -203,21 +228,18 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 			sp.cs.data.n_standing_pat++;
 			return best_score;
 		}
-/* TODO
-		int BIG_DELTA = sp.parameters.big_delta;
-		if (sp.pos.previous_move().has_value() && sp.pos.is_promotion_move(sp.pos.previous_move().value()))
-			BIG_DELTA += sp.parameters.big_delta_promotion;
-		if (best_score < alpha - BIG_DELTA)
-			return alpha;
-*/
+
 		if (alpha < best_score)
 			alpha = best_score;
 	}
 
 	int  n_played  = 0;
 	auto move_list = gen_qs_moves(sp.pos);
+	std::optional<libchess::Move> m;
 
 	sort_movelist_compare smc(sp);
+	if (tt_move.has_value())
+		smc.add_first_move(tt_move.value());
 	sort_movelist(move_list, smc);
 
 	for(auto move : move_list) {
@@ -241,6 +263,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 		if (score > best_score) {
 			best_score = score;
+			m          = move;
 
 			if (score > alpha) {
 				if (score >= beta) {
@@ -266,6 +289,25 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 	assert(best_score >= -10000);
 	assert(best_score <=  10000);
+
+	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
+		sp.cs.data.tt_store++;
+
+		tt_entry_flag flag = EXACT;
+		if (best_score <= start_alpha)
+			flag = UPPERBOUND;
+		else if (best_score >= beta)
+			flag = LOWERBOUND;
+
+		int work_score = eval_to_tt(best_score, qsdepth);
+
+		if (best_score > start_alpha && m.has_value())
+			tti.store(hash, flag, 0, work_score, m.value());
+		else if (tt_move.has_value())
+			tti.store(hash, flag, 0, work_score, tt_move.value());
+		else
+			tti.store(hash, flag, 0, work_score);
+	}
 
 	return best_score;
 }
