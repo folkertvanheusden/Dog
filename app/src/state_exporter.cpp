@@ -9,7 +9,10 @@ state_exporter::state_exporter(const int hz):
 {
 	unsigned sid = shmget('Dog0', sizeof(_export_structure_), IPC_CREAT | 0600);
 	pdata        = reinterpret_cast<_export_structure_ *>(shmat(sid, nullptr, 0));
-	pdata->mutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutexattr_t mutex_attributes;
+	pthread_mutexattr_init(&mutex_attributes);
+	pthread_mutexattr_setpshared(&mutex_attributes, PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(&pdata->mutex, &mutex_attributes);
 
 	th = new std::thread(&state_exporter::handler, this);
 }
@@ -46,10 +49,11 @@ void state_exporter::handler()
 		if (!sp)
 			continue;
 
-		pthread_mutex_lock(&pdata->mutex);
-		pdata->counters = sp->cs.data;
-		pdata->cur_move = sp->cur_move;
-		pdata->revision++;
-		pthread_mutex_unlock(&pdata->mutex);
+		if (pthread_mutex_trylock(&pdata->mutex) == 0) {
+			pdata->counters = sp->cs.data;
+			pdata->cur_move = sp->cur_move;
+			pdata->revision++;
+			pthread_mutex_unlock(&pdata->mutex);
+		}
 	}
 }
