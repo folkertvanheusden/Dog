@@ -1,19 +1,23 @@
+#include <fcntl.h>
 #include <pthread.h>
 #include <string>
 #include <unistd.h>
-#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #include "state_exporter.h"
 
 
-void emit_statistics(state_exporter::_export_structure_ *const counts, const std::string & header)
+void emit_statistics(state_exporter::_export_structure_ *const counts, const std::string & header, std::optional<int> *const prev_revision)
 {
 	printf(" * %s *\n", header.c_str());
 
 	for(;;) {
 		pthread_mutex_lock(&counts->mutex);
-		if (counts->revision)
+		if (prev_revision->has_value() == false || counts->revision != prev_revision->value()) {
+			*prev_revision = counts->revision;
 			break;
+		}
 		pthread_mutex_unlock(&counts->mutex);
 		usleep(101000);
 	}
@@ -30,18 +34,22 @@ void emit_statistics(state_exporter::_export_structure_ *const counts, const std
 	printf("static evaluation cutoff: %.2f%% (%u out of %u)\n", counts->counters.n_static_eval_hit * 100. / counts->counters.n_static_eval, counts->counters.n_static_eval_hit, counts->counters.n_static_eval);
 	printf("average alpha/beta aspiration window distance: %.2f/%.2f\n", counts->counters.alpha_distance / double(counts->counters.n_alpha_distances), counts->counters.beta_distance / double(counts->counters.n_beta_distances));
 
-	pthread_mutex_unlock(&counts->mutex);
+	printf("UNLOCK %d\n", pthread_mutex_unlock(&counts->mutex));
 }
 
 state_exporter::_export_structure_ *open_shm()
 {
-	unsigned sid = shmget('Dog0', sizeof(state_exporter::_export_structure_), 0);
-	return reinterpret_cast<state_exporter::_export_structure_ *>(shmat(sid, nullptr, 0));
+	int fd = shm_open("/Dog", O_RDWR, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+	if (fd == -1)
+		return reinterpret_cast<state_exporter::_export_structure_ *>(-1);
+	auto *p = reinterpret_cast<state_exporter::_export_structure_ *>(mmap(nullptr, sizeof(state_exporter::_export_structure_), PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0));
+	close(fd);
+	return p;
 }
 
 void close_shm(state_exporter::_export_structure_ *p)
 {
-	shmdt(p);
+	munmap(p, 0);
 }
 
 int main(int argc, char *argv[])
@@ -52,7 +60,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	emit_statistics(p, "Statistics");
+	std::optional<int> prev_revision;
+
+	for(;;)
+		emit_statistics(p, "Statistics", &prev_revision);
 
 	close_shm(p);
 
