@@ -1,5 +1,6 @@
 #include <atomic>
 #include <mutex>
+#include <pthread.h>
 #include <thread>
 
 #include "main.h"
@@ -17,7 +18,7 @@ private:
 
 public:
 	struct _export_structure_ {
-		std::mutex           lock;
+		pthread_mutex_t      mutex;
 		volatile int         revision;
 		chess_stats::_data_  counters;
 		uint32_t             cur_move;

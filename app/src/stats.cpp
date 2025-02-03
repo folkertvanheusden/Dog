@@ -25,9 +25,14 @@ void chess_stats::add(const chess_stats & source)
 	this->data.n_standing_pat  += source.data.n_standing_pat;
 	this->data.n_qs_early_stop += source.data.n_qs_early_stop;
 
-        this->data.tt_query += source.data.tt_query;
-        this->data.tt_hit   += source.data.tt_hit;
-        this->data.tt_store += source.data.tt_store;
+        this->data.tt_query   += source.data.tt_query;
+        this->data.tt_hit     += source.data.tt_hit;
+        this->data.tt_store   += source.data.tt_store;
+        this->data.tt_invalid += source.data.tt_invalid;
+
+	this->data.qtt_query += source.data.qtt_query;
+	this->data.qtt_hit   += source.data.qtt_hit;
+	this->data.qtt_store += source.data.qtt_store;
 
 	this->data.n_null_move     += source.data.n_null_move;
 	this->data.n_null_move_hit += source.data.n_null_move_hit;

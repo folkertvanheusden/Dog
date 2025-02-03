@@ -1,3 +1,5 @@
+#include <cstring>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/shm.h>
 
@@ -9,15 +11,28 @@ state_exporter::state_exporter(const int hz):
 {
 	unsigned sid = shmget('Dog0', sizeof(_export_structure_), IPC_CREAT | 0600);
 	pdata        = reinterpret_cast<_export_structure_ *>(shmat(sid, nullptr, 0));
+	if (pdata != reinterpret_cast<void *>(-1)) {
+		pthread_mutexattr_t mutex_attributes;
+		pthread_mutexattr_init(&mutex_attributes);
+		pthread_mutexattr_setpshared(&mutex_attributes, PTHREAD_PROCESS_SHARED);
+		pthread_mutex_init(&pdata->mutex, &mutex_attributes);
 
-	th = new std::thread(&state_exporter::handler, this);
+		th = new std::thread(&state_exporter::handler, this);
+	}
+	else {
+		fprintf(stderr, "SHM unavailable: %s\n", strerror(errno));
+		pdata = nullptr;
+	}
 }
 
 state_exporter::~state_exporter()
 {
 	stop = true;
-	th->join();
-	delete th;
+
+	if (th) {
+		th->join();
+		delete th;
+	}
 
 	shmdt(pdata);
 }
@@ -45,9 +60,11 @@ void state_exporter::handler()
 		if (!sp)
 			continue;
 
-		std::unique_lock<std::mutex> lck_data(pdata->lock);
-		pdata->counters = sp->cs.data;
-		pdata->cur_move = sp->cur_move;
-		pdata->revision++;
+		if (pthread_mutex_trylock(&pdata->mutex) == 0) {
+			pdata->counters = sp->cs.data;
+			pdata->cur_move = sp->cur_move;
+			pdata->revision++;
+			pthread_mutex_unlock(&pdata->mutex);
+		}
 	}
 }
