@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+master versus 3.1
+	Results of Dog-8b9c980-master-LC7569dd6-native vs Dog-d1dd592-v3.1-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
+	Elo: 7.89 +/- 6.08, nElo: 21.31 +/- 16.43
+	LOS: 99.45 %, DrawRatio: 79.39 %, PairsRatio: 1.53
+	Games: 1718, Wins: 675, Losses: 636, Draws: 407, Points: 878.5 (51.14 %)
+	Ptnml(0-2): [9, 61, 682, 96, 11], WL/DD Ratio: 4.46
+	LLR: 3.01 (-2.94, 2.94) [-5.00, 5.00]
+
 biggernet
 	Results of Dog-0540556-biggernet-incremental-LC7569dd6-native vs Dog-85fc511-incremental-NNUE-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.
 	epd):
