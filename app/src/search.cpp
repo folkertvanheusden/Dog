@@ -539,7 +539,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
 	if (beta_cutoff_move.has_value()) {
-		int bonus = depth * depth;
+		int bonus = depth * 300 - 250;
 		for(auto move : move_list) {
 			if (sp.pos.is_capture_move(move))
 				continue;
