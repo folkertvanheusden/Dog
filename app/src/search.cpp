@@ -394,7 +394,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			}
 		}
 	}
-	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
+	else if (is_pv && depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
 	////////
