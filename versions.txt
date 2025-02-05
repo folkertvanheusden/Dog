@@ -8,6 +8,54 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+historyGravity 4 versus 3.1
+	Results of Dog-d11f6f4-historyGravity-L7569dd6-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: 23.27 +/- 11.77, nElo: 44.01 +/- 22.19
+	LOS: 99.99 %, DrawRatio: 55.84 %, PairsRatio: 1.67
+	Games: 942, Wins: 287, Losses: 224, Draws: 431, Points: 502.5 (53.34 %)
+	Ptnml(0-2): [5, 73, 263, 114, 16], WL/DD Ratio: 1.16
+	LLR: 2.97 (-2.94, 2.94) [0.00, 10.00]
+
+historyGravity 4
+	Results of Dog-d11f6f4-historyGravity-L7569dd6-native vs Dog-069a7a0-TTR-L7569dd6-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: 10.35 +/- 7.26, nElo: 19.22 +/- 13.48
+	LOS: 99.74 %, DrawRatio: 54.39 %, PairsRatio: 1.23
+	Games: 2552, Wins: 711, Losses: 635, Draws: 1206, Points: 1314.0 (51.49 %)
+	Ptnml(0-2): [19, 242, 694, 286, 35], WL/DD Ratio: 1.05
+	LLR: 3.00 (-2.94, 2.94) [0.00, 10.00]
+
+historyGravity 3
+	Results of Dog-35182a6-historyGravity-L7569dd6-native vs Dog-069a7a0-TTR-L7569dd6-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: -5.74 +/- 7.64, nElo: -10.66 +/- 14.19
+	LOS: 7.06 %, DrawRatio: 55.26 %, PairsRatio: 0.88
+	Games: 2302, Wins: 567, Losses: 605, Draws: 1130, Points: 1132.0 (49.17 %)
+	Ptnml(0-2): [28, 246, 636, 218, 23], WL/DD Ratio: 0.91
+	LLR: -2.97 (-2.94, 2.94) [0.00, 10.00]
+
+historyGravity 2
+	Results of Dog-fbcab96-historyGravity-L7569dd6-native vs Dog-069a7a0-TTR-L7569dd6-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: 10.41 +/- 7.31, nElo: 19.66 +/- 13.79
+	LOS: 99.74 %, DrawRatio: 56.19 %, PairsRatio: 1.33
+	Games: 2438, Wins: 654, Losses: 581, Draws: 1203, Points: 1255.5 (51.50 %)
+	Ptnml(0-2): [27, 202, 685, 281, 24], WL/DD Ratio: 0.90
+	LLR: 2.95 (-2.94, 2.94) [0.00, 10.00]
+
+historyGravity 1
+	Results of Dog-1f92365-historyGravity-L7569dd6-native vs Dog-069a7a0-TTR-L7569dd6-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: -14.12 +/- 11.10, nElo: -24.98 +/- 19.61
+	LOS: 0.63 %, DrawRatio: 54.89 %, PairsRatio: 0.73
+	Games: 1206, Wins: 312, Losses: 361, Draws: 533, Points: 578.5 (47.97 %)
+	Ptnml(0-2): [23, 134, 331, 99, 16], WL/DD Ratio: 1.21
+	LLR: -2.95 (-2.94, 2.94) [0.00, 10.00]
+
+noIIR
+	Results of Dog-c71e8e2-noIIR-L7569dd6-native vs Dog-069a7a0-TTR-L7569dd6-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: -13.59 +/- 10.63, nElo: -24.87 +/- 19.43
+	LOS: 0.61 %, DrawRatio: 54.40 %, PairsRatio: 0.75
+	Games: 1228, Wins: 314, Losses: 362, Draws: 552, Points: 590.0 (48.05 %)
+	Ptnml(0-2): [19, 141, 334, 109, 11], WL/DD Ratio: 1.21
+	LLR: -2.99 (-2.94, 2.94) [0.00, 10.00]
+
 master versus 3.1
 	Results of Dog-8b9c980-master-LC7569dd6-native vs Dog-d1dd592-v3.1-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
 	Elo: 7.89 +/- 6.08, nElo: 21.31 +/- 16.43
