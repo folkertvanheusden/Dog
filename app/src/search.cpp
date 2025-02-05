@@ -314,7 +314,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 void update_history(const search_pars_t & sp, const int index, const int bonus)
 {
-	constexpr const int max_history = 16383;
+	constexpr const int max_history = 1023;
 	constexpr const int min_history = -max_history;
 	int  clamped_bonus = std::clamp(bonus, min_history, max_history);
 	int  final_value   = clamped_bonus - sp.history[index] * abs(clamped_bonus) / max_history;
@@ -538,7 +538,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	}
 
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
-	if (beta_cutoff_move.has_value() && sp.pos.is_capture_move(beta_cutoff_move.value()) == false) {
+	if (beta_cutoff_move.has_value()) {
 		int bonus = depth * 30 - 25;
 		for(auto move : move_list) {
 			if (sp.pos.is_capture_move(move))
