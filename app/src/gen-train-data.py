@@ -53,81 +53,98 @@ if proc == None:
     help()
     sys.exit(1)
 
-def process(proc, q):
-    engine1 = chess.engine.SimpleEngine.popen_uci(proc)
-    engine2 = chess.engine.SimpleEngine.popen_uci(proc)
+def gen_board():
+    b = chess.Board()
 
-    name1 = engine1.id['name']
-    name2 = engine2.id['name']
+    for i in range(random.choice((8, 9))):
+        moves = [m for m in b.legal_moves]
+        b.push(random.choice(moves))
+        if b.outcome() != None:
+            break
 
-    print(name1, name2)
+    return b
+
+def play(b, engine1, engine2):
+    fens = []
+    first = True
+    was_capture = False
+    while b.outcome() == None:
+        store_fen = None
+        if first:
+            first = False  # was random
+        elif b.is_check() == False and was_capture == False:
+            store_fen = b.fen()
+
+        # count number of pieces. if 4 or less: stop.
+        piece_count = chess.popcount(b.occupied)
+        if piece_count < 4:
+            q.put(('early_abort', 1))
+            break
+
+        if b.turn == chess.WHITE:
+            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            was_capture = b.is_capture(result.move)
+            b.push(result.move)
+        else:
+            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            was_capture = b.is_capture(result.move)
+            b.push(result.move)
+
+        if store_fen != None and 'score' in result.info and result.info['score'].is_mate() == False and 'nodes' in result.info:
+            score = result.info['score'].white().score()
+            cur_node_count = result.info['nodes']
+            fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
+
+    return fens
+
+def transmit(host, port, name1, name2, result, fens):
+    j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
+    j['data'] = {'result': result, 'fens': fens }
 
     while True:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            b = chess.Board()
+            s.connect((host, port))
+            s.send(json.dumps(j).encode('ascii'))
+            s.close()
+            break
+        except Exception as e:
+            print(f'failure: {e}')
+            time.sleep(1)
+        s.close()
 
-            for i in range(random.choice((8, 9))):
-                moves = [m for m in b.legal_moves]
-                b.push(random.choice(moves))
-                if b.outcome() != None:
-                    break
+def process(proc, q):
+    while True:
+        try:
+            engine1 = engine2 = None
+            engine1 = chess.engine.SimpleEngine.popen_uci(proc)
+            engine2 = chess.engine.SimpleEngine.popen_uci(proc)
 
-            fens = []
-            first = True
-            was_capture = False
-            while b.outcome() == None:
-                store_fen = None
-                if first:
-                    first = False  # was random
-                elif b.is_check() == False and was_capture == False:
-                    store_fen = b.fen()
+            name1 = engine1.id['name']
+            name2 = engine2.id['name']
 
-                # count number of pieces. if 4 or less: stop.
-                piece_count = chess.popcount(b.occupied)
-                if piece_count < 4:
-                    q.put(('early_abort', 1))
-                    break
+            print(name1, name2)
 
-                if b.turn == chess.WHITE:
-                    result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
-                    was_capture = b.is_capture(result.move)
-                    b.push(result.move)
-                else:
-                    result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
-                    was_capture = b.is_capture(result.move)
-                    b.push(result.move)
+            while True:
+                b = gen_board()
+                fens = play(b, engine1, engine2)
+                if len(fens) > 0 and b.outcome() != None:
+                    result = b.outcome().result()
 
-                if store_fen != None and 'score' in result.info and result.info['score'].is_mate() == False and 'nodes' in result.info:
-                    score = result.info['score'].white().score()
-                    cur_node_count = result.info['nodes']
-                    fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
+                    q.put(('count', len(fens)))
+                    q.put(('gcount', 1))
 
-            if len(fens) > 0 and b.outcome() != None:
-                result = b.outcome().result()
+                    if host != None:
+                        transmit(host, port, name1, name2, result, fens)
 
-                q.put(('count', len(fens)))
-                q.put(('gcount', 1))
-
-                if host != None:
-                    j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
-                    j['data'] = {'result': result, 'fens': fens }
-
-                    while True:
-                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        try:
-                            s.connect((host, port))
-                            s.send(json.dumps(j).encode('ascii'))
-                            s.close()
-                            break
-                        except Exception as e:
-                            print(f'failure: {e}')
-                            time.sleep(1)
-                        s.close()
         except Exception as e:
             print(f'failure: {e}')
 
-    engine2.quit()
-    engine1.quit()
+        finally:
+            if engine2:
+                engine2.quit()
+            if engine1:
+                engine1.quit()
 
     print('PROCESS TERMINATING')
 
@@ -154,9 +171,9 @@ while True:
         early_abort += item[1]
     else:
         print('Internal error', item[0])
-        break
+        continue
     t_diff = time.time() - start
-    print(f'fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
+    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
 
 for t in processes:
     t.join()
