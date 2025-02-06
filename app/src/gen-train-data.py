@@ -16,22 +16,20 @@ import time
 
 
 host = 'dog.vanheusden.com'
-port = 31250
+port = 31251
 proc = None
 node_count = 5000
-file = None
-nth = 1
+nth = os.sysconf("SC_NPROCESSORS_ONLN")
 
 def help():
     print(f'-H x  host to send data to (default: {host})')
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
-    print('-f x  file to write to, pid will be added to the filename')
-    print('-t x  # threads')
+    print('-t x  # threads (default: {nth})')
     print('-h    this help')
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'e:d:f:t:h')
+    opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
 
 except getopt.GetoptError as err:
     print(err)
@@ -45,29 +43,27 @@ for o, a in opts:
         node_count = float(a)
     elif o == '-h':
         host = a
-    elif o == '-f':
-        file = a
     elif o == '-t':
         nth = int(a)
     elif o == '-h':
         help()
         sys.exit(0)
 
-if proc == None or file == None:
+if proc == None:
     help()
     sys.exit(1)
-
-file = f'{file}.{os.getpid()}.{socket.gethostname()}'
 
 lock = threading.Lock()
 
 count = 0
 gcount = 0
+early_abort = 0
 
 def thread(proc):
     global count
     global gcount
     global lock
+    global early_abort
 
     engine1 = chess.engine.SimpleEngine.popen_uci(proc)
     engine2 = chess.engine.SimpleEngine.popen_uci(proc)
@@ -92,9 +88,15 @@ def thread(proc):
         while b.outcome() == None:
             store_fen = None
             if first:
-                first = False
+                first = False  # was random
             elif b.is_check() == False and was_capture == False:
                 store_fen = b.fen()
+
+            # count number of pieces. if 4 or less: stop.
+            piece_count = chess.popcount(b.occupied)
+            if piece_count < 4:
+                early_abort += 1
+                break
 
             if b.turn == chess.WHITE:
                 result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
@@ -110,17 +112,10 @@ def thread(proc):
                 cur_node_count = result.info['nodes']
                 fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
 
-        if len(fens) > 0:
+        if len(fens) > 0 and b.outcome() != None:
             result = b.outcome().result()
-            str_ = ''
-            for fen in fens:
-                str_ += f'{fen}|{score}|{result}\n'
-            lock.acquire()
-            with open(file, 'a+') as fh:
-                fh.write(str_)
             count += len(fens)
             gcount += 1
-            lock.release()
 
             if host != None:
                 j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
@@ -154,7 +149,7 @@ while True:
     c = count
     lock.release()
     t_diff = time.time() - start
-    print(c / t_diff, c, gcount * 60 / t_diff)
+    print(f'fen/s: {c / t_diff}, total fens: {c}, games/minute: {gcount * 60 / t_diff}, early aborts: {early_abort}')
 
 for t in threads:
     t.join()
