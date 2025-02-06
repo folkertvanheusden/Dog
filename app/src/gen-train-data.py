@@ -7,11 +7,11 @@ import chess
 import chess.engine
 import getopt
 import json
+import multiprocessing
 import os
 import random
 import socket
 import sys
-import threading
 import time
 
 
@@ -25,7 +25,7 @@ def help():
     print(f'-H x  host to send data to (default: {host})')
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
-    print('-t x  # threads (default: {nth})')
+    print('-t x  # processes (default: {nth})')
     print('-h    this help')
 
 try:
@@ -53,18 +53,7 @@ if proc == None:
     help()
     sys.exit(1)
 
-lock = threading.Lock()
-
-count = 0
-gcount = 0
-early_abort = 0
-
-def thread(proc):
-    global count
-    global gcount
-    global lock
-    global early_abort
-
+def process(proc, q):
     engine1 = chess.engine.SimpleEngine.popen_uci(proc)
     engine2 = chess.engine.SimpleEngine.popen_uci(proc)
 
@@ -95,7 +84,7 @@ def thread(proc):
             # count number of pieces. if 4 or less: stop.
             piece_count = chess.popcount(b.occupied)
             if piece_count < 4:
-                early_abort += 1
+                q.put(('early_abort', 1))
                 break
 
             if b.turn == chess.WHITE:
@@ -114,8 +103,9 @@ def thread(proc):
 
         if len(fens) > 0 and b.outcome() != None:
             result = b.outcome().result()
-            count += len(fens)
-            gcount += 1
+
+            q.put(('count', len(fens)))
+            q.put(('gcount', 1))
 
             if host != None:
                 j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
@@ -136,20 +126,32 @@ def thread(proc):
     engine2.quit()
     engine1.quit()
 
-threads = []
+q = multiprocessing.Queue()
+
+processes = []
 for i in range(0, nth):
-    t = threading.Thread(target=thread, args=(proc,))
-    threads.append(t)
+    t = multiprocessing.Process(target=process, args=(proc,q,))
+    processes.append(t)
     t.start()
+
+count = 0
+gcount = 0
+early_abort = 0
 
 start = time.time()
 while True:
-    time.sleep(1)
-    lock.acquire()
-    c = count
-    lock.release()
+    item = q.get()
+    if item[0] == 'count':
+        count += item[1]
+    elif item[0] == 'gcount':
+        gcount += item[1]
+    elif item[0] == 'early_abort':
+        early_abort += item[1]
+    else:
+        print('Internal error', item[0])
+        break
     t_diff = time.time() - start
-    print(f'fen/s: {c / t_diff:.2f}, total fens: {c}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
+    print(f'fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
 
-for t in threads:
+for t in processes:
     t.join()
