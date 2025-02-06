@@ -149,7 +149,7 @@ while True:
     c = count
     lock.release()
     t_diff = time.time() - start
-    print(f'fen/s: {c / t_diff}, total fens: {c}, games/minute: {gcount * 60 / t_diff}, early aborts: {early_abort}')
+    print(f'fen/s: {c / t_diff:.2f}, total fens: {c}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
 
 for t in threads:
     t.join()
