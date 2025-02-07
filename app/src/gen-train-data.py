@@ -81,10 +81,6 @@ def play(b, engine1, engine2, q):
             q.put(('early_abort', 1))
             break
 
-        if b.is_insufficient_material():
-            q.put(('early_abort', 1))
-            break
-
         if b.turn == chess.WHITE:
             result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
             was_capture = b.is_capture(result.move)
