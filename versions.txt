@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+clamp
+	Results of Dog-52705f9-clamp-LC7569dd6-native vs Dog-b77be9c-master-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
+	Elo: -4.23 +/- 4.37, nElo: -12.14 +/- 12.53
+	LOS: 2.87 %, DrawRatio: 82.74 %, PairsRatio: 0.81
+	Games: 2954, Wins: 1115, Losses: 1151, Draws: 688, Points: 1459.0 (49.39 %)
+	Ptnml(0-2): [22, 119, 1222, 101, 13], WL/DD Ratio: 4.22
+	LLR: -2.96 (-2.94, 2.94) [-5.00, 5.00]
+
 historyGravity 4 versus 3.1
 	Results of Dog-d11f6f4-historyGravity-L7569dd6-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
 	Elo: 23.27 +/- 11.77, nElo: 44.01 +/- 22.19
