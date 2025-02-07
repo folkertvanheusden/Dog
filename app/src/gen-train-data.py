@@ -64,7 +64,7 @@ def gen_board():
 
     return b
 
-def play(b, engine1, engine2):
+def play(b, engine1, engine2, q):
     fens = []
     first = True
     was_capture = False
@@ -127,7 +127,7 @@ def process(proc, q):
 
             while True:
                 b = gen_board()
-                fens = play(b, engine1, engine2)
+                fens = play(b, engine1, engine2, q)
                 if len(fens) > 0 and b.outcome() != None:
                     result = b.outcome().result()
 
