@@ -35,7 +35,7 @@ struct Network {
 		output *= SCALE;
 		output /= int{QA} * int{QB};
 
-		return output;
+		return std::clamp(output, -9800, 9800);
 	}
 
 	void add_feature(Accumulator& acc, const int feature_idx) const {
