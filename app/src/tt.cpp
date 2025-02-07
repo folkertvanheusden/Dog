@@ -7,6 +7,7 @@
 #endif
 
 #include "libchess/Position.h"
+#include "main.h"
 #include "tt.h"
 
 
@@ -160,18 +161,18 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 
 int eval_to_tt(const int eval, const int ply)
 {
-	if (eval > 9800)
+	if (eval > max_non_mate)
 		return eval + ply;
-	if (eval < -9800)
+	if (eval < -max_non_mate)
 		return eval - ply;
 	return eval;
 }
 
 int eval_from_tt(const int eval, const int ply)
 {
-	if (eval > 9800)
+	if (eval > max_non_mate)
 		return eval - ply;
-	if (eval < -9800)
+	if (eval < -max_non_mate)
 		return eval + ply;
 	return eval;
 }
