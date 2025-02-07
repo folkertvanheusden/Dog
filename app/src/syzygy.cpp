@@ -162,11 +162,11 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 	int score  = 0;
 	int result = TB_GET_WDL(res);
 	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
-		score = -9999;
+		score = -(max_eval - 1);
 	else if (result == TB_DRAW)
 		score = 0;
 	else if (result == TB_CURSED_WIN || result == TB_WIN)
-		score = 9999;
+		score = max_eval - 1;
 	else {
 		printf("# unexpected return code from fathom: %d (%d)\n", result, res);
 		return { };
