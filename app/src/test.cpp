@@ -473,7 +473,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 		sp.at(0)->pos = positions.at(i).first;
 		auto rc  = search_it(search_time, false, sp.at(0), -1, { }, false);
 
-		bool hit = abs(rc.second) >= 9800;
+		bool hit = abs(rc.second) >= max_non_mate;
 		mates_found += hit;
 	}
 
