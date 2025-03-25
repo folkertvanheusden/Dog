@@ -34,7 +34,7 @@ public:
 	 * => force underflow()
 	 */
 	inbuf() {
-		setg (buffer+4,     // beginning of putback area
+		setg(buffer+4,     // beginning of putback area
 			buffer+4,     // read position
 			buffer+4);    // end position
 	}
@@ -64,17 +64,14 @@ protected:
 		 * - use number of characters read
 		 * - but at most four
 		 */
-		int numPutback;
-		numPutback = gptr() - eback();
-		if (numPutback > 4) {
+		int numPutback = gptr() - eback();
+		if (numPutback > 4)
 			numPutback = 4;
-		}
 
 		/* copy up to four characters previously read into
 		 * the putback buffer (area of first four characters)
 		 */
-		std::memmove (buffer+(4-numPutback), gptr()-numPutback,
-				numPutback);
+		std::memmove(buffer+(4-numPutback), gptr()-numPutback, numPutback);
 
 		// read new characters
 		int c = 0;
@@ -113,7 +110,7 @@ protected:
 		int num = 1;
 
 		// reset buffer pointers
-		setg (buffer+(4-numPutback),   // beginning of putback area
+		setg(buffer+(4-numPutback),   // beginning of putback area
 				buffer+4,                // read position
 				buffer+4+num);           // end of buffer
 

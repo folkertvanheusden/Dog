@@ -61,6 +61,7 @@ extern bool               with_syzygy;
 typedef struct {
 	gpio_num_t pin_nr;
 	bool       state;
+	int        screen_x;
 } led_t;
 
 extern led_t led_green;

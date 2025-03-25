@@ -20,8 +20,6 @@
 #include "tui.h"
 
 
-typedef enum { T_ANSI, T_VT100, T_ASCII } terminal_t;
-
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -246,6 +244,32 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 	}
 }
 
+void show_stats(const chess_stats & cs)
+{
+	my_printf("Nodes processed   : %u\n", cs.data.nodes);
+	my_printf("QS Nodes processed: %u\n", cs.data.qnodes);
+	my_printf("Standing pats     : %u\n", cs.data.n_standing_pat);
+	my_printf("Draws             : %u\n", cs.data.n_draws);
+	my_printf("QS early stop     : %u\n", cs.data.n_qs_early_stop);
+	my_printf("TT queries        : %u\n", cs.data.tt_query);
+	my_printf("TT hits           : %u\n", cs.data.tt_hit);
+	my_printf("TT store          : %u\n", cs.data.tt_store);
+	my_printf("TT invalid        : %u\n", cs.data.tt_invalid);
+	my_printf("QS TT queries     : %u\n", cs.data.qtt_query);
+	my_printf("QS TT hits        : %u\n", cs.data.qtt_hit);
+	my_printf("QS TT store       : %u\n", cs.data.qtt_store);
+	my_printf("Null moves        : %u\n", cs.data.n_null_move);
+	my_printf("Null moves hit    : %u\n", cs.data.n_null_move_hit);
+	my_printf("LMR               : %u\n", cs.data.n_lmr);
+	my_printf("LMR hit           : %u\n", cs.data.n_lmr_hit);
+	my_printf("Static eval       : %u\n", cs.data.n_static_eval);
+	my_printf("Static eval hit   : %u\n", cs.data.n_static_eval_hit);
+	if (cs.data.nmc_nodes)
+		my_printf("Avg. move cutoff  : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
+	if (cs.data.nmc_qnodes)
+		my_printf("Avg.qs move cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+}
+
 void show_movelist(const libchess::Position & pos)
 {
 	bool first = true;
@@ -391,7 +415,33 @@ static void help()
 	my_printf("trace    on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
 	my_printf("perft    run \"perft\" for the given depth\n");
+	my_printf("stats    show statistics\n");
+	my_printf("cstats   reset statistics\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
+}
+
+std::string my_getline(std::istream & is)
+{
+	std::string out;
+
+	for(;;) {
+		char c = 0;
+		if (!is.get(c))
+			break;
+
+		if ((c == 13 || c == 10) && out.empty() == false)
+			break;
+
+		if (c == 8) {
+			if (out.empty() == false)
+				out = out.substr(0, out.size() - 1);
+		}
+		else if (c < 127) {
+			out += c;
+		}
+	}
+
+	return out;
 }
 
 void tui()
@@ -424,12 +474,8 @@ void tui()
 			if (do_ponder)
 				start_ponder();
 
-			std::string line;
 			my_printf("> ");
-			if (!std::getline(is, line))
-				break;
-			if (line.empty())
-				continue;
+			std::string line = my_getline(is);
 
 			stop_ponder();
 
@@ -472,8 +518,16 @@ void tui()
 			}
 			else if (parts[0] == "moves")
 				show_movelist(sp.at(0)->pos);
+			else if (parts[0] == "stats")
+				show_stats(sp.at(0)->cs);
+			else if (parts[0] == "cstats")
+				sp.at(0)->cs.reset();
+			else if (parts[0] == "cls")
+				my_printf("\x1b[2J");
+#if !defined(ESP32)
 			else if (parts[0] == "syzygy")
 				do_syzygy(sp.at(0)->pos);
+#endif
 			else if (parts[0] == "trace") {
 				if (parts.size() == 2)
 					trace_enabled = parts[1] == "on";

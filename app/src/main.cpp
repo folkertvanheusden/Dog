@@ -177,6 +177,9 @@ void blink_led(void *arg)
 {
 	led_t *l = reinterpret_cast<led_t *>(arg);
 	gpio_set_level(l->pin_nr, l->state);
+// doesn't work with VT510?
+//	if (l->screen_x != -1 && t == T_VT100)
+//		my_printf("\x1b7\x1b[1;%dH\x1b[1m%d\x1b8", l->screen_x, l->state);
 	l->state = !l->state;
 }
 
@@ -192,7 +195,7 @@ void stop_blink(esp_timer_handle_t handle, led_t *l)
 	gpio_set_level(l->pin_nr, false);
 }
 
-led_t led_green { LED_GREEN, false };
+led_t led_green { LED_GREEN, false, 79};
 
 const esp_timer_create_args_t led_green_timer_pars = {
             .callback = &blink_led,
@@ -200,7 +203,7 @@ const esp_timer_create_args_t led_green_timer_pars = {
             .name = "greenled"
 };
 
-led_t led_blue { LED_BLUE, false };
+led_t led_blue { LED_BLUE, false, 78 };
 
 const esp_timer_create_args_t led_blue_timer_pars = {
             .callback = &blink_led,
@@ -208,7 +211,7 @@ const esp_timer_create_args_t led_blue_timer_pars = {
             .name = "blueled"
 };
 
-led_t led_red { LED_RED, false };
+led_t led_red { LED_RED, false, 77 };
 
 const esp_timer_create_args_t led_red_timer_pars = {
             .callback = &blink_led,
@@ -1177,7 +1180,7 @@ extern "C" void app_main()
 
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
-		.baud_rate = 115200,
+		.baud_rate = 19200,
 		.data_bits = UART_DATA_8_BITS,
 		.parity = UART_PARITY_DISABLE,
 		.stop_bits = UART_STOP_BITS_1,
