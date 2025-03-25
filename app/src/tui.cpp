@@ -20,6 +20,8 @@
 #include "tui.h"
 
 
+typedef enum { T_ANSI, T_VT100, T_ASCII } terminal_t;
+
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -74,7 +76,7 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
-void display(const libchess::Position & p, const bool large, const bool colors, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
+void display(const libchess::Position & p, const bool large, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
 {
 	if (!large) {
 		p.display();
@@ -83,7 +85,7 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 
 	std::vector<std::string> lines;
 
-	if (colors) {
+	if (t == T_ANSI) {
 		std::string line = "\x1b[0m\x1b[43;30m    ";
 		for(int x=0; x<8; x++)
 			line += "   ";
@@ -93,8 +95,10 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 
 	for(int y=7; y>=0; y--) {
 		std::string line;
-		if (colors)
+		if (t == T_ANSI)
 			line = "\x1b[43;30m " + std::to_string(y + 1) + " |";
+		else if (t == T_VT100)
+			line = " " + std::to_string(y + 1) + " \x1b(0\x78\x1b(B";
 		else
 			line = " " + std::to_string(y + 1) + " |";
 		for(int x=0; x<8; x++) {
@@ -102,7 +106,7 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 			if (piece.has_value()) {
 				int  c        = piece.value().type().to_char();
 				bool is_white = piece.value().color() == libchess::constants::WHITE;
-				if (colors) {
+				if (t == T_ANSI) {
 					if (is_white)
 						line += "\x1b[30;47m ";
 					else
@@ -112,7 +116,7 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 					line += " ";
 				}
 				line += char(piece.value().color() == libchess::constants::WHITE ? toupper(c) : c) + std::string(" ");
-				if (colors)
+				if (t == T_ANSI)
 					line += "\x1b[43;30m";
 			}
 			else {
@@ -122,7 +126,7 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 		line += " \x1b[0m";
 		lines.push_back(line);
 	}
-	if (colors) {
+	if (t == T_ANSI) {
 		std::string line;
 		line = "\x1b[43;30m   +";
 		for(int x=0; x<8; x++)
@@ -133,6 +137,18 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
 		line += " \x1b[0m";
+		lines.push_back(line);
+	}
+	else if (t == T_VT100) {
+		std::string line;
+		line = "   \x1b(0\x6d";
+		for(int x=0; x<8; x++)
+			line += "\x71\x71\x71";
+		line += "\x1b(B ";
+		lines.push_back(line);
+		line = "    ";
+		for(int x=0; x<8; x++)
+			line += std::string(" ") + char('A' + x) + " ";
 		lines.push_back(line);
 	}
 	else {
@@ -203,13 +219,13 @@ void display(const libchess::Position & p, const bool large, const bool colors, 
 		my_printf("Move number: %d, color: %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
 }
 
-void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const bool colors)
+void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
 	auto start_color = pos.side_to_move();
 	auto start_score = nnue_evaluate(nnue_eval, pos);
 
-	if (colors) {
+	if (t == T_ANSI) {
 		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
 
 		int prev_score = start_score;
@@ -304,10 +320,10 @@ void do_syzygy(const libchess::Position & pos)
 	}
 }
 
-bool colors        = false;
-bool default_trace = false;
-int  think_time    = 1000;  // milliseconds
-bool do_ponder     = false;
+terminal_t t             = T_ASCII;
+bool       default_trace = false;
+int        think_time    = 1000;  // milliseconds
+bool       do_ponder     = false;
 
 std::optional<std::string> get_cfg_dir()
 {
@@ -341,7 +357,7 @@ void write_settings()
 		return;
 	}
 
-	fprintf(fh, "%d\n", colors);
+	fprintf(fh, "%d\n", t);
 	fprintf(fh, "%d\n", default_trace);
 	fprintf(fh, "%d\n", think_time);
 	fprintf(fh, "%d\n", do_ponder);
@@ -364,7 +380,7 @@ void load_settings()
 
 	char buffer[16] { };
 	fgets(buffer, sizeof buffer, fh);
-	colors        = atoi(buffer);
+	t             = terminal_t(atoi(buffer));
 	fgets(buffer, sizeof buffer, fh);
 	default_trace = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
@@ -377,22 +393,22 @@ void load_settings()
 
 static void help()
 {
-	my_printf("quit    stop the tui\n");
-	my_printf("new     restart game\n");
-	my_printf("player  select player (\"white\" or \"black\")\n");
-	my_printf("time    set think time, in seconds\n");
-	my_printf("fen     show fen for current position\n");
-	my_printf("setfen  set fen\n");
-	my_printf("eval    show current evaluation score\n");
-	my_printf("moves   show valid moves\n");
-	my_printf("syzygy  probe the syzygy ETB\n");
-	my_printf("tt      show TT entry for current position\n");
-	my_printf("undo    take back last move\n");
-	my_printf("auto    auto play until the end\n");
-	my_printf("ponder  on/off\n");
-	my_printf("trace   on/off\n");
-	my_printf("colors  on/off\n");
-	my_printf("perft   run \"perft\" for the given depth\n");
+	my_printf("quit     stop the tui\n");
+	my_printf("new      restart game\n");
+	my_printf("player   select player (\"white\" or \"black\")\n");
+	my_printf("time     set think time, in seconds\n");
+	my_printf("fen      show fen for current position\n");
+	my_printf("setfen   set fen\n");
+	my_printf("eval     show current evaluation score\n");
+	my_printf("moves    show valid moves\n");
+	my_printf("syzygy   probe the syzygy ETB\n");
+	my_printf("tt       show TT entry for current position\n");
+	my_printf("undo     take back last move\n");
+	my_printf("auto     auto play until the end\n");
+	my_printf("ponder   on/off\n");
+	my_printf("trace    on/off\n");
+	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
+	my_printf("perft    run \"perft\" for the given depth\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 }
 
@@ -419,7 +435,7 @@ void tui()
 #endif
 
 	for(;;) {
-		display(sp.at(0)->pos, true, colors, moves_played, scores);
+		display(sp.at(0)->pos, true, t, moves_played, scores);
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
@@ -485,13 +501,17 @@ void tui()
 				write_settings();
 				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
 			}
-			else if (parts[0] == "colors") {
-				if (parts.size() == 2)
-					colors = parts[1] == "on";
-				else
-					colors = !colors;
+			else if (parts[0] == "terminal" && parts.size() == 2) {
+				if (parts[1] == "ansi")
+					t = T_ANSI;
+				else if (parts[1] == "vt100")
+					t = T_VT100;
+				else {
+					t = T_ASCII;
+					parts[1] = "text";
+				}
 				write_settings();
-				my_printf("Colors are now %senabled\n", colors ? "":"not ");
+				my_printf("Terminal type is now: %s\n", parts[1].c_str());
 			}
 			else if (parts[0] == "ponder") {
 				if (parts.size() == 2)
@@ -559,7 +579,7 @@ void tui()
 				clear_flag(sp.at(0)->stop);
 				std::tie(best_move, best_score) = search_it(think_time, true, sp.at(0), -1, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
-				emit_pv(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move, colors);
+				emit_pv(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move, t);
 
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				moves_played.push_back(best_move);
