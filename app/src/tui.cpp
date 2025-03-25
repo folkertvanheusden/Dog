@@ -273,14 +273,16 @@ void show_stats(const chess_stats & cs)
 
 void show_movelist(const libchess::Position & pos)
 {
-	bool first = true;
+	int nr = 0;
 	auto moves = pos.legal_move_list();
 	for(auto & move: moves) {
-		if (first)
-			first = false;
-		else
+		if (nr != 0)
 			my_printf(" ");
 		my_printf("%s", move.to_str().c_str());
+		if (++nr == 13) {
+			my_printf("\n");
+			nr = 0;
+		}
 	}
 	my_printf("\n");
 }
