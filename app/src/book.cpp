@@ -172,7 +172,7 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			scan(p, index, -1, -1, moves);  // backward search
 			scan(p, index,  1,  n, moves);  // forward serach
 
-			printf("Selecting from %zu moves (", moves.size());
+			printf("Selecting from %zu move(s) (", moves.size());
 			bool first = true;
 			for(auto & m: moves) {
 				if (first)

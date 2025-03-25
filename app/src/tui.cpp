@@ -190,34 +190,6 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 			lines.at(line_nr++) += std::string(17, ' ');
 	}
 
-	// scores
-	int16_t max = -32768;
-	int16_t min =  32767;
-	for(auto & v: scores) {
-		max = std::max(max, v);
-		min = std::min(min, v);
-	}
-
-	if (max != min) {
-		constexpr int width  = 25;
-		constexpr int height = 8;
-		char matrix[height][width] { };
-		memset(matrix, ' ', sizeof matrix);
-
-		int    extent   = max - min;
-		size_t n_values = scores.size();
-		size_t start    = 0;
-		if (n_values > width)
-			start = n_values - width;
-		for(size_t idx=start; idx<n_values; idx++) {
-			int y = (scores[idx] - min) * (height - 1) / extent;
-			int x = idx - start;
-			matrix[y][x] = '+';
-		}
-		for(int y=0; y<height; y++)
-			lines.at(y) += std::string(matrix[y], width);
-	}
-
 	for(auto & line: lines)
 		my_printf("%s\n", line.c_str());
 
