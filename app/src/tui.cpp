@@ -132,6 +132,7 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 		line += " \x1b[0m";
 		lines.push_back(line);
 	}
+
 	if (t == T_ANSI) {
 		std::string line;
 		line = "\x1b[43;30m   +";
@@ -469,8 +470,13 @@ void tui()
 	auto *pb = new polyglot_book("dog-book.bin");
 #endif
 
+	bool show_board = true;
+
 	for(;;) {
-		display(sp.at(0)->pos, true, t, moves_played, scores);
+		if (show_board) {
+			show_board = false;
+			display(sp.at(0)->pos, true, t, moves_played, scores);
+		}
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
@@ -593,6 +599,7 @@ void tui()
 				}
 				if (!valid)
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+				show_board = true;
 			}
 		}
 		else {
@@ -630,6 +637,7 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
+			show_board = true;
 		}
 	}
 
