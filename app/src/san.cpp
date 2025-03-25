@@ -96,6 +96,9 @@ std::optional<libchess::Move> SAN_to_move(std::string san_move, const libchess::
 		}
 	}
 
+	if (to.size() < 2)
+		return { };
+
 	/* convert to-string to a position */
 	tx = to.at(0) - 'a';
 	ty = to.at(1) - '1';
