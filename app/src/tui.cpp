@@ -432,9 +432,12 @@ std::string my_getline(std::istream & is)
 		if ((c == 13 || c == 10) && out.empty() == false)
 			break;
 
-		if (c == 8) {
+		if (c == 8 || c == 127) {
 			if (out.empty() == false)
+			{
+				my_printf(" \x08");
 				out = out.substr(0, out.size() - 1);
+			}
 		}
 		else if (c < 127) {
 			out += c;
