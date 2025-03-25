@@ -30,7 +30,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#if !defined(ESP32)
 #include "state_exporter.h"
+#endif
 #else
 #include <driver/uart.h>
 #include <driver/gpio.h>
@@ -66,7 +68,9 @@ bool with_syzygy = false;
 
 
 std::vector<search_pars_t *> sp;
+#if !defined(ESP32)
 state_exporter              *se { nullptr };
+#endif
 
 static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
@@ -358,8 +362,10 @@ void stop_ponder()
 
 void delete_threads()
 {
+#if !defined(ESP32)
 	if (se)
 		se->clear();
+#endif
 
 	{
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
@@ -395,8 +401,10 @@ void allocate_threads(const int n)
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 		sp.at(i)->nnue_eval = new Eval(sp.at(i)->pos);
 	}
+#if !defined(ESP32)
 	if (se)
 		se->set(sp.at(0));
+#endif
 #if defined(ESP32)
 	if (n > 0) {
 		think_timeout_pars.arg = sp.at(0)->stop;
@@ -1121,7 +1129,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(ESP32)
 	se = new state_exporter(20);
 #endif
 
