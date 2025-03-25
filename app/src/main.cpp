@@ -1188,7 +1188,7 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
 	constexpr int uart_buffer_size = 1024 * 2;
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
