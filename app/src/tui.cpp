@@ -112,12 +112,20 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 					else
 						line += "\x1b[40;37m ";
 				}
+				else if (t == T_VT100) {
+					if (is_white)
+						line += "\x1b[1m ";
+					else
+						line += "\x1b[0m ";
+				}
 				else {
 					line += " ";
 				}
 				line += char(piece.value().color() == libchess::constants::WHITE ? toupper(c) : c) + std::string(" ");
 				if (t == T_ANSI)
 					line += "\x1b[43;30m";
+				else if (t == T_VT100)
+					line += "\x1b[0m";
 			}
 			else {
 				line += "   ";
@@ -538,7 +546,7 @@ void tui()
 				tt_lookup();
 			else if (parts[0] == "dog")
 				print_max_ascii();
-			else {
+			else if (parts[0].size() >= 2) {
 				bool valid = false;
 				std::optional<libchess::Move> move;
 				move = libchess::Move::from(parts[0]);
