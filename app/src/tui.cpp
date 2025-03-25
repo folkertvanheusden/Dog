@@ -527,12 +527,16 @@ void tui()
 			}
 			else if (parts[0] == "moves")
 				show_movelist(sp.at(0)->pos);
+			else if (parts[0] == "board")
+				show_board = true;
 			else if (parts[0] == "stats")
 				show_stats(sp.at(0)->cs);
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
-			else if (parts[0] == "cls")
-				my_printf("\x1b[2J");
+			else if (parts[0] == "cls") {
+				if (t != T_ASCII)
+					my_printf("\x1b[2J");
+			}
 #if !defined(ESP32)
 			else if (parts[0] == "syzygy")
 				do_syzygy(sp.at(0)->pos);
