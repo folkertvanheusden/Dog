@@ -205,11 +205,13 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 	auto start_color = pos.side_to_move();
 	auto start_score = nnue_evaluate(nnue_eval, pos);
 
-	if (t == T_ANSI) {
-		my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
+	if (t == T_ANSI || t == T_VT100) {
+		if (t == T_ANSI)
+			my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
+		else
+			my_printf("PV[%.2f]:\n    ", start_score / 100.);
 
-		int prev_score = start_score;
-		int nr         = 0;
+		int nr = 0;
 		libchess::Position work(sp.at(0)->pos);
 		for(auto & move: pv) {
 			if (++nr == 6)
@@ -218,21 +220,19 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(nnue_eval, pos);
+			int  cur_score = nnue_evaluate(nnue_eval, work);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
 			else if (start_score == cur_score)
 				my_printf("%s", move.to_str().c_str());
 			else
-				my_printf("\x1b[40;32m%s\x1b[0m", move.to_str().c_str());
-			if (cur_score > prev_score)
-				my_printf("\x1b[40;32m▲\x1b[0m");
-			else if (cur_score < prev_score)
-				my_printf("\x1b[40;31m▼\x1b[0m");
-			else
-				my_printf("-");
-			prev_score = cur_score;
+			{
+				if (t == T_ANSI)
+					my_printf("\x1b[40;32m%s\x1b[0m", move.to_str().c_str());
+				else
+					my_printf("\x1b[1m%s\x1b[0m", move.to_str().c_str());
+			}
 			if (work.side_to_move() != start_color)
 				my_printf(" [%.2f] ", -cur_score / 100.);
 			else
