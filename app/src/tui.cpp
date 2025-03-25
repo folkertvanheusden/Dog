@@ -381,7 +381,9 @@ static void help()
 	my_printf("setfen   set fen\n");
 	my_printf("eval     show current evaluation score\n");
 	my_printf("moves    show valid moves\n");
+#if !defined(ESP32)
 	my_printf("syzygy   probe the syzygy ETB\n");
+#endif
 	my_printf("tt       show TT entry for current position\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
