@@ -205,20 +205,20 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 
 	if (t == T_ANSI || t == T_VT100) {
 		if (t == T_ANSI)
-			my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n    ", start_score / 100.);
+			my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n", start_score / 100.);
 		else
-			my_printf("PV[%.2f]:\n    ", start_score / 100.);
+			my_printf("PV[%.2f (%c)]:\n", start_score / 100., start_color == libchess::constants::WHITE ? 'W' : 'B');
 
 		int nr = 0;
 		libchess::Position work(sp.at(0)->pos);
 		for(auto & move: pv) {
-			if (++nr == 6)
-				my_printf("\n    "), nr = 0;
+			if (++nr == 5)
+				my_printf("\n"), nr = 0;
 			my_printf(" ");
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(nnue_eval, work);
+			int  cur_score = nnue_evaluate(nnue_eval, work, start_color);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
