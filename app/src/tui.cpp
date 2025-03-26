@@ -477,7 +477,7 @@ static void help()
 #if !defined(ESP32)
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
-	my_printf("tt       show TT entry for current position\n");
+	my_printf("hint     show a hint\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
@@ -671,7 +671,7 @@ void tui()
 				int nnue_score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 				my_printf("evaluation score: %.2f\n", nnue_score / 100.);
 			}
-			else if (parts[0] == "tt")
+			else if (parts[0] == "hint")
 				tt_lookup();
 			else if (parts[0] == "dog")
 				print_max_ascii();
