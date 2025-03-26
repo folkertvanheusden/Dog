@@ -106,6 +106,7 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
 			break;
 		default:
+			printf("type is %d\n", move.type());
 			assert(false);
 			break;
 	}

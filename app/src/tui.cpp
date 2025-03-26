@@ -20,6 +20,21 @@
 #include "tui.h"
 
 
+std::string myformat(const char *const fmt, ...)
+{
+        char *buffer = nullptr;
+        va_list ap;
+        va_start(ap, fmt);
+        if (vasprintf(&buffer, fmt, ap) == -1)
+                return fmt;
+        va_end(ap);
+
+        std::string result = buffer;
+        free(buffer);
+
+        return result;
+}
+
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -72,6 +87,11 @@ void perft(libchess::Position &pos, int depth)
 		double   t_diff  = std::max(uint64_t(1), t_end - t_start) / 1000000.;
 		my_printf("%d: %" PRIu64 " (%.3f nps, %.2f seconds)\n", d, count, count / t_diff, t_diff);
 	}
+}
+
+std::string format_move_and_score(const libchess::Move & m, int16_t score)
+{
+	return m.to_str() + myformat(" [%5.2f]", score / 100.);
 }
 
 void display(const libchess::Position & p, const bool large, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
@@ -178,15 +198,11 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 			skip = (half - lines.size()) * 2;
 		size_t line_nr = 0;
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
-			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + refm.at(i + 0).to_str();
+			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0), scores.at(i + 0));
 			if (nrefm - i >= 2)
-				add += " " + refm.at(i + 1).to_str();
-			if (add.size())
-				add += std::string(17 - add.size(), ' ');
+				add += "  " + format_move_and_score(refm.at(i + 1), scores.at(i + 1));
 			lines.at(line_nr) += add;
 		}
-		while(line_nr < lines.size())
-			lines.at(line_nr++) += std::string(17, ' ');
 	}
 
 	for(auto & line: lines)
@@ -643,21 +659,20 @@ void tui()
 				print_max_ascii();
 			else if (parts[0].size() >= 2) {
 				bool valid = false;
-				std::optional<libchess::Move> move;
-				move = libchess::Move::from(parts[0]);
+				auto move = libchess::Move::from(parts[0]);
+				if (move.has_value())
+					move = validate_move(move.value(), sp.at(0)->pos);
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					if (sp.at(0)->pos.is_legal_move(move.value())) {
-						compare_moves(sp.at(0)->pos, move.value());
+					compare_moves(sp.at(0)->pos, move.value());
 
-						auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-						moves_played.push_back(move.value());
-						scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
-						valid = true;
-					}
+					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
+					moves_played.push_back(move.value());
+					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+					valid = true;
 				}
-				if (!valid) {
+				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
 					press_any_key();
 				}
