@@ -540,6 +540,10 @@ void tui()
 	bool show_board = true;
 	bool p_a_k      = false;
 
+	uint64_t human_think_start = 0;
+	uint64_t total_human_think = 0;
+	int      n_human_think     = 0;
+
 	for(;;) {
 		bool ponder_started = false;
 		std::string fen = sp.at(0)->pos.fen();
@@ -561,6 +565,13 @@ void tui()
 
 			show_header(t);
 
+			if (t == T_ASCII)
+				my_printf("Think time: %.3f seconds\n", total_human_think / 1000000.);
+			else {
+				my_printf("\x1b[2;68HThink time:");
+				my_printf("\x1b[3;65H%.3f seconds\x1b[2;1H", total_human_think / 1000000.);
+			}
+
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 		}
@@ -569,6 +580,8 @@ void tui()
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			if (do_ponder && ponder_started == false)
 				start_ponder();
+
+			human_think_start = esp_timer_get_time();
 
 			my_printf("> ");
 			std::string line = my_getline(is);
@@ -674,6 +687,10 @@ void tui()
 					moves_played.push_back(move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 					valid = true;
+
+					uint64_t human_think_end = esp_timer_get_time();
+					total_human_think += human_think_end - human_think_start;
+					n_human_think++;
 				}
 				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
