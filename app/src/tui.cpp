@@ -551,6 +551,7 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
+			std::string fen = sp.at(0)->pos.fen();
 			if (do_ponder)
 				start_ponder();
 
@@ -558,6 +559,8 @@ void tui()
 			std::string line = my_getline(is);
 
 			stop_ponder();
+			// because pondering does not reset the libchess::Position-object:
+			sp.at(0)->pos = libchess::Position(fen);
 
 			auto parts = split(line, " ");
 			if (parts[0] == "help")
