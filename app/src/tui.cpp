@@ -338,6 +338,15 @@ void do_syzygy(const libchess::Position & pos)
 	}
 }
 
+void press_any_key()
+{
+	my_printf("Press any key... ");
+
+	char c = 0;
+	if (is.get(c))
+		my_printf("\n");
+}
+
 void compare_moves(const libchess::Position & pos, libchess::Move & m)
 {
 	auto tt_rc = tti.lookup(pos.hash());
@@ -350,8 +359,10 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 		int eval_opp = get_score(sp.at(0)->pos, m);
 		if (eval_opp > eval_me)
 			my_printf("Very good!\n");
-		else if (eval_opp < eval_me)
+		else if (eval_opp < eval_me) {
 			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
+			press_any_key();
+		}
 	}
 }
 
