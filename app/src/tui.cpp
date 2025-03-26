@@ -20,6 +20,10 @@
 #include "tui.h"
 
 
+typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
+
+dog_clock_t clock_type = C_TOTAL;
+
 std::string myformat(const char *const fmt, ...)
 {
         char *buffer = nullptr;
@@ -393,10 +397,10 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[m\x1b[2;1H");
 }
 
-terminal_t t             = T_ASCII;
-bool       default_trace = false;
-int        think_time    = 1000;  // milliseconds
-bool       do_ponder     = false;
+terminal_t t              = T_ASCII;
+bool       default_trace  = false;
+int32_t    total_dog_time = 1000;  // milliseconds
+bool       do_ponder      = false;
 
 std::optional<std::string> get_cfg_dir()
 {
@@ -432,8 +436,9 @@ void write_settings()
 
 	fprintf(fh, "%d\n", t);
 	fprintf(fh, "%d\n", default_trace);
-	fprintf(fh, "%d\n", think_time);
+	fprintf(fh, "%d\n", total_dog_time);
 	fprintf(fh, "%d\n", do_ponder);
+	fprintf(fh, "%d\n", clock_type);
 
 	fclose(fh);
 }
@@ -453,13 +458,15 @@ void load_settings()
 
 	char buffer[16] { };
 	fgets(buffer, sizeof buffer, fh);
-	t             = terminal_t(atoi(buffer));
+	t              = terminal_t(atoi(buffer));
 	fgets(buffer, sizeof buffer, fh);
-	default_trace = atoi(buffer);
+	default_trace  = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
-	think_time    = atoi(buffer);
+	total_dog_time = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
-	do_ponder     = atoi(buffer);
+	do_ponder      = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	clock_type     = dog_clock_t(atoi(buffer));
 
 	fclose(fh);
 }
@@ -470,6 +477,7 @@ static void help()
 	my_printf("new      restart game\n");
 	my_printf("player   select player (\"white\" or \"black\")\n");
 	my_printf("time     set think time, in seconds\n");
+	my_printf("clock    set clock type: \"incremental\" or \"total\"\n");
 	my_printf("eval     show current evaluation score\n");
 	my_printf("moves    show valid moves\n");
 #if !defined(ESP32)
@@ -524,12 +532,11 @@ void tui()
 
 	stop_ponder();
 
-	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
-
 	trace_enabled = default_trace;
 	
-	std::vector<int16_t>        scores;
-	std::vector<libchess::Move> moves_played;
+	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
+	std::vector<int16_t>           scores;
+	std::vector<libchess::Move>    moves_played;
 
 #if defined(ESP32)
 	auto *pb = new polyglot_book("/spiffs/dog-book.bin");
@@ -540,9 +547,10 @@ void tui()
 	bool show_board = true;
 	bool p_a_k      = false;
 
-	uint64_t human_think_start = 0;
-	uint64_t total_human_think = 0;
-	int      n_human_think     = 0;
+	uint64_t human_think_start  = 0;
+	uint64_t total_human_think  = 0;
+	int      n_human_think      = 0;
+	int32_t  initial_think_time = 0;
 
 	for(;;) {
 		bool ponder_started = false;
@@ -565,11 +573,15 @@ void tui()
 
 			show_header(t);
 
-			if (t == T_ASCII)
-				my_printf("Think time: %.3f seconds\n", total_human_think / 1000000.);
+			if (t == T_ASCII) {
+				my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
+				my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
+			}
 			else {
-				my_printf("\x1b[2;68HThink time:");
+				my_printf("\x1b[2;63HHuman think time:");
 				my_printf("\x1b[3;65H%.3f seconds\x1b[2;1H", total_human_think / 1000000.);
+				my_printf("\x1b[4;63HDog time left:");
+				my_printf("\x1b[5;65H%.3f seconds\x1b[2;1H", total_dog_time / 1000.);
 			}
 
 			show_board = false;
@@ -603,6 +615,7 @@ void tui()
 				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
 				moves_played.clear();
 				scores.clear();
+				total_dog_time = initial_think_time;
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
@@ -611,8 +624,12 @@ void tui()
 					player = libchess::constants::BLACK;
 			}
 			else if (parts[0] == "time" && parts.size() == 2) {
-				think_time = std::stod(parts[1]) * 1000;
+				initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
 				write_settings();
+			}
+			else if (parts[0] == "clock" && parts.size() == 2) {
+				clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
+				my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
 			}
 			else if (parts[0] == "moves")
 				show_movelist(sp.at(0)->pos);
@@ -712,13 +729,35 @@ void tui()
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 				moves_played.push_back(move.value());
 				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+
+				if (clock_type == C_TOTAL)
+					total_dog_time -= 1;  // 1 millisecond
 			}
 			else {
-				my_printf("Thinking... (%.3f seconds)\n", think_time / 1000.);
+				if (total_dog_time <= 0)
+					my_printf("The flag fell for Dog, you won!\n");
+
+				int32_t cur_think_time = 0;
+				if (clock_type == C_INCREMENTAL)
+					cur_think_time = total_dog_time;
+				else {
+					const int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
+					const int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
+
+	                                cur_think_time  = total_dog_time / (cur_n_moves + 7);
+
+					const int limit_duration_min = total_dog_time / 15;
+					if (cur_think_time > limit_duration_min)
+						cur_think_time = limit_duration_min;
+
+					total_dog_time -= cur_think_time;
+				}
+
+				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
 				libchess::Move best_move  { 0 };
 				int            best_score { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score) = search_it(think_time, true, sp.at(0), -1, { }, true);
+				std::tie(best_move, best_score) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 				emit_pv(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move, t);
 
