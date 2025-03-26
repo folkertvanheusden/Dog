@@ -653,7 +653,7 @@ void emit_result(const libchess::Position & pos, const libchess::Move & best_mov
 #if defined(ESP32)
 	std::string msg1 = myformat("Search depth: %d, duration: %.3f, nodes per second: %" PRIu64 "\n", max_depth, thought_ms / 1000., nps);
 	to_uart(msg1.c_str(), msg1.size());
-	std::string msg2 = score_str_human + ", pv: " + pv_str.c_str();
+	std::string msg2 = score_str_human + ", pv: " + pv_str.c_str() + "\n";
 	to_uart(msg2.c_str(), msg2.size());
 
 #endif
