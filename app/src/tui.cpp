@@ -198,6 +198,17 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 		my_printf("Move number: %d, color: %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
 }
 
+int get_score(const libchess::Position & pos, const libchess::Move & m)
+{
+	Eval e(pos);
+
+	libchess::Position work(sp.at(0)->pos);
+	work.make_move(m);
+	make_move(&e, work, m);
+
+	return -nnue_evaluate(&e, work);
+}
+
 void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
@@ -324,6 +335,23 @@ void do_syzygy(const libchess::Position & pos)
 #endif
 	{
 		my_printf("No syzygy available\n");
+	}
+}
+
+void compare_moves(const libchess::Position & pos, libchess::Move & m)
+{
+	auto tt_rc = tti.lookup(pos.hash());
+	if (tt_rc.has_value() == false || tt_rc.value().m == 0)
+		return;
+
+	auto tt_move = libchess::Move(tt_rc.value().m);
+	if (tt_move != m) {
+		int eval_me = get_score(sp.at(0)->pos, tt_move);
+		int eval_opp = get_score(sp.at(0)->pos, m);
+		if (eval_opp > eval_me)
+			my_printf("Very good!\n");
+		else if (eval_opp < eval_me)
+			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
 	}
 }
 
@@ -597,6 +625,9 @@ void tui()
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
+						if (do_ponder)
+							compare_moves(sp.at(0)->pos, move.value());
+
 						auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 						moves_played.push_back(move.value());
 						scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
