@@ -389,7 +389,7 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2J\x1b[7m\x1b[1;1H");
 	for(int i=0; i<80; i++)
 		my_printf(" ");
-	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[2;1H");
+	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[m\x1b[2;1H");
 }
 
 terminal_t t             = T_ASCII;
