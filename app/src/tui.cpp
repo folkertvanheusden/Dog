@@ -498,17 +498,20 @@ std::string my_getline(std::istream & is)
 		if (!is.get(c))
 			break;
 
-		if ((c == 13 || c == 10) && out.empty() == false)
+		if ((c == 13 || c == 10) && out.empty() == false) {
+			my_printf("\n");
 			break;
+		}
 
 		if (c == 8 || c == 127) {
 			if (out.empty() == false)
 			{
-				my_printf(" \x08");
+				my_printf("\x08 \x08");
 				out = out.substr(0, out.size() - 1);
 			}
 		}
 		else if (c < 127) {
+			my_printf("%c", c);
 			out += c;
 		}
 	}
@@ -527,7 +530,6 @@ void tui()
 	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
 
 	trace_enabled = default_trace;
-	i.set_local_echo(true);
 	
 	std::vector<int16_t>        scores;
 	std::vector<libchess::Move> moves_played;
@@ -720,7 +722,6 @@ void tui()
 
 	delete pb;
 
-	i.set_local_echo(false);
 	trace_enabled = true;
 }
 

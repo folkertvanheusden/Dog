@@ -25,7 +25,6 @@ protected:
 	 * - at most, six characters in ordinary read buffer
 	 */
 	char buffer[bufferSize];            // data buffer
-	bool local_echo { false };
 
 public:
 	/* constructor
@@ -37,20 +36,6 @@ public:
 		setg(buffer+4,     // beginning of putback area
 			buffer+4,     // read position
 			buffer+4);    // end position
-	}
-
-	void set_local_echo(const bool state) {
-		local_echo = state;
-	}
-
-	void echo(const int c) {
-		if (local_echo) {
-#if defined(ESP32)
-			char buffer = c;
-			uart_write_bytes(uart_num, &buffer, 1);
-#endif
-			printf("%c", c);
-		}
 	}
 
 protected:
@@ -78,10 +63,8 @@ protected:
 
 		for(;;) {
 			c = fgetc(stdin);
-			if (c >= 0) {
-				echo(c);
+			if (c >= 0)
 				break;
-			}
 
 #if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
 			int length = 0;
@@ -89,14 +72,10 @@ protected:
 			if (length) {
 				char buffer = 0;
 				if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
-					if (buffer == 13) {
-						echo(13);
+					if (buffer == 13)
 						c = 10;
-					}
-					else {
+					else
 						c = buffer;
-					}
-					echo(c);
 					break;
 				}
 			}
