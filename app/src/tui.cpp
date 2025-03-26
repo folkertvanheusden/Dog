@@ -374,10 +374,8 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 		int eval_opp = get_score(sp.at(0)->pos, m);
 		if (eval_opp > eval_me)
 			my_printf("Very good!\n");
-		else if (eval_opp < eval_me) {
+		else if (eval_opp < eval_me)
 			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
-			press_any_key();
-		}
 	}
 }
 
@@ -540,9 +538,27 @@ void tui()
 #endif
 
 	bool show_board = true;
+	bool p_a_k      = false;
 
 	for(;;) {
+		bool ponder_started = false;
+		std::string fen = sp.at(0)->pos.fen();
+
+		if (p_a_k) {
+			p_a_k = false;
+			if (do_ponder) {
+				start_ponder();
+				ponder_started = true;
+			}
+			press_any_key();
+		}
+
 		if (show_board) {
+			if (ponder_started) {
+				stop_ponder();
+				sp.at(0)->pos = libchess::Position(fen);
+			}
+
 			show_header(t);
 
 			show_board = false;
@@ -551,8 +567,7 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
-			std::string fen = sp.at(0)->pos.fen();
-			if (do_ponder)
+			if (do_ponder && ponder_started == false)
 				start_ponder();
 
 			my_printf("> ");
@@ -674,8 +689,8 @@ void tui()
 				}
 				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
-					press_any_key();
 				}
+				p_a_k = true;
 				show_board = true;
 			}
 		}
@@ -714,7 +729,7 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
-			press_any_key();
+			p_a_k = true;
 			show_board = true;
 		}
 	}
