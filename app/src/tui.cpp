@@ -218,8 +218,7 @@ int get_score(const libchess::Position & pos, const libchess::Move & m)
 {
 	Eval e(pos);
 
-	libchess::Position work(sp.at(0)->pos);
-	work.make_move(m);
+	libchess::Position work(pos);
 	make_move(&e, work, m);
 
 	return -nnue_evaluate(&e, work);
@@ -371,7 +370,7 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 
 	auto tt_move = libchess::Move(tt_rc.value().m);
 	if (tt_move != m) {
-		int eval_me = get_score(sp.at(0)->pos, tt_move);
+		int eval_me  = get_score(sp.at(0)->pos, tt_move);
 		int eval_opp = get_score(sp.at(0)->pos, m);
 		if (eval_opp > eval_me)
 			my_printf("Very good!\n");
