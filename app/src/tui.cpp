@@ -470,8 +470,6 @@ static void help()
 	my_printf("new      restart game\n");
 	my_printf("player   select player (\"white\" or \"black\")\n");
 	my_printf("time     set think time, in seconds\n");
-	my_printf("fen      show fen for current position\n");
-	my_printf("setfen   set fen\n");
 	my_printf("eval     show current evaluation score\n");
 	my_printf("moves    show valid moves\n");
 #if !defined(ESP32)
@@ -483,7 +481,6 @@ static void help()
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
-	my_printf("perft    run \"perft\" for the given depth\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
@@ -587,18 +584,6 @@ void tui()
 				break;
 			else if (parts[0] == "auto")
 				player.reset();
-			else if (parts[0] == "fen")
-				my_printf("FEN: %s\n", sp.at(0)->pos.fen().c_str());
-			else if (parts[0] == "setfen") {
-				if (parts.size() == 6 + 1)
-					sp.at(0)->pos = libchess::Position(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4] + " " + parts[5] + " " + parts[6]);
-				else
-					my_printf("Invalid FEN\n");
-			}
-			else if (parts[0] == "hash")
-				my_printf("Polyglot Zobrist hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
-			else if (parts[0] == "perft" && parts.size() == 2)
-				perft(sp.at(0)->pos, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
 				tti.reset();
