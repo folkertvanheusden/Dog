@@ -632,18 +632,31 @@ void emit_result(const libchess::Position & pos, const libchess::Move & best_mov
 
 	uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 	std::string score_str;
+	std::string score_str_human;
 	if (abs(best_score) > max_non_mate) {
 		int mate_moves = (max_eval - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
-		score_str = "score mate " + std::to_string(mate_moves);
+		auto mate_str = std::to_string(mate_moves);
+		score_str = "score mate " + mate_str;
+		score_str_human = "Mate in " + mate_str;
 	}
 	else {
 		score_str = "score cp " + std::to_string(best_score);
+		score_str_human = myformat("Score: %.2f", best_score / 100.);
 	}
 
+	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
 	printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 			max_depth, score_str.c_str(),
-			nodes.first, ebf_str.c_str(), thought_ms, uint64_t(nodes.first * 1000 / use_thought_ms),
+			nodes.first, ebf_str.c_str(), thought_ms, nps,
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
+
+#if defined(ESP32)
+	std::string msg1 = myformat("Search depth: %d, duration: %.3f, nodes per second: %" PRIu64 "\n", max_depth, thought_ms / 1000., nps);
+	to_uart(msg1.c_str(), msg1.size());
+	std::string msg2 = score_str_human + ", pv: " + pv_str.c_str();
+	to_uart(msg2.c_str(), msg2.size());
+
+#endif
 }
 
 std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)

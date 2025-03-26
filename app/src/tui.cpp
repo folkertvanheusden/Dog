@@ -35,6 +35,18 @@ std::string myformat(const char *const fmt, ...)
         return result;
 }
 
+void to_uart(const char *const buffer, int buffer_len)
+{
+#if defined(ESP32)
+        ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
+        uart_write_bytes(uart_num, buffer, buffer_len);
+	if (buffer[buffer_len - 1] == '\n') {
+		const char cr = '\r';
+		uart_write_bytes(uart_num, &cr, 1);
+	}
+#endif
+}
+
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -45,12 +57,8 @@ void my_printf(const char *const fmt, ...)
         va_end(ap);
 
         printf("%s", buffer);
-        ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
-        uart_write_bytes(uart_num, buffer, buffer_len);
-	if (buffer[buffer_len - 1] == '\n') {
-		const char cr = '\r';
-		uart_write_bytes(uart_num, &cr, 1);
-	}
+	to_uart(buffer, buffer_len);
+
         free(buffer);
 #else
         va_list ap { };
