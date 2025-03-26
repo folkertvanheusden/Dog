@@ -625,8 +625,7 @@ void tui()
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
 					if (sp.at(0)->pos.is_legal_move(move.value())) {
-						if (do_ponder)
-							compare_moves(sp.at(0)->pos, move.value());
+						compare_moves(sp.at(0)->pos, move.value());
 
 						auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 						moves_played.push_back(move.value());
