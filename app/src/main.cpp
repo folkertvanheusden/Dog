@@ -1204,12 +1204,12 @@ extern "C" void app_main()
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
 	if (ret != ESP_OK) {
 		if (ret == ESP_FAIL)
-			printf("Failed to mount or format filesystem\n");
+			my_printf("Failed to mount or format filesystem\n");
 		else if (ret == ESP_ERR_NOT_FOUND)
-			printf("Failed to find SPIFFS partition\n");
+			my_printf("Failed to find SPIFFS partition\n");
 		else
-			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
-		printf("Did you run \"pio run -t uploadfs\"?\n");
+			my_printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
+		my_printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
 
 	hello();
