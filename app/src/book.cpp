@@ -184,7 +184,26 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			printf(")...\n");
 
 			std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
-			return moves.at(dist(rng));
+			auto move = moves.at(dist(rng));
+
+			/* now find the move in the movelist */
+			for(auto & current_move: p.legal_move_list()) {
+				if (current_move.to_square().file() != move.to_square().file() || current_move.to_square().rank() != move.to_square().rank())
+					continue;
+
+				if (move.from_square().file() != -1 && current_move.from_square().file() != move.from_square().file())
+					continue;
+
+				if (move.from_square().rank() != -1 && current_move.from_square().rank() != move.from_square().rank())
+					continue;
+
+				if (move.promotion_piece_type().has_value() != current_move.promotion_piece_type().has_value() ||
+					(move.promotion_piece_type().has_value() && move.promotion_piece_type().value() != current_move.promotion_piece_type().value())) {
+					continue;
+				}
+
+				return current_move;
+			}
 		}
 	}
 
