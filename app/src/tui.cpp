@@ -84,10 +84,10 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 	std::vector<std::string> lines;
 
 	if (t == T_ANSI) {
-		std::string line = "\x1b[0m\x1b[43;30m    ";
+		std::string line = "\x1b[m\x1b[43;30m    ";
 		for(int x=0; x<8; x++)
 			line += "   ";
-		line += " \x1b[0m";
+		line += " \x1b[m";
 		lines.push_back(line);
 	}
 
@@ -114,7 +114,7 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 					if (is_white)
 						line += "\x1b[1m ";
 					else
-						line += "\x1b[0m ";
+						line += "\x1b[m ";
 				}
 				else {
 					line += " ";
@@ -123,13 +123,13 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 				if (t == T_ANSI)
 					line += "\x1b[43;30m";
 				else if (t == T_VT100)
-					line += "\x1b[0m";
+					line += "\x1b[m";
 			}
 			else {
 				line += "   ";
 			}
 		}
-		line += " \x1b[0m";
+		line += " \x1b[m";
 		lines.push_back(line);
 	}
 
@@ -138,12 +138,12 @@ void display(const libchess::Position & p, const bool large, const terminal_t t,
 		line = "\x1b[43;30m   +";
 		for(int x=0; x<8; x++)
 			line += "---";
-		line += " \x1b[0m";
+		line += " \x1b[m";
 		lines.push_back(line);
 		line = "\x1b[43;30m    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
-		line += " \x1b[0m";
+		line += " \x1b[m";
 		lines.push_back(line);
 	}
 	else if (t == T_VT100) {
@@ -217,7 +217,7 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 
 	if (t == T_ANSI || t == T_VT100) {
 		if (t == T_ANSI)
-			my_printf("\x1b[43;30mPV[%.2f]:\x1b[0m\n", start_score / 100.);
+			my_printf("\x1b[43;30mPV[%.2f]:\x1b[m\n", start_score / 100.);
 		else
 			my_printf("PV[%.2f (%c)]:\n", start_score / 100., start_color == libchess::constants::WHITE ? 'W' : 'B');
 
@@ -233,15 +233,15 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 			int  cur_score = nnue_evaluate(nnue_eval, work, start_color);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
-				my_printf("\x1b[40;31m%s\x1b[0m", move.to_str().c_str());
+				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
 			else if (start_score == cur_score)
 				my_printf("%s", move.to_str().c_str());
 			else
 			{
 				if (t == T_ANSI)
-					my_printf("\x1b[40;32m%s\x1b[0m", move.to_str().c_str());
+					my_printf("\x1b[40;32m%s\x1b[m", move.to_str().c_str());
 				else
-					my_printf("\x1b[1m%s\x1b[0m", move.to_str().c_str());
+					my_printf("\x1b[1m%s\x1b[m", move.to_str().c_str());
 			}
 			if (work.side_to_move() != start_color)
 				my_printf(" [%.2f] ", -cur_score / 100.);
@@ -364,6 +364,17 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 			press_any_key();
 		}
 	}
+}
+
+void show_header(const terminal_t t)
+{
+	if (t != T_VT100 && t != T_ANSI)
+		return;
+
+	my_printf("\x1b[m\x1b[2J\x1b[7m\x1b[1;1H");
+	for(int i=0; i<80; i++)
+		my_printf(" ");
+	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[2;1H");
 }
 
 terminal_t t             = T_ASCII;
@@ -515,6 +526,8 @@ void tui()
 
 	for(;;) {
 		if (show_board) {
+			show_header(t);
+
 			show_board = false;
 			display(sp.at(0)->pos, true, t, moves_played, scores);
 		}
@@ -644,8 +657,10 @@ void tui()
 						valid = true;
 					}
 				}
-				if (!valid)
+				if (!valid) {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+					press_any_key();
+				}
 				show_board = true;
 			}
 		}
