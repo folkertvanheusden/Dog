@@ -231,6 +231,12 @@ int get_score(const libchess::Position & pos, const libchess::Move & m)
 	return -nnue_evaluate(&e, work);
 }
 
+int get_score(const libchess::Position & pos, const libchess::Color & c)
+{
+	Eval e(pos);
+	return -nnue_evaluate(&e, c);
+}
+
 void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
@@ -252,7 +258,7 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 
 			work.make_move(move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(nnue_eval, work, start_color);
+			int  cur_score = nnue_evaluate(nnue_eval, start_color);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
@@ -492,6 +498,7 @@ static void help()
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
+	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
 
 std::string my_getline(std::istream & is)
@@ -551,6 +558,10 @@ void tui()
 	uint64_t total_human_think  = 0;
 	int      n_human_think      = 0;
 	int32_t  initial_think_time = 0;
+	int32_t  human_score_sum    = 0;
+	int      human_score_n      = 0;
+	int32_t  dog_score_sum      = 0;
+	int      dog_score_n        = 0;
 
 	for(;;) {
 		bool ponder_started = false;
@@ -576,12 +587,24 @@ void tui()
 			if (t == T_ASCII) {
 				my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
 				my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
+				if (human_score_n)
+					my_printf("Average score gain human: %.2f\n", human_score_sum * 100. / human_score_n);
+				if (dog_score_n)
+					my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
 			}
 			else {
 				my_printf("\x1b[2;63HHuman think time:");
-				my_printf("\x1b[3;65H%.3f seconds\x1b[2;1H", total_human_think / 1000000.);
+				my_printf("\x1b[3;65H%.3f seconds", total_human_think / 1000000.);
 				my_printf("\x1b[4;63HDog time left:");
-				my_printf("\x1b[5;65H%.3f seconds\x1b[2;1H", total_dog_time / 1000.);
+				my_printf("\x1b[5;65H%.3f seconds", total_dog_time / 1000.);
+				if (human_score_n || dog_score_n) {
+					my_printf("\x1b[7;63HAvg.score gain:");
+					if (human_score_n)
+						my_printf("\x1b[8;65Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+					if (dog_score_n)
+						my_printf("\x1b[9;65Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+				}
+				my_printf("\x1b[2;1H");
 			}
 
 			show_board = false;
@@ -700,10 +723,17 @@ void tui()
 				if (move.has_value() == true) {
 					compare_moves(sp.at(0)->pos, move.value());
 
+					auto    now_playing  = sp.at(0)->pos.side_to_move();
+					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
+
 					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					moves_played.push_back(move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 					valid = true;
+
+					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
+					human_score_sum += score_after - score_before;
+					human_score_n++;
 
 					uint64_t human_think_end = esp_timer_get_time();
 					total_human_think += human_think_end - human_think_start;
@@ -721,6 +751,9 @@ void tui()
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
+
+			auto    now_playing  = sp.at(0)->pos.side_to_move();
+			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
 			auto move = pb->query(sp.at(0)->pos);
 			if (move.has_value()) {
@@ -765,6 +798,10 @@ void tui()
 				moves_played.push_back(best_move);
 				scores.push_back(best_score);
 			}
+
+			int16_t score_after = get_score(sp.at(0)->pos, now_playing);
+			dog_score_sum += score_after - score_before;
+			dog_score_n++;
 
 			my_printf("\n");
 
