@@ -102,13 +102,8 @@ std::string format_move_and_score(const libchess::Move & m, int16_t score)
 	return m.to_str() + myformat(" [%5.2f]", score / 100.);
 }
 
-void display(const libchess::Position & p, const bool large, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
+void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
 {
-	if (!large) {
-		p.display();
-		return;
-	}
-
 	std::vector<std::string> lines;
 
 	if (t == T_ANSI) {
@@ -392,7 +387,7 @@ void show_header(const terminal_t t)
 	if (t != T_VT100 && t != T_ANSI)
 		return;
 
-	my_printf("\x1b[m\x1b[2J\x1b[7m\x1b[1;1H");
+	my_printf("\x1b[m\x1b[2J\x1b[1;7m\x1b[1;1H");
 	for(int i=0; i<80; i++)
 		my_printf(" ");
 	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[m\x1b[2;1H");
@@ -570,7 +565,7 @@ void tui()
 			show_header(t);
 
 			show_board = false;
-			display(sp.at(0)->pos, true, t, moves_played, scores);
+			display(sp.at(0)->pos, t, moves_played, scores);
 		}
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
@@ -707,8 +702,6 @@ void tui()
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
-
-			my_printf("Color: %s\n", sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white":"black");
 
 			auto move = pb->query(sp.at(0)->pos);
 			if (move.has_value()) {
