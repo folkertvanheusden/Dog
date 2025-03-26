@@ -579,7 +579,6 @@ void tui()
 			else if (parts[0] == "perft" && parts.size() == 2)
 				perft(sp.at(0)->pos, std::stoi(parts.at(1)));
 			else if (parts[0] == "new") {
-				stop_ponder();
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
 				tti.reset();
 				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
@@ -640,11 +639,8 @@ void tui()
 					do_ponder = !do_ponder;
 				write_settings();
 				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
-				if (!do_ponder)
-					stop_ponder();
 			}
 			else if (parts[0] == "undo") {
-				stop_ponder();
 				sp.at(0)->pos.unmake_move();  /// TODO
 				player = sp.at(0)->pos.side_to_move();
 				moves_played.pop_back();
