@@ -515,7 +515,7 @@ std::string my_getline(std::istream & is)
 
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
-				my_printf("\n> ");
+				my_printf("\n\r> ");
 				break;
 			}
 		}
@@ -587,29 +587,31 @@ void tui()
 				ponder_started = false;
 			}
 
-			show_header(t);
+			if (player.has_value()) {
+				show_header(t);
 
-			if (t == T_ASCII) {
-				my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
-				my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
-				if (human_score_n)
-					my_printf("Average score gain human: %.2f\n", human_score_sum * 100. / human_score_n);
-				if (dog_score_n)
-					my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
-			}
-			else {
-				my_printf("\x1b[2;63HHuman think time:");
-				my_printf("\x1b[3;65H%.3f seconds", total_human_think / 1000000.);
-				my_printf("\x1b[4;63HDog time left:");
-				my_printf("\x1b[5;65H%.3f seconds", total_dog_time / 1000.);
-				if (human_score_n || dog_score_n) {
-					my_printf("\x1b[7;63HAvg.score gain:");
+				if (t == T_ASCII) {
+					my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
+					my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
 					if (human_score_n)
-						my_printf("\x1b[8;65Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+						my_printf("Average score gain human: %.2f\n", human_score_sum * 100. / human_score_n);
 					if (dog_score_n)
-						my_printf("\x1b[9;65Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
 				}
-				my_printf("\x1b[2;1H");
+				else {
+					my_printf("\x1b[2;63HHuman think time:");
+					my_printf("\x1b[3;65H%.3f seconds", total_human_think / 1000000.);
+					my_printf("\x1b[4;63HDog time left:");
+					my_printf("\x1b[5;65H%.3f seconds", total_dog_time / 1000.);
+					if (human_score_n || dog_score_n) {
+						my_printf("\x1b[7;63HAvg.score gain:");
+						if (human_score_n)
+							my_printf("\x1b[8;65Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+						if (dog_score_n)
+							my_printf("\x1b[9;65Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+					}
+					my_printf("\x1b[2;1H");
+				}
 			}
 
 			show_board = false;
