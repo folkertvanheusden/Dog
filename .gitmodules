@@ -6,4 +6,4 @@
 	url = https://github.com/jdart1/Fathom
 [submodule "app/book/chess-openings"]
 	path = app/book/chess-openings
-	url = git@github.com:lichess-org/chess-openings.git
+	url = https://github.com/lichess-org/chess-openings.git
