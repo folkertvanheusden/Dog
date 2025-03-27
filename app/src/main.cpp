@@ -342,6 +342,24 @@ void start_ponder()
 	work.search_output     = false;
 	work.search_cv.notify_all();
 	my_trace("# ponder started\n");
+
+	if (t != T_ASCII) {
+		if (t == T_VT100) {
+			my_printf("\x1b");
+			my_printf("7");
+		}
+		else {
+			my_printf("\x1b[s");
+		}
+		my_printf("\x1b[1;80H\x1b[1;5;7mP");
+		if (t == T_VT100) {
+			my_printf("\x1b");
+			my_printf("8");
+		}
+		else {
+			my_printf("\x1b[u");
+		}
+	}
 }
 
 void stop_ponder()
@@ -358,6 +376,24 @@ void stop_ponder()
 
 		while(work.search_count_running != 0)
 			work.search_cv_finished.wait(lck);
+	}
+
+	if (t != T_ASCII) {
+		if (t == T_VT100) {
+			my_printf("\x1b");
+			my_printf("7");
+		}
+		else {
+			my_printf("\x1b[s");
+		}
+		my_printf("\x1b[1;80H\x1b[1;5;7m-");
+		if (t == T_VT100) {
+			my_printf("\x1b");
+			my_printf("8");
+		}
+		else {
+			my_printf("\x1b[u");
+		}
 	}
 
 	my_trace("# ponder stopped\n");

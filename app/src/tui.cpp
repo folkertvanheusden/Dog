@@ -392,7 +392,7 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 	}
 }
 
-void show_header(const terminal_t t, const bool do_ponder)
+void show_header(const terminal_t t)
 {
 	if (t != T_VT100 && t != T_ANSI)
 		return;
@@ -401,8 +401,6 @@ void show_header(const terminal_t t, const bool do_ponder)
 	for(int i=0; i<80; i++)
 		my_printf(" ");
 	my_printf("\x1b[1;1HHELLO, THIS IS DOG");
-	if (do_ponder)
-		my_printf("\x1b[1;80H\x1b[5mP");
 	my_printf("\x1b[m\x1b[2;1H");
 }
 
@@ -589,7 +587,7 @@ void tui()
 				ponder_started = false;
 			}
 
-			show_header(t, do_ponder);
+			show_header(t);
 
 			if (t == T_ASCII) {
 				my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
