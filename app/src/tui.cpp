@@ -573,7 +573,8 @@ void tui()
 				start_ponder();
 				ponder_started = true;
 			}
-			press_any_key();
+			if (player.has_value())
+				press_any_key();
 		}
 
 		if (show_board) {
