@@ -177,7 +177,7 @@ void blink_led(void *arg)
 {
 	led_t *l = reinterpret_cast<led_t *>(arg);
 	gpio_set_level(l->pin_nr, l->state);
-// doesn't work with VT510?
+// doesn't work with VT510? --> too much data via serial connection
 //	if (l->screen_x != -1 && t == T_VT100)
 //		my_printf("\x1b7\x1b[1;%dH\x1b[1m%d\x1b8", l->screen_x, l->state);
 	l->state = !l->state;

@@ -392,7 +392,7 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 	}
 }
 
-void show_header(const terminal_t t)
+void show_header(const terminal_t t, const bool do_ponder)
 {
 	if (t != T_VT100 && t != T_ANSI)
 		return;
@@ -400,7 +400,10 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2J\x1b[1;7m\x1b[1;1H");
 	for(int i=0; i<80; i++)
 		my_printf(" ");
-	my_printf("\x1b[1;1HHELLO, THIS IS DOG\x1b[m\x1b[2;1H");
+	my_printf("\x1b[1;1HHELLO, THIS IS DOG");
+	if (do_ponder)
+		my_printf("\x1b[1;80H\x1b[5mP");
+	my_printf("\x1b[m\x1b[2;1H");
 }
 
 terminal_t t              = T_ASCII;
@@ -586,7 +589,7 @@ void tui()
 				ponder_started = false;
 			}
 
-			show_header(t);
+			show_header(t, do_ponder);
 
 			if (t == T_ASCII) {
 				my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
@@ -701,6 +704,8 @@ void tui()
 					do_ponder = !do_ponder;
 				write_settings();
 				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
+				p_a_k      = true;
+				show_board = true;
 			}
 			else if (parts[0] == "undo") {
 				sp.at(0)->pos.unmake_move();  /// TODO
@@ -745,7 +750,7 @@ void tui()
 				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
 				}
-				p_a_k = true;
+				p_a_k      = true;
 				show_board = true;
 			}
 		}
@@ -815,7 +820,7 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
-			p_a_k = true;
+			p_a_k      = true;
 			show_board = true;
 		}
 	}
