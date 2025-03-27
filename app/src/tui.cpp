@@ -567,20 +567,20 @@ void tui()
 		bool ponder_started = false;
 		std::string fen = sp.at(0)->pos.fen();
 
-		if (p_a_k) {
+		if (p_a_k && player.has_value()) {
 			p_a_k = false;
 			if (do_ponder) {
 				start_ponder();
 				ponder_started = true;
 			}
-			if (player.has_value())
-				press_any_key();
+			press_any_key();
 		}
 
 		if (show_board) {
 			if (ponder_started) {
 				stop_ponder();
 				sp.at(0)->pos = libchess::Position(fen);
+				ponder_started = false;
 			}
 
 			show_header(t);
@@ -752,6 +752,10 @@ void tui()
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
+			if (ponder_started) {
+				ponder_started = false;
+				stop_ponder();
+			}
 
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
