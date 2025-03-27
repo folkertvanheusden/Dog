@@ -503,6 +503,8 @@ static void help()
 
 std::string my_getline(std::istream & is)
 {
+	my_printf("> ");
+
 	std::string out;
 
 	for(;;) {
@@ -510,19 +512,20 @@ std::string my_getline(std::istream & is)
 		if (!is.get(c))
 			break;
 
-		if ((c == 13 || c == 10) && out.empty() == false) {
-			my_printf("\n");
-			break;
+		if (c == 13 || c == 10) {
+			if (out.empty() == false) {
+				my_printf("\n> ");
+				break;
+			}
 		}
 
 		if (c == 8 || c == 127) {
-			if (out.empty() == false)
-			{
+			if (out.empty() == false) {
 				my_printf("\x08 \x08");
 				out = out.substr(0, out.size() - 1);
 			}
 		}
-		else if (c < 127) {
+		else if (c >= 32 && c < 127) {
 			my_printf("%c", c);
 			out += c;
 		}
@@ -619,7 +622,6 @@ void tui()
 
 			human_think_start = esp_timer_get_time();
 
-			my_printf("> ");
 			std::string line = my_getline(is);
 
 			stop_ponder();
