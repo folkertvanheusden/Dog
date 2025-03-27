@@ -51,6 +51,19 @@ void to_uart(const char *const buffer, int buffer_len)
 #endif
 }
 
+bool peek_for_ctrl_c()
+{
+#if defined(ESP32)
+	char   buffer = 0;
+	size_t length = 0;
+	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
+	if (length && uart_read_bytes(uart_num, &buffer, 1, 100))
+		return buffer == 3;
+#endif
+
+	return false;
+}
+
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -617,6 +630,9 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 		}
+
+		if (peek_for_ctrl_c())
+			player = sp.at(0)->pos.side_to_move();
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
