@@ -231,7 +231,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
 		my_printf("Game is finished\n");
 	else
-		my_printf("Move number: %d, color: %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
+		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
 }
 
 int get_score(const libchess::Position & pos, const libchess::Move & m)
