@@ -388,7 +388,7 @@ void press_any_key()
 		my_printf("\n");
 }
 
-void compare_moves(const libchess::Position & pos, libchess::Move & m)
+void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
 	if (tt_rc.has_value() == false || tt_rc.value().m == 0)
@@ -402,6 +402,9 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m)
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
 			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
+	}
+	else {
+		(*expected_move_count)++;
 	}
 }
 
@@ -571,14 +574,15 @@ void tui()
 	bool show_board = true;
 	bool p_a_k      = false;
 
-	uint64_t human_think_start  = 0;
-	uint64_t total_human_think  = 0;
-	int      n_human_think      = 0;
-	int32_t  initial_think_time = 0;
-	int32_t  human_score_sum    = 0;
-	int      human_score_n      = 0;
-	int32_t  dog_score_sum      = 0;
-	int      dog_score_n        = 0;
+	uint64_t human_think_start   = 0;
+	uint64_t total_human_think   = 0;
+	int      n_human_think       = 0;
+	int32_t  initial_think_time  = 0;
+	int32_t  human_score_sum     = 0;
+	int      human_score_n       = 0;
+	int32_t  dog_score_sum       = 0;
+	int      dog_score_n         = 0;
+	int      expected_move_count = 0;
 
 	for(;;) {
 		bool ponder_started = false;
@@ -629,6 +633,8 @@ void tui()
 
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
+
+			my_printf("%d of the moves you played were expected.\n", expected_move_count);
 		}
 
 		if (peek_for_ctrl_c())
@@ -661,6 +667,7 @@ void tui()
 				moves_played.clear();
 				scores.clear();
 				total_dog_time = initial_think_time;
+				expected_move_count = 0;
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
@@ -749,14 +756,13 @@ void tui()
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else if (parts[0].size() >= 2) {
-				bool valid = false;
 				auto move = libchess::Move::from(parts[0]);
 				if (move.has_value())
 					move = validate_move(move.value(), sp.at(0)->pos);
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					compare_moves(sp.at(0)->pos, move.value());
+					compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
@@ -764,7 +770,6 @@ void tui()
 					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					moves_played.push_back(move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
-					valid = true;
 
 					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
 					human_score_sum += score_after - score_before;
@@ -773,12 +778,13 @@ void tui()
 					uint64_t human_think_end = esp_timer_get_time();
 					total_human_think += human_think_end - human_think_start;
 					n_human_think++;
+
+					show_board = true;
+					p_a_k      = true;
 				}
 				else {
 					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
 				}
-				p_a_k      = true;
-				show_board = true;
 			}
 		}
 		else {
