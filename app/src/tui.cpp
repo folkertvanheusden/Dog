@@ -669,12 +669,23 @@ void tui()
 					player = libchess::constants::BLACK;
 			}
 			else if (parts[0] == "time" && parts.size() == 2) {
-				initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
-				write_settings();
+				try {
+					initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
+					write_settings();
+				}
+				catch(std::invalid_argument ia) {
+					my_printf("Please enter a value for time, not something else.\n");
+					my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
+				}
 			}
 			else if (parts[0] == "clock" && parts.size() == 2) {
-				clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
-				my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+				if (parts[1] == "incremental" || parts[1] == "total") {
+					clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
+					my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+				}
+				else {
+					my_printf("Parameter for \"clock\" must be \"incremental\" or \"total\".\n");
+				}
 			}
 			else if (parts[0] == "moves")
 				show_movelist(sp.at(0)->pos);
