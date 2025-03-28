@@ -4,11 +4,12 @@ import chess
 import chess.pgn
 import chess.polyglot
 import random
+import sys
 
 
-depth = 7
+depth = 10
 duration = 10
-pgn_out = 'test.pgn'
+pgn_out = sys.argv[2]
 program = '/usr/games/stockfish'
 thread_count = 12
 hash_amount = 256
@@ -28,7 +29,7 @@ def do_board(initial_move, depth, duration):
             break
         result = program_i.play(b, chess.engine.Limit(time=duration))
         b.push(result.move)
-        print(f'{result.move}, ', end='')
+        print(f'{result.move}, ', end='', flush=True)
         result_moves.append(result.move)
     game.add_line(result_moves)
     program_i.quit()
@@ -40,7 +41,7 @@ fh = open(pgn_out, 'w')
 exporter = chess.pgn.FileExporter(fh)
 
 n = 0
-with chess.polyglot.open_reader('../data/dog-book.bin') as reader:  # use step 3
+with chess.polyglot.open_reader(sys.argv[1]) as reader:  # use step 3
     moves = [move for move in chess.Board().legal_moves]
     for m in moves:
         b = chess.Board()
@@ -48,7 +49,7 @@ with chess.polyglot.open_reader('../data/dog-book.bin') as reader:  # use step 3
         book_moves = [move.move for move in reader.find_all(b)]
         if len(book_moves) > 0:
             continue
-        print(f'{m}: ', end='')
+        print(f'{m}: ', end='', flush=True)
         pgn = do_board(m, depth, duration)
         pgn.accept(exporter)
 
