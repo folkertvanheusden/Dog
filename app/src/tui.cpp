@@ -634,7 +634,8 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			my_printf("%d of the moves you played were expected.\n", expected_move_count);
+			if (sp.at(0)->pos.fullmoves())
+				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 		}
 
 		if (peek_for_ctrl_c())
