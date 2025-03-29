@@ -685,8 +685,9 @@ void tui()
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check())
 				my_printf("\x1b[4mCHECK\x1b[m!");
-			int complexity = get_complexity(sp.at(0)->pos, sp.at(0)->pos.side_to_move()) * 100 / 64;
-			my_printf("Position complexity for %s: %d\n", sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white" : "black", complexity);
+			int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
+			int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
+			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 
 			store_cursor_position();
 			my_printf("\x1b[15;69H / \__");
