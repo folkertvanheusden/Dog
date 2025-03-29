@@ -584,6 +584,8 @@ void tui()
 	int      expected_move_count = 0;
 
 	for(;;) {
+		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
+
 		if (p_a_k && player.has_value()) {
 			p_a_k = false;
 			if (do_ponder) {
@@ -654,6 +656,11 @@ void tui()
 				stop_ponder();
 				// because pondering does not reset the libchess::Position-object:
 				sp.at(0)->pos = libchess::Position(fen);
+			}
+
+			if (do_ponder) {
+				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
+				my_printf("While you were thinking, Dog considered %" PRIu64 " positions.\n", end_position_count - start_position_count);
 			}
 
 			auto parts = split(line, " ");
