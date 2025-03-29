@@ -12,7 +12,7 @@ private:
 	std::random_device dev;
 	std::mt19937       rng { dev()   };
 
-	void scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> & moves_out);
+	void scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<std::pair<libchess::Move, int> > & moves_out);
 
 public:
 	polyglot_book(const std::string & filename);

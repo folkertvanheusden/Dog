@@ -4,6 +4,7 @@
 
 #include "book.h"
 #include "san.h"
+#include "tui.h"
 
 
 #define my_HTONLL(x) ((1==my_HTONL(1)) ? (x) : (((uint64_t)my_HTONL((x) & 0xFFFFFFFFUL)) << 32) | my_HTONL((uint32_t)((x) >> 32)))
@@ -99,11 +100,14 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && (sq_to.rank() == 3 || sq_to.rank() == 4)) {
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
+	else {
+		type = libchess::Move::Type::NORMAL;
+	}
 
 	return libchess::Move(sq_from, sq_to, type);
 }
 
-void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<libchess::Move> & moves_out)
+void polyglot_book::scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<std::pair<libchess::Move, int> > & moves_out)
 {
 	const uint64_t hash  { p.hash() };
 	polyglot_entry entry {          };
@@ -125,7 +129,7 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 			break;
 		auto move = convert_polyglot_move(my_NTOHS(entry.move), p);
 		if (p.is_legal_move(move))
-			moves_out.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
+			moves_out.push_back({ convert_polyglot_move(my_NTOHS(entry.move), p), my_NTOHS(entry.weight) });
 		else
 			printf("Book: hash collision! (%s)\n", move.to_str().c_str());
 	}
@@ -167,8 +171,8 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			// entries are surround the current
 			size_t index = mid;
 
-			std::vector<libchess::Move> moves;
-			moves.push_back(convert_polyglot_move(my_NTOHS(entry.move), p));
+			std::vector<std::pair<libchess::Move, int> > moves;
+			moves.push_back({ convert_polyglot_move(my_NTOHS(entry.move), p), my_NTOHS(entry.weight) });
 
 			scan(p, index, -1, -1, moves);  // backward search
 			scan(p, index,  1,  n, moves);  // forward serach
@@ -180,12 +184,27 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 					first = false;
 				else
 					printf(" ");
-				printf("%s", m.to_str().c_str());
+				printf("%s", m.first.to_str().c_str());
 			}
 			printf(")...\n");
 
-			std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
-			return validate_move(moves.at(dist(rng)), p);
+			int use_weight = 0;
+			if (moves.size() > 4) {
+				int sum = 0;
+				for(auto & m : moves)
+					sum += m.second;
+				use_weight = sum / moves.size();
+			}
+
+			for(;;) {
+				std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
+				size_t nr = dist(rng);
+				auto & m  = moves.at(nr);
+				if (m.second >= use_weight) {
+					my_printf("Minimum move weight: %d, chosen move weight: %d\n", use_weight, m.second);
+					return m.first;
+				}
+			}
 		}
 	}
 
