@@ -733,12 +733,20 @@ void tui()
 			else if (parts[0] == "new") {
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
 				tti.reset();
-				sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
 				moves_played.clear();
 				scores.clear();
-				total_dog_time = initial_think_time;
+				sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
+				total_dog_time      = initial_think_time;
+				human_think_start   = 0;
+				total_human_think   = 0;
+				n_human_think       = 0;
+				initial_think_time  = 0;
+				human_score_sum     = 0;
+				human_score_n       = 0;
+				dog_score_sum       = 0;
+				dog_score_n         = 0;
 				expected_move_count = 0;
-				show_board = true;
+				show_board          = true;
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
