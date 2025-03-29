@@ -584,25 +584,21 @@ void tui()
 	int      expected_move_count = 0;
 
 	for(;;) {
-		bool ponder_started = false;
-		std::string fen = sp.at(0)->pos.fen();
-
 		if (p_a_k && player.has_value()) {
 			p_a_k = false;
 			if (do_ponder) {
+				std::string fen = sp.at(0)->pos.fen();
 				start_ponder();
-				ponder_started = true;
+				press_any_key();
+				stop_ponder();
+				sp.at(0)->pos = libchess::Position(fen);
 			}
-			press_any_key();
+			else {
+				press_any_key();
+			}
 		}
 
 		if (show_board) {
-			if (ponder_started) {
-				stop_ponder();
-				sp.at(0)->pos = libchess::Position(fen);
-				ponder_started = false;
-			}
-
 			if (player.has_value()) {
 				show_header(t);
 
@@ -642,16 +638,21 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
-			if (do_ponder && ponder_started == false)
+			std::string fen;
+			if (do_ponder) {
+				fen = sp.at(0)->pos.fen();
 				start_ponder();
+			}
 
 			human_think_start = esp_timer_get_time();
 
 			std::string line = my_getline(is);
 
-			stop_ponder();
-			// because pondering does not reset the libchess::Position-object:
-			sp.at(0)->pos = libchess::Position(fen);
+			if (fen.empty() == false) {
+				stop_ponder();
+				// because pondering does not reset the libchess::Position-object:
+				sp.at(0)->pos = libchess::Position(fen);
+			}
 
 			auto parts = split(line, " ");
 			if (parts[0] == "help")
@@ -792,11 +793,6 @@ void tui()
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
-			if (ponder_started) {
-				ponder_started = false;
-				stop_ponder();
-			}
-
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
