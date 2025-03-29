@@ -256,6 +256,33 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
 }
 
+int get_complexity(const libchess::Position & pos, const libchess::Color & c)
+{
+	using namespace libchess;
+	int  count     = 0;
+	auto my_pieces = pos.color_bb(c);
+	while(my_pieces) {
+		Square my_sq = my_pieces.forward_bitscan();
+		my_pieces.forward_popbit();
+
+		Bitboard pinned_bb;
+		Bitboard pinners_bb =
+			((pos.piece_type_bb(constants::QUEEN) | pos.piece_type_bb(constants::ROOK))   & pos.color_bb(!c) & lookups::rook_attacks(my_sq)) |
+			((pos.piece_type_bb(constants::QUEEN) | pos.piece_type_bb(constants::BISHOP)) & pos.color_bb(!c) & lookups::bishop_attacks(my_sq));
+		while (pinners_bb) {
+			Square sq = pinners_bb.forward_bitscan();
+			pinners_bb.forward_popbit();
+			Bitboard bb = lookups::intervening(sq, my_sq) & pos.occupancy_bb();
+			if (bb.popcount() == 1)
+				pinned_bb ^= bb & pos.color_bb(c);
+		}
+
+		count += pinned_bb.popcount();
+	}
+
+	return count;
+}
+
 int get_score(const libchess::Position & pos, const libchess::Move & m)
 {
 	Eval e(pos);
@@ -657,6 +684,8 @@ void tui()
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check())
 				my_printf("\x1b[4mCHECK\x1b[m!");
+			int complexity = get_complexity(sp.at(0)->pos, sp.at(0)->pos.side_to_move()) * 100 / 64;
+			my_printf("Position complexity for %s: %d\n", sp.at(0)->pos.side_to_move() == libchess::constants::WHITE ? "white" : "black", complexity);
 
 			store_cursor_position();
 			my_printf("\x1b[15;69H / \__");
