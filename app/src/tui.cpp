@@ -678,6 +678,7 @@ void tui()
 				scores.clear();
 				total_dog_time = initial_think_time;
 				expected_move_count = 0;
+				show_board = true;
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
