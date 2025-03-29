@@ -535,8 +535,7 @@ std::string my_getline(std::istream & is)
 				break;
 			}
 		}
-
-		if (c == 8 || c == 127) {
+		else if (c == 8 || c == 127) {
 			if (out.empty() == false) {
 				my_printf("\x08 \x08");
 				out = out.substr(0, out.size() - 1);
@@ -634,7 +633,7 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (sp.at(0)->pos.fullmoves())
+			if (sp.at(0)->pos.fullmoves() > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 		}
 
