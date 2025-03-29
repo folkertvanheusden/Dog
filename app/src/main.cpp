@@ -344,21 +344,9 @@ void start_ponder()
 	my_trace("# ponder started\n");
 
 	if (t != T_ASCII) {
-		if (t == T_VT100) {
-			my_printf("\x1b");
-			my_printf("7");
-		}
-		else {
-			my_printf("\x1b[s");
-		}
+		store_cursor_position();
 		my_printf("\x1b[1;80H\x1b[1;5;7mP");
-		if (t == T_VT100) {
-			my_printf("\x1b");
-			my_printf("8");
-		}
-		else {
-			my_printf("\x1b[u");
-		}
+		restore_cursor_position();
 	}
 }
 
@@ -379,21 +367,9 @@ void stop_ponder()
 	}
 
 	if (t != T_ASCII) {
-		if (t == T_VT100) {
-			my_printf("\x1b");
-			my_printf("7");
-		}
-		else {
-			my_printf("\x1b[s");
-		}
+		store_cursor_position();
 		my_printf("\x1b[1;80H\x1b[1;5;7m-");
-		if (t == T_VT100) {
-			my_printf("\x1b");
-			my_printf("8");
-		}
-		else {
-			my_printf("\x1b[u");
-		}
+		restore_cursor_position();
 	}
 
 	my_trace("# ponder stopped\n");

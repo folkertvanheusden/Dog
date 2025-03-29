@@ -119,6 +119,28 @@ std::string format_move_and_score(const libchess::Move & m, int16_t score)
 	return m.to_str() + myformat(" [%5.2f]", score / 100.);
 }
 
+void store_cursor_position()
+{
+	if (t == T_VT100) {
+		my_printf("\x1b");
+		my_printf("7");
+	}
+	else if (t == T_ANSI) {
+		my_printf("\x1b[s");
+	}
+}
+
+void restore_cursor_position()
+{
+	if (t == T_VT100) {
+		my_printf("\x1b");
+		my_printf("8");
+	}
+	else if (t == T_ANSI) {
+		my_printf("\x1b[u");
+	}
+}
+
 void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
 {
 	std::vector<std::string> lines;
@@ -635,6 +657,14 @@ void tui()
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check())
 				my_printf("\x1b[4mCHECK\x1b[m!");
+
+			store_cursor_position();
+			my_printf("\x1b[15;69H / \__");
+			my_printf("\x1b[16;69H(    @\____");
+			my_printf("\x1b[17;69H /         O");
+			my_printf("\x1b[18;69H/   (_____/");
+			my_printf("\x1b[19;69H/_____/   U");
+			restore_cursor_position();
 		}
 
 		if (peek_for_ctrl_c())
