@@ -631,6 +631,8 @@ void tui()
 
 			if (sp.at(0)->pos.fullmoves() > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
+			if (sp.at(0)->pos.in_check())
+				my_printf("\x1b[4mCHECK\x1b[m!");
 		}
 
 		if (peek_for_ctrl_c())
@@ -784,7 +786,8 @@ void tui()
 					p_a_k      = true;
 				}
 				else {
-					my_printf("Not a valid move nor command (enter \"help\" for command list)\n");
+					my_printf("Not a valid move (or ambiguous) nor command.\n");
+					my_printf("Enter \"help\" for the list of commands.\n");
 				}
 			}
 		}
