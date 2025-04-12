@@ -25,7 +25,7 @@ def help():
     print(f'-H x  host to send data to (default: {host})')
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
-    print('-t x  # processes (default: {nth})')
+    print(f'-t x  # processes (default: {nth})')
     print('-h    this help')
 
 try:
