@@ -92,13 +92,38 @@ std::optional<tt_entry> tt::lookup(const uint64_t hash)
 	return { };
 }
 
+uint32_t libchessmove_to_uint(const libchess::Move & m)
+{
+	uint32_t v = m.from_square().file() | (m.from_square().rank() << 3) |
+		(m.to_square().file() << 6) | (m.to_square().rank() << 9) |
+		(int(m.type()) << 15);
+
+	if (m.promotion_piece_type().has_value())
+		v |= m.promotion_piece_type().value() << 12;
+
+	return v;
+}
+
+libchess::Move uint_to_libchessmove(const uint32_t v)
+{
+	auto promo = libchess::PieceType((v >> 12) & 7);
+	auto from  = libchess::Square::from(libchess::File(v & 7), libchess::Rank((v >> 3) & 7)).value();
+	auto to    = libchess::Square::from(libchess::File((v >> 6) & 7), libchess::Rank((v >> 9) & 7)).value();
+	auto type  = libchess::Move::Type(v >> 15);
+
+	if (promo)
+		return libchess::Move{ from, to, promo, type };
+
+	return libchess::Move{ from, to, type };
+}
+
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
 	tt_entry n { };
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
-	n.m     = m.value();
+	n.M     = libchessmove_to_uint(m);
 	n.hash  = uint16_t(hash);
 
 	uint64_t index = fastrange(hash, n_entries);
@@ -114,7 +139,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	if (e->hash == uint16_t(hash)) {
 		tt_entry & cur = entries[index];
-		n.m = cur.m;
+		n.M = cur.M;
 	}
 
 	n.score = int16_t(score);
@@ -146,7 +171,10 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 		if (!te.has_value())
 			break;
 
-		libchess::Move cur_move = libchess::Move(te.value().m);
+		if (te.value().M == 0)
+			break;
+
+		libchess::Move cur_move { uint_to_libchessmove(te.value().M) };
 		if (!work.is_legal_move(cur_move))
 			break;
 

@@ -399,8 +399,8 @@ void tt_lookup()
 		my_printf("Score: %.2f (%s)\n", te.value().score / 100., flag_names[te.value().flags]);
 		my_printf("Depth: %d\n", te.value().depth);
 		std::optional<libchess::Move> tt_move;
-		if (te.value().m)
-			tt_move = libchess::Move(te.value().m);
+		if (te.value().M)
+			tt_move = uint_to_libchessmove(te.value().M);
 		if (tt_move.has_value() && sp.at(0)->pos.is_legal_move(tt_move.value()))
 			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
 	}
@@ -441,10 +441,10 @@ void press_any_key()
 void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
-	if (tt_rc.has_value() == false || tt_rc.value().m == 0)
+	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
 		return;
 
-	auto tt_move = libchess::Move(tt_rc.value().m);
+	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
 	if (tt_move != m) {
 		int eval_me  = get_score(sp.at(0)->pos, tt_move);
 		int eval_opp = get_score(sp.at(0)->pos, m);
@@ -908,7 +908,7 @@ void tui()
 				}
 
 				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
-				libchess::Move best_move  { 0 };
+				libchess::Move best_move;
 				int            best_score { 0 };
 				clear_flag(sp.at(0)->stop);
 				std::tie(best_move, best_score) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);

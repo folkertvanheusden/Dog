@@ -15,7 +15,7 @@ typedef struct __PRAGMA_PACKED__
 	uint16_t hash;
 	int16_t  score;
 	uint8_t  depth  : 8;
-	uint32_t m      : 18;
+	uint32_t M      : 18;
 	uint8_t  flags  : 2;
 	uint8_t  filler : 4;
 } tt_entry;
@@ -51,5 +51,7 @@ public:
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move);
 int eval_to_tt  (const int eval, const int ply);
 int eval_from_tt(const int eval, const int ply);
+uint32_t       libchessmove_to_uint(const libchess::Move & m);
+libchess::Move uint_to_libchessmove(const uint32_t v);
 
 extern tt tti;

@@ -47,6 +47,7 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 	Square to_square   = move.to_square  ();
 
 	auto moving_pt    = pos.piece_type_on(from_square);
+	assert(moving_pt.has_value());
 	auto captured_pt  = pos.piece_type_on(to_square  );
 	auto promotion_pt = move.promotion_piece_type();
 
@@ -55,16 +56,19 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 	switch(move.type()) {
 		case Move::Type::NORMAL:
 		case Move::Type::DOUBLE_PUSH:
+			assert(moving_pt.has_value());
 			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
 			assert(*moving_pt == constants::PAWN || move.type() != Move::Type::DOUBLE_PUSH);
 			break;
 		case Move::Type::CAPTURE:
+			assert(captured_pt.has_value());
 			remove_piece(e, to_square, *captured_pt, !is_white, &actions);
 			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
 			break;
 		case Move::Type::ENPASSANT:
 			assert(*moving_pt == constants::PAWN);
 			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions);
+			assert(pos.piece_type_on(is_white ? Square(to_square - 8) : Square(to_square + 8)) == constants::PAWN);
 			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, !is_white, &actions);
 			break;
 		case Move::Type::CASTLING:

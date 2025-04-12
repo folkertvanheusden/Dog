@@ -14,6 +14,8 @@ import socket
 import sys
 import time
 
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
 
 host = 'dog.vanheusden.com'
 port = 31251

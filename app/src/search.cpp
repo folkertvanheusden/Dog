@@ -40,6 +40,23 @@ for(int depth=1; depth<N_LMR_DEPTH; depth++) {
 #endif
 }
 
+std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m)
+{
+	auto m_obj = libchess::Move::from(m);
+	if (m_obj.has_value() == false)
+		return { };
+
+	if (m_obj.value().type() != libchess::Move::Type::NONE)
+		return m_obj;
+
+	for(auto m_compare: p.legal_move_list()) {
+		if (m_compare == m_obj.value())  // compare is without type
+			return m_compare;
+	}
+
+	return { };
+}
+
 inline int history_index(const libchess::Color & side, const libchess::PieceType & from_type, const libchess::Square & sq)
 {
 	return side * 6 * 64 + from_type * 64 + sq;
@@ -193,17 +210,18 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))
 		return 0;
 
-	// TT //
 	int            start_alpha = alpha;
-	std::optional<libchess::Move> tt_move { };
+
+	// TT //
 	uint64_t       hash        = sp.pos.hash();
+	std::optional<libchess::Move> tt_move;
 	std::optional<tt_entry> te = tti.lookup(hash);
 	sp.cs.data.qtt_query++;
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
-		if (te.value().m)  // move stored in TT?
-			tt_move = libchess::Move(te.value().m);
+		if (te.value().M)  // move stored in TT?
+			tt_move = uint_to_libchessmove(te.value().M);
 
 		{
 			int score      = te.value().score;
@@ -361,8 +379,13 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.tt_hit++;
-		if (te.value().m)  // move stored in TT?
-			tt_move = libchess::Move(te.value().m);
+		if (te.value().M) {  // move stored in TT?
+			tt_move = uint_to_libchessmove(te.value().M);
+			if (sp.pos.is_legal_move(tt_move.value()) == false) {
+				sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
+				tt_move.reset();
+			}
+		}
 
 		if (te.value().depth >= depth && !is_pv) {
 			int score      = te.value().score;
@@ -374,23 +397,11 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 			if (use) {
 				if (tt_move.has_value()) {
-					if (is_root_position) {
-						if (sp.pos.is_legal_move(tt_move.value())) {
-							*m = tt_move.value();  // move in TT is valid
-							return work_score;
-						}
-
-						sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
-						// do NOT return
-					}
-					else {
-						*m = tt_move.value();  // not used directly, only for move ordening
-						return work_score;
-					}
-				}
-				else if (!is_root_position) {
+					*m = tt_move.value();  // move in TT is valid
 					return work_score;
 				}
+				if (!is_root_position)
+					return work_score;
 			}
 		}
 	}
@@ -415,7 +426,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 				int score      = syzygy_score.value();
 				int work_score = eval_to_tt(score, csd);
-				tti.store(hash, EXACT, depth, work_score, libchess::Move(0));
+				tti.store(hash, EXACT, depth, work_score);
 				return score;
 			}
 		}
@@ -471,7 +482,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
 	std::optional<libchess::Move> beta_cutoff_move;
-	libchess::Move new_move { 0 };
+	libchess::Move new_move;
 	for(auto move : move_list) {
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
@@ -694,7 +705,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 
 		int     max_depth = 1;
 
-		libchess::Move cur_move { 0 };
+		libchess::Move cur_move;
 
 		int alpha_repeat = 0;
 		int beta_repeat  = 0;

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstdint>
 
 #include "main.h"
@@ -101,6 +102,7 @@ int Eval::evaluate(bool white_to_move) const
 
 void Eval::add_piece(const int piece, const int square, const bool is_white)
 {
+	assert(piece >= 0 && piece < 6);
 	if (is_white) {
 		NNUE->add_feature(this->white, 64 * piece + square);
 		NNUE->add_feature(this->black, 64 * (6 + piece) + (square ^ 56));
@@ -113,6 +115,7 @@ void Eval::add_piece(const int piece, const int square, const bool is_white)
 
 void Eval::remove_piece(const int piece, const int square, const bool is_white)
 {
+	assert(piece >= 0 && piece < 6);
 	if (is_white) {
 		NNUE->remove_feature(this->white, 64 * piece + square);
 		NNUE->remove_feature(this->black, 64 * (6 + piece) + (square ^ 56));

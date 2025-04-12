@@ -251,7 +251,7 @@ struct {
 	int                     search_max_depth;
 	std::optional<uint64_t> search_max_n_nodes;
 	std::condition_variable search_cv_finished;
-	libchess::Move          search_best_move     { 0     };
+	std::optional<libchess::Move> search_best_move;
 	int                     search_best_score    { 0     };
 	bool                    search_output        { false };
 	int                     search_count_running { 0     };
@@ -285,7 +285,7 @@ void searcher(const int i)
 		search_lck.unlock();
 
 		// search!
-		libchess::Move best_move  { 0 };
+		libchess::Move best_move;
 		int            best_score { 0 };
 		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
@@ -337,7 +337,7 @@ void start_ponder()
 	work.search_max_depth   = -1;
 	work.search_max_n_nodes.reset();
 	work.search_version++;
-	work.search_best_move  = libchess::Move(0);
+	work.search_best_move.reset();
 	work.search_best_score = -32768;
 	work.search_output     = false;
 	work.search_cv.notify_all();
@@ -638,7 +638,7 @@ void main_task()
 		init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 		if (position_parameters.move_list()) {
 			for (auto & move_str : position_parameters.move_list()->move_list())
-				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, *libchess::Move::from(move_str));
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, *str_to_move(sp.at(0)->pos, move_str));
 		}
 	};
 
@@ -683,7 +683,7 @@ void main_task()
 					work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
 					work.search_max_n_nodes.reset();
 					work.search_version++;
-					work.search_best_move  = libchess::Move(0);
+					work.search_best_move.reset();
 					work.search_best_score = -32768;
 					work.search_output     = true;
 					work.search_cv.notify_all();
@@ -691,7 +691,7 @@ void main_task()
 				// get
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
-					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
+					while(work.search_best_move.has_value() == false || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 				}
 #if defined(ESP32)
@@ -699,9 +699,9 @@ void main_task()
 #endif
 				cs_sum.add(calculate_search_statistics());
 
-				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
+				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.value().to_str().c_str(), work.search_best_score);
 
-				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, work.search_best_move);
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, work.search_best_move.value());
 			}
 
 			printf("\nFinished.\n");
@@ -774,9 +774,9 @@ void main_task()
 				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), moves_to_go, tti.get_per_mille_filled());
 			}
 
-			libchess::Move best_move  { 0 };
-			int            best_score { 0 };
-			bool           has_best   { false };
+			libchess::Move  best_move;
+			int  best_score { 0 };
+			bool has_best   { false };
 
 			// probe the Syzygy endgame table base
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
@@ -809,7 +809,7 @@ void main_task()
 					work.search_max_depth   = depth.has_value() ? depth.value() : -1;
 					work.search_max_n_nodes = nodes;
 					work.search_version++;
-					work.search_best_move  = libchess::Move(0);
+					work.search_best_move.reset();
 					work.search_best_score = -32768;
 					work.search_output     = true;
 					work.search_cv.notify_all();
@@ -819,10 +819,10 @@ void main_task()
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
-					while(work.search_best_move.value() == 0 || work.search_count_running != 0)
+					while(work.search_best_move.has_value() == false || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 
-					best_move  = work.search_best_move;
+					best_move  = work.search_best_move.value();
 					best_score = work.search_best_score;
 				}
 			}
@@ -1047,7 +1047,7 @@ void run_bench()
 			work.search_max_depth   = 10;
 			work.search_max_n_nodes.reset();
 			work.search_version++;
-			work.search_best_move  = libchess::Move(0);
+			work.search_best_move.reset();
 			work.search_best_score = -32768;
 			work.search_output     = false;
 			work.search_cv.notify_all();
@@ -1055,10 +1055,10 @@ void run_bench()
 		// get
 		{
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);
-			while(work.search_best_move.value() == 0 || work.search_count_running != 0)
+			while(work.search_best_move.has_value() == false || work.search_count_running != 0)
 				work.search_cv_finished.wait(lck);
 		}
-		// printf("%s|%s|%d\n", fen.c_str(), work.search_best_move.to_str().c_str(), work.search_best_score);
+		// printf("%s|%s|%d\n", fen.c_str(), work.search_best_move.value().to_str().c_str(), work.search_best_score);
 	}
 	uint64_t end_ts   = esp_timer_get_time();
 
