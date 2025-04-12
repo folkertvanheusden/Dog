@@ -8,7 +8,7 @@ docker run --name dog -d -it --restart=unless-stopped dog
 
 echo "####################################"
 echo "Log output (ctrl-c to stop, docker container will keep running):"
-echo "To get rid of it type: docker rm -f dog"
+echo "To get rid of it, type: docker rm -f dog"
 echo "####################################"
 
 docker logs -f dog
