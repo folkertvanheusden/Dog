@@ -7,9 +7,11 @@ There are 2 ways:
 
 * DOCKER
 
+```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog
     ./dockerrun
+```
 
 That's it! Interrupt the program whenever you like.
 
@@ -18,6 +20,7 @@ That's it! Interrupt the program whenever you like.
 
 This is the recipe for any Debian/Ubuntu based system:
 
+```
     sudo apt update
     sudo apt install clang cmake git build-essential libstdc++-12-dev screen python3-pip python3-venv
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
@@ -29,5 +32,6 @@ This is the recipe for any Debian/Ubuntu based system:
     . venv/bin/activate
     pip install python-chess
     ./gen-train-data.py -e linux-windows/build/Dog-native
+```
 
 Interrupt the program whenever you want.
