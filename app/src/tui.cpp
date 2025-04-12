@@ -690,8 +690,8 @@ void tui()
 			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 
 			store_cursor_position();
-			my_printf("\x1b[15;69H / \__");
-			my_printf("\x1b[16;69H(    @\____");
+			my_printf("\x1b[15;69H / \\__");
+			my_printf("\x1b[16;69H(    @\\____");
 			my_printf("\x1b[17;69H /         O");
 			my_printf("\x1b[18;69H/   (_____/");
 			my_printf("\x1b[19;69H/_____/   U");
