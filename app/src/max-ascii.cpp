@@ -1,5 +1,7 @@
 #include <cstdio>
 
+#include "tui.h"
+
 
 constexpr char dog_max[] = 
 "                       --:----------\n"
@@ -38,5 +40,9 @@ constexpr char dog_max[] =
 
 void print_max_ascii()
 {
-	printf("%s\n", dog_max);
+	for(size_t i=0; i<sizeof(dog_max); i++) {
+		my_printf("%c", dog_max[i]);
+		if (dog_max[i] == 13)
+			my_printf("\n");
+	}
 }

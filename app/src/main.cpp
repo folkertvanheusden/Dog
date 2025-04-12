@@ -30,7 +30,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#if !defined(ESP32)
 #include "state_exporter.h"
+#endif
 #else
 #include <driver/uart.h>
 #include <driver/gpio.h>
@@ -66,7 +68,9 @@ bool with_syzygy = false;
 
 
 std::vector<search_pars_t *> sp;
+#if !defined(ESP32)
 state_exporter              *se { nullptr };
+#endif
 
 static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
@@ -173,6 +177,9 @@ void blink_led(void *arg)
 {
 	led_t *l = reinterpret_cast<led_t *>(arg);
 	gpio_set_level(l->pin_nr, l->state);
+// doesn't work with VT510? --> too much data via serial connection
+//	if (l->screen_x != -1 && t == T_VT100)
+//		my_printf("\x1b7\x1b[1;%dH\x1b[1m%d\x1b8", l->screen_x, l->state);
 	l->state = !l->state;
 }
 
@@ -188,7 +195,7 @@ void stop_blink(esp_timer_handle_t handle, led_t *l)
 	gpio_set_level(l->pin_nr, false);
 }
 
-led_t led_green { LED_GREEN, false };
+led_t led_green { LED_GREEN, false, 79};
 
 const esp_timer_create_args_t led_green_timer_pars = {
             .callback = &blink_led,
@@ -196,7 +203,7 @@ const esp_timer_create_args_t led_green_timer_pars = {
             .name = "greenled"
 };
 
-led_t led_blue { LED_BLUE, false };
+led_t led_blue { LED_BLUE, false, 78 };
 
 const esp_timer_create_args_t led_blue_timer_pars = {
             .callback = &blink_led,
@@ -204,7 +211,7 @@ const esp_timer_create_args_t led_blue_timer_pars = {
             .name = "blueled"
 };
 
-led_t led_red { LED_RED, false };
+led_t led_red { LED_RED, false, 77 };
 
 const esp_timer_create_args_t led_red_timer_pars = {
             .callback = &blink_led,
@@ -335,6 +342,12 @@ void start_ponder()
 	work.search_output     = false;
 	work.search_cv.notify_all();
 	my_trace("# ponder started\n");
+
+	if (t != T_ASCII) {
+		store_cursor_position();
+		my_printf("\x1b[1;80H\x1b[1;5;7mP");
+		restore_cursor_position();
+	}
 }
 
 void stop_ponder()
@@ -353,13 +366,21 @@ void stop_ponder()
 			work.search_cv_finished.wait(lck);
 	}
 
+	if (t != T_ASCII) {
+		store_cursor_position();
+		my_printf("\x1b[1;80H\x1b[1;5;7m-");
+		restore_cursor_position();
+	}
+
 	my_trace("# ponder stopped\n");
 }
 
 void delete_threads()
 {
+#if !defined(ESP32)
 	if (se)
 		se->clear();
+#endif
 
 	{
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
@@ -391,12 +412,14 @@ void allocate_threads(const int n)
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
-		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(malloc(history_malloc_size)), new end_t, i }));
+		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)), new end_t, i }));
 		sp.at(i)->thread_handle = new std::thread(searcher, i);
 		sp.at(i)->nnue_eval = new Eval(sp.at(i)->pos);
 	}
+#if !defined(ESP32)
 	if (se)
 		se->set(sp.at(0));
+#endif
 #if defined(ESP32)
 	if (n > 0) {
 		think_timeout_pars.arg = sp.at(0)->stop;
@@ -1121,7 +1144,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(ESP32)
 	se = new state_exporter(20);
 #endif
 
@@ -1169,7 +1192,7 @@ extern "C" void app_main()
 
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
-		.baud_rate = 115200,
+		.baud_rate = 19200,
 		.data_bits = UART_DATA_8_BITS,
 		.parity = UART_PARITY_DISABLE,
 		.stop_bits = UART_STOP_BITS_1,
@@ -1177,7 +1200,7 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
 	constexpr int uart_buffer_size = 1024 * 2;
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
@@ -1193,12 +1216,12 @@ extern "C" void app_main()
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
 	if (ret != ESP_OK) {
 		if (ret == ESP_FAIL)
-			printf("Failed to mount or format filesystem\n");
+			my_printf("Failed to mount or format filesystem\n");
 		else if (ret == ESP_ERR_NOT_FOUND)
-			printf("Failed to find SPIFFS partition\n");
+			my_printf("Failed to find SPIFFS partition\n");
 		else
-			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
-		printf("Did you run \"pio run -t uploadfs\"?\n");
+			my_printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
+		my_printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
 
 	hello();

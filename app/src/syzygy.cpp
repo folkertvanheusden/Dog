@@ -1,5 +1,6 @@
 #include <optional>
 
+#include "main.h"
 #include "fathom/src/tbprobe.h"
 #include "libchess/Position.h"
 
@@ -128,11 +129,11 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	m = get_best_dtz_move(results, TB_WIN);
 	if (m.has_value())
-		return { { m.value().first, 10000 - m.value().second } };
+		return { { m.value().first, max_eval - m.value().second } };
 
 	m = get_best_dtz_move(results, TB_CURSED_WIN);
 	if (m.has_value())
-		return { { m.value().first, 10000 - m.value().second } };
+		return { { m.value().first, max_eval - m.value().second } };
 
 	m = get_best_dtz_move(results, TB_DRAW);
 	if (m.has_value())
@@ -140,11 +141,11 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	m = get_best_dtz_move(results, TB_BLESSED_LOSS);
 	if (m.has_value())
-		return { { m.value().first, -(10000 - m.value().second) } };
+		return { { m.value().first, -(max_eval - m.value().second) } };
 
 	m = get_best_dtz_move(results, TB_LOSS);
 	if (m.has_value())
-		return { { m.value().first, -(10000 - m.value().second) } };
+		return { { m.value().first, -(max_eval - m.value().second) } };
 
 	return { };
 }
@@ -161,11 +162,11 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 	int score  = 0;
 	int result = TB_GET_WDL(res);
 	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
-		score = -9999;
+		score = -(max_eval - 1);
 	else if (result == TB_DRAW)
 		score = 0;
 	else if (result == TB_CURSED_WIN || result == TB_WIN)
-		score = 9999;
+		score = max_eval - 1;
 	else {
 		printf("# unexpected return code from fathom: %d (%d)\n", result, res);
 		return { };

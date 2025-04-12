@@ -276,19 +276,19 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 			}
 		}
 
-		if (n_played >= 3 && best_score >= 9800)
+		if (n_played >= 3 && best_score >= max_non_mate)
 			break;
 	}
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + qsdepth;
+			best_score = -max_eval + qsdepth;
 		else if (best_score == -32767)
 			best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
 	}
 
-	assert(best_score >= -10000);
-	assert(best_score <=  10000);
+	assert(best_score >= -max_eval);
+	assert(best_score <=  max_eval);
 
 	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
 		sp.cs.data.qtt_store++;
@@ -423,7 +423,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 #endif
 	bool in_check = sp.pos.in_check();
 
-	if (!is_root_position && !in_check && depth <= 7 && beta <= 9800) {
+	if (!is_root_position && !in_check && depth <= 7 && beta <= max_non_mate) {
 		sp.cs.data.n_static_eval++;
 		int staticeval = nnue_evaluate(sp.nnue_eval, sp.pos);
 
@@ -449,7 +449,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
-				return abs(nmscore) >= 9800 ? beta : nmscore;
+				return abs(nmscore) >= max_non_mate ? beta : nmscore;
 			}
                 }
 	}
@@ -479,7 +479,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		sp.cur_move = move.value();
 
                 bool is_lmr = false;
-                int  score  = -10000;
+                int  score  = -max_eval;
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
                 if (n_played == 0)
@@ -558,7 +558,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	if (n_played == 0) {
 		if (in_check)
-			best_score = -10000 + csd;
+			best_score = -max_eval + csd;
 		else
 			best_score = 0;
 	}
@@ -632,18 +632,31 @@ void emit_result(const libchess::Position & pos, const libchess::Move & best_mov
 
 	uint64_t use_thought_ms = std::max(uint64_t(1), thought_ms);  // prevent div. by 0
 	std::string score_str;
-	if (abs(best_score) > 9800) {
-		int mate_moves = (10000 - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
-		score_str = "score mate " + std::to_string(mate_moves);
+	std::string score_str_human;
+	if (abs(best_score) > max_non_mate) {
+		int mate_moves = (max_eval - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
+		auto mate_str = std::to_string(mate_moves);
+		score_str = "score mate " + mate_str;
+		score_str_human = "Mate in " + mate_str;
 	}
 	else {
 		score_str = "score cp " + std::to_string(best_score);
+		score_str_human = myformat("Score: %.2f", best_score / 100.);
 	}
 
+	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
 	printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 			max_depth, score_str.c_str(),
-			nodes.first, ebf_str.c_str(), thought_ms, uint64_t(nodes.first * 1000 / use_thought_ms),
+			nodes.first, ebf_str.c_str(), thought_ms, nps,
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
+
+#if defined(ESP32)
+	std::string msg1 = myformat("Search depth: %d, duration: %.3f, nodes per second: %" PRIu64 "\n", max_depth, thought_ms / 1000., nps);
+	to_uart(msg1.c_str(), msg1.size());
+	std::string msg2 = score_str_human + ", pv: " + pv_str.c_str() + "\n";
+	to_uart(msg2.c_str(), msg2.size());
+
+#endif
 }
 
 std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
@@ -715,12 +728,12 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 
 			if (score <= alpha) {
 				if (alpha_repeat >= 3)
-					alpha = -10000;
+					alpha = -max_eval;
 				else {
 					beta = (alpha + beta) / 2;
 					alpha = score - add_alpha;
-					if (alpha < -10000)
-						alpha = -10000;
+					if (alpha < -max_eval)
+						alpha = -max_eval;
 					add_alpha += add_alpha / 15 + 1;
 
 					alpha_repeat++;
@@ -728,12 +741,12 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 			}
 			else if (score >= beta) {
 				if (beta_repeat >= 3)
-					beta = 10000;
+					beta = max_eval;
 				else {
 					alpha = (alpha + beta) / 2;
 					beta = score + add_beta;
-					if (beta > 10000)
-						beta = 10000;
+					if (beta > max_eval)
+						beta = max_eval;
 					add_beta += add_beta / 15 + 1;
 
 					beta_repeat++;
@@ -752,12 +765,12 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 				alpha_repeat = beta_repeat = 0;
 
 				alpha = score - add_alpha;
-				if (alpha < -10000)
-					alpha = -10000;
+				if (alpha < -max_eval)
+					alpha = -max_eval;
 
 				beta = score + add_beta;
-				if (beta > 10000)
-					beta = 10000;
+				if (beta > max_eval)
+					beta = max_eval;
 
 				best_move  = cur_move;
 				best_score = score;

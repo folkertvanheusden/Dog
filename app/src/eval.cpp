@@ -11,6 +11,11 @@ int nnue_evaluate(Eval *const e, const Position & pos)
         return e->evaluate(pos.side_to_move() == constants::WHITE);
 }
 
+int nnue_evaluate(Eval *const e, const Color & c)
+{
+        return e->evaluate(c == constants::WHITE);
+}
+
 void init_move(Eval *const e, const libchess::Position & pos)
 {
 	e->set(pos);
@@ -101,6 +106,7 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
 			break;
 		default:
+			printf("type is %d\n", move.type());
 			assert(false);
 			break;
 	}

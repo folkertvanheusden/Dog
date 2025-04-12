@@ -9,6 +9,9 @@
 #include "stats.h"
 
 
+constexpr const int max_eval = 30000;
+constexpr const int max_non_mate = 29500;
+
 typedef struct {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
@@ -58,6 +61,7 @@ extern bool               with_syzygy;
 typedef struct {
 	gpio_num_t pin_nr;
 	bool       state;
+	int        screen_x;
 } led_t;
 
 extern led_t led_green;
