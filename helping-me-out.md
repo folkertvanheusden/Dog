@@ -1,5 +1,7 @@
 To be able to generate a strong NNUE network, Dog needs a large set of training data.
 You can help generating that!
+Feel free to run it whenever you like and how long you like.
+
 
 There are 2 ways:
 
@@ -27,3 +29,5 @@ This is the recipe for any Debian/Ubuntu based system:
     . venv/bin/activate
     pip install python-chess
     ./gen-train-data.py -e linux-windows/build/Dog-native
+
+Interrupt the program whenever you want.
