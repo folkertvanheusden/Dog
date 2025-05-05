@@ -6,8 +6,6 @@ COPY app /app
 
 RUN pip3 install python-chess
 
-RUN git checkout TRAINER
-
 RUN cd /app/src/linux-windows/build &&  \
     CXX=clang++-14 CC=clang-14 cmake .. && \
     make -j4
