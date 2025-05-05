@@ -33,7 +33,7 @@ This is the recipe for any Debian/Ubuntu based system:
     python3 -m venv venv
     . venv/bin/activate
     pip install python-chess
-    ./gen-train-data.py -e linux-windows/build/Dog-native
+    ./gen-train-data.py -e linux-windows/build/Dog
 ```
 
 Interrupt the program whenever you want.
