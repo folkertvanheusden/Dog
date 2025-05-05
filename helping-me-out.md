@@ -10,6 +10,7 @@ There are 2 ways:
 ```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog
+    git checkout TRAINER
     ./dockerrun
 ```
 
