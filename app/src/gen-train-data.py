@@ -134,7 +134,7 @@ def process(proc, q):
                                     s.setsockopt(socket.SOL_TCP, 23, 5)  # TCP fastopen (client as well?!)
                                     s.connect((host, port))
 
-                                s.send(json.dumps(j).encode('ascii'))
+                                s.send((json.dumps(j) + '\n').encode('ascii'))
                                 break
                             except Exception as e:
                                 print(f'Socket error: {e}')
