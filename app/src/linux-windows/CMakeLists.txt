@@ -84,6 +84,7 @@ add_executable(
   ../usb-device.cpp
   ../fathom/src/tbprobe.c
 )
+target_compile_options(Dog PRIVATE -march=native -mtune=native -O3)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
