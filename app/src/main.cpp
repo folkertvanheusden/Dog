@@ -712,6 +712,7 @@ void main_task()
 			int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
 
 			auto depth     = go_parameters.depth();
+			auto nodes     = go_parameters.nodes();
 
 			auto movetime = go_parameters.movetime();
 
@@ -784,7 +785,7 @@ void main_task()
 					work.search_think_time  = depth.has_value() && think_time == 0 ? -1 : think_time;
 					work.search_is_abs_time = is_absolute_time;
 					work.search_max_depth   = depth.has_value() ? depth.value() : -1;
-					work.search_max_n_nodes.reset();
+					work.search_max_n_nodes = nodes;
 					work.search_version++;
 					work.search_best_move  = libchess::Move(0);
 					work.search_best_score = -32768;
