@@ -1,6 +1,6 @@
 FROM python:3.11
 
-RUN apt update && apt install -y build-essential  cmake clang-14
+RUN apt update && apt install -y build-essential cmake clang-14 libstdc++-12-dev
 
 COPY app /app
 
