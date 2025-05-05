@@ -99,24 +99,6 @@ def play(b, engine1, engine2, q):
 
     return fens
 
-def transmit(host, port, name1, name2, result, fens):
-    j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
-    j['data'] = {'result': result, 'fens': fens }
-
-    while True:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-            s.setsockopt(socket.SOL_TCP, 23, 5)  # TCP fastopen (client as well?!)
-            s.connect((host, port))
-            s.send(json.dumps(j).encode('ascii'))
-            s.close()
-            break
-        except Exception as e:
-            print(f'failure: {e}')
-            time.sleep(1)
-        s.close()
-
 def process(proc, q):
     while True:
         try:
@@ -129,6 +111,8 @@ def process(proc, q):
 
             print(name1, name2)
 
+            s = None
+
             while True:
                 b = gen_board()
                 fens = play(b, engine1, engine2, q)
@@ -139,7 +123,24 @@ def process(proc, q):
                     q.put(('gcount', 1))
 
                     if host != None:
-                        transmit(host, port, name1, name2, result, fens)
+                        j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
+                        j['data'] = {'result': result, 'fens': fens }
+
+                        while True:
+                            try:
+                                if s == None:
+                                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
+                                    s.setsockopt(socket.SOL_TCP, 23, 5)  # TCP fastopen (client as well?!)
+                                    s.connect((host, port))
+
+                                s.send(json.dumps(j).encode('ascii'))
+                                break
+                            except Exception as e:
+                                print(f'Socket error: {e}')
+                                s.close()
+                                s = None
+                                time.sleep(0.5)
 
         except Exception as e:
             print(f'failure: {e}')
