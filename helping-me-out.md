@@ -10,6 +10,7 @@ There are 2 ways:
 ```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog
+    git checkout TRAINER
     ./dockerrun
 ```
 
@@ -25,6 +26,7 @@ This is the recipe for any Debian/Ubuntu based system:
     sudo apt install clang cmake git build-essential libstdc++-12-dev screen python3-pip python3-venv
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog/app/src/linux-windows/build/
+    git checkout TRAINER
     CXX=clang++-14 cmake ..
     make -j4
     cd ../..
