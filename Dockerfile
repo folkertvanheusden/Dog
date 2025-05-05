@@ -6,6 +6,7 @@ COPY app /app
 
 RUN pip3 install python-chess
 
+RUN git checkout TRAINER
 
 RUN cd /app/src/linux-windows/build &&  \
     CXX=clang++-14 CC=clang-14 cmake .. && \
@@ -13,5 +14,4 @@ RUN cd /app/src/linux-windows/build &&  \
 
 WORKDIR /app/src
 
-CMD ./gen-train-data.py -e ./linux-windows/build/Dog -f backup.dat -t 4
-
+CMD ./gen-train-data.py -e ./linux-windows/build/Dog
