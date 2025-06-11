@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+new-net3
+	Results of Dog-new-net3-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: -21.84 +/- 13.74, nElo: -36.36 +/- 22.80
+	LOS: 0.09 %, DrawRatio: 49.33 %, PairsRatio: 0.69
+	Games: 892, Wins: 249, Losses: 305, Draws: 338, Points: 418.0 (46.86 %)
+	Ptnml(0-2): [24, 110, 220, 82, 10], WL/DD Ratio: 2.01
+	LLR: -2.97 (-2.94, 2.94) [0.00, 10.00]
+
 clamp
 	Results of Dog-52705f9-clamp-LC7569dd6-native vs Dog-b77be9c-master-LC7569dd6-native (8+0.08, 1t, 256MB, lichess-big3-resolved.epd):
 	Elo: -4.23 +/- 4.37, nElo: -12.14 +/- 12.53
