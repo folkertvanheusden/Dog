@@ -8,6 +8,14 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+new-net7 100 superbatches
+	Results of Dog-new-net7-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
+	Elo: -24.56 +/- 14.48, nElo: -40.09 +/- 23.55
+	LOS: 0.04 %, DrawRatio: 49.04 %, PairsRatio: 0.69
+	Games: 836, Wins: 232, Losses: 291, Draws: 313, Points: 388.5 (46.47 %)
+	Ptnml(0-2): [28, 98, 205, 79, 8], WL/DD Ratio: 2.01
+	LLR: -3.02 (-2.94, 2.94) [0.00, 10.00]
+
 new-net6
 	Results of Dog-new-net6-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
 	Elo: -29.94 +/- 15.91, nElo: -48.78 +/- 25.77
