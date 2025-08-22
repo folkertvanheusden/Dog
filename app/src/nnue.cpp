@@ -100,7 +100,7 @@ int IRAM_ATTR Eval::evaluate(bool white_to_move) const
 	return NNUE->evaluate(this->black, this->white);
 }
 
-void Eval::add_piece(const int piece, const int square, const bool is_white)
+void IRAM_ATTR Eval::add_piece(const int piece, const int square, const bool is_white)
 {
 	assert(piece >= 0 && piece < 6);
 	if (is_white) {
@@ -113,7 +113,7 @@ void Eval::add_piece(const int piece, const int square, const bool is_white)
 	}
 }
 
-void Eval::remove_piece(const int piece, const int square, const bool is_white)
+void IRAM_ATTR Eval::remove_piece(const int piece, const int square, const bool is_white)
 {
 	assert(piece >= 0 && piece < 6);
 	if (is_white) {
