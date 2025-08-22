@@ -91,3 +91,4 @@ chess_stats calculate_search_statistics();
 std::pair<uint64_t, uint64_t> simple_search_statistics();  // nodes, syzyg hits
 void allocate_threads(const int n);
 void delete_threads();
+void run_bench(const bool long_bench);

@@ -587,6 +587,7 @@ static void help()
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("fen      show a fen for the current position\n");
+	my_printf("bench    run a benchmark: \"short\" or \"long\"\n");
 	my_printf("recall   go to the latest position recorded\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
@@ -803,6 +804,9 @@ void tui()
 				break;
 			else if (parts[0] == "auto")
 				player.reset();
+			else if (parts[0] == "bench") {
+				run_bench(parts.size() == 2 && parts[1] == "long");
+			}
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
