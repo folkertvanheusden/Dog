@@ -20,6 +20,12 @@
 #include "tui.h"
 
 
+#if defined(ESP32)
+#define RECALL_FILE "/spiffs/recall.txt"
+#else
+#define RECALL_FILE ".dog-recall.txt"
+#endif
+
 typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
 
 dog_clock_t clock_type = C_TOTAL;
@@ -37,6 +43,19 @@ std::string myformat(const char *const fmt, ...)
         free(buffer);
 
         return result;
+}
+
+bool store_position(const std::string & fen)
+{
+	FILE *fh = fopen(RECALL_FILE, "w");
+	if (fh) {
+		fprintf(fh, "%s", fen.c_str());
+		fclose(fh);
+
+		return true;
+	}
+
+	return false;
 }
 
 void to_uart(const char *const buffer, int buffer_len)
@@ -565,6 +584,7 @@ static void help()
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("fen      show a fen for the current position\n");
+	my_printf("recall   go to the latest position recorded\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
@@ -633,6 +653,25 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
+
+	auto reset_state = [&]()
+	{
+		memset(sp.at(0)->history, 0x00, history_malloc_size);
+		tti.reset();
+		moves_played.clear();
+		scores.clear();
+		sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
+		total_dog_time      = initial_think_time;
+		human_think_start   = 0;
+		total_human_think   = 0;
+		n_human_think       = 0;
+		initial_think_time  = 0;
+		human_score_sum     = 0;
+		human_score_n       = 0;
+		dog_score_sum       = 0;
+		dog_score_n         = 0;
+		expected_move_count = 0;
+	};
 
 	for(;;) {
 		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
@@ -733,22 +772,8 @@ void tui()
 			else if (parts[0] == "auto")
 				player.reset();
 			else if (parts[0] == "new") {
-				memset(sp.at(0)->history, 0x00, history_malloc_size);
-				tti.reset();
-				moves_played.clear();
-				scores.clear();
-				sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
-				total_dog_time      = initial_think_time;
-				human_think_start   = 0;
-				total_human_think   = 0;
-				n_human_think       = 0;
-				initial_think_time  = 0;
-				human_score_sum     = 0;
-				human_score_n       = 0;
-				dog_score_sum       = 0;
-				dog_score_n         = 0;
-				expected_move_count = 0;
-				show_board          = true;
+				reset_state();
+				show_board = true;
 			}
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
@@ -834,6 +859,26 @@ void tui()
 				int nnue_score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 				my_printf("evaluation score: %.2f\n", nnue_score / 100.);
 			}
+			else if (parts[0] == "recall") {
+				FILE *fh = fopen(RECALL_FILE, "r");
+				if (fh) {
+					char buffer[128] { };
+					fgets(buffer, sizeof(buffer) - 1, fh);
+					fclose(fh);
+					my_printf("Use \"%s\"?\n", buffer);
+
+					if (is.get() == 'y') {
+						reset_state();
+						sp.at(0)->pos = libchess::Position(buffer);
+						p_a_k      = true;
+						show_board = true;
+					}
+				}
+				else {
+					my_printf("No fen remembered\n");
+					p_a_k = true;
+				}
+			}
 			else if (parts[0] == "hint")
 				tt_lookup();
 			else if (parts[0] == "dog")
@@ -861,6 +906,8 @@ void tui()
 					uint64_t human_think_end = esp_timer_get_time();
 					total_human_think += human_think_end - human_think_start;
 					n_human_think++;
+
+					store_position(sp.at(0)->pos.fen());
 
 					show_board = true;
 					p_a_k      = true;
@@ -922,6 +969,8 @@ void tui()
 				moves_played.push_back(best_move);
 				scores.push_back(best_score);
 			}
+
+			store_position(sp.at(0)->pos.fen());
 
 			int16_t score_after = get_score(sp.at(0)->pos, now_playing);
 			dog_score_sum += score_after - score_before;
