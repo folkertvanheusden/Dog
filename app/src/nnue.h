@@ -26,7 +26,7 @@ public:
 	void reset();
 	void set(const libchess::Position & pos);
 
-	int evaluate(bool white_to_move) const;
-	void add_piece(const int piece, const int square, const bool is_white);
+	int  evaluate(bool white_to_move) const;
+	void add_piece   (const int piece, const int square, const bool is_white);
 	void remove_piece(const int piece, const int square, const bool is_white);
 };
