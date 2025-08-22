@@ -946,6 +946,9 @@ void hello() {
 
 void run_bench(const bool long_bench)
 {
+	reset_search_statistics();
+	tti.reset();
+
 	uint64_t start_ts = esp_timer_get_time();
 
 	if (long_bench) {
