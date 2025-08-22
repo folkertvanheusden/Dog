@@ -79,6 +79,8 @@ void stop_blink(esp_timer_handle_t handle, led_t *l);
 
 int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
+#else
+#define IRAM_ATTR
 #endif
 
 void my_trace(const char *const fmt, ...);

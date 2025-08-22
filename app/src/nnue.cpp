@@ -13,7 +13,7 @@ struct Network {
 	Accumulator output_weights[2];
 	std::int16_t output_bias;
 
-	int evaluate(const Accumulator& us, const Accumulator& them) const {
+	int IRAM_ATTR evaluate(const Accumulator& us, const Accumulator& them) const {
 		static_assert(sizeof(Network) == 197440);
 
 		int output = 0;
@@ -92,7 +92,7 @@ void Eval::set(const libchess::Position & pos)
         }
 }
 
-int Eval::evaluate(bool white_to_move) const
+int IRAM_ATTR Eval::evaluate(bool white_to_move) const
 {
 	if (white_to_move)
 		return NNUE->evaluate(this->white, this->black);

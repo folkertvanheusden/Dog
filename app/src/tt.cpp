@@ -91,7 +91,7 @@ inline uint64_t fastrange64(uint64_t word, uint64_t p)
 #define fastrange fastrange64
 #endif
 
-std::optional<tt_entry> tt::lookup(const uint64_t hash)
+std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 {
 	uint64_t   index = fastrange(hash, n_entries);
 	tt_entry & cur   = entries[index];
