@@ -885,6 +885,9 @@ void tui()
 				if (fh) {
 					char buffer[128] { };
 					fgets(buffer, sizeof(buffer) - 1, fh);
+					char *lf = strchr(buffer, '\n');
+					if (lf)
+						*lf = 0x00;
 					my_printf("Use \"%s\"?\n", buffer);
 
 					if (is.get() == 'y') {
