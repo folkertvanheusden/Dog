@@ -270,6 +270,7 @@ void searcher(const int i)
 	VALGRIND_HG_DISABLE_CHECKING(&sp.at(i)->cur_move, sizeof(sp.at(i)->cur_move));
 	DRD_IGNORE_VAR(sp.at(i)->cs.data );
 	DRD_IGNORE_VAR(sp.at(i)->cur_move);
+	tti.debug_helper();
 #endif
 
 	int last_fen_version = -1;

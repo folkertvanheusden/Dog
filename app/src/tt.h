@@ -38,6 +38,7 @@ public:
 	tt();
 	~tt();
 
+	void debug_helper();
 	void reset();
 	void set_size(const uint64_t s);
 	int  get_size() const;  // in MB

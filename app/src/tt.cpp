@@ -1,6 +1,9 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+#if !defined(_WIN32) && !defined(ESP32)
+#include <valgrind/helgrind.h>
+#endif
 
 #if defined(ESP32)
 #include <esp_heap_caps.h>
@@ -24,6 +27,13 @@ tt::tt()
 tt::~tt()
 {
 	free(entries);
+}
+
+void tt::debug_helper()
+{
+#if !defined(_WIN32) && !defined(ESP32)
+	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_entry));
+#endif
 }
 
 void tt::allocate()
