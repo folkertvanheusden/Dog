@@ -564,6 +564,7 @@ static void help()
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
+	my_printf("fen      show a fen for the current position\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
@@ -782,6 +783,8 @@ void tui()
 				show_stats(sp.at(0)->cs);
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
+			else if (parts[0] == "fen")
+				my_printf("Fen: %s\n", sp.at(0)->pos.fen().c_str());
 			else if (parts[0] == "cls") {
 				if (t != T_ASCII)
 					my_printf("\x1b[2J");
