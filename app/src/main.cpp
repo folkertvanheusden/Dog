@@ -13,6 +13,10 @@
 #include <signal.h>
 #include <streambuf>
 #include <string>
+#if !defined(_WIN32) && !defined(ESP32)
+#include <valgrind/drd.h>
+#include <valgrind/helgrind.h>
+#endif
 
 #if defined(__ANDROID__)
 #include <android/log.h>
@@ -260,6 +264,13 @@ struct {
 void searcher(const int i)
 {
 	printf("Thread %d started\n", i);
+
+#if !defined(_WIN32) && !defined(ESP32)
+	VALGRIND_HG_DISABLE_CHECKING(&sp.at(i)->cs.data,  sizeof(sp.at(i)->cs.data));
+	VALGRIND_HG_DISABLE_CHECKING(&sp.at(i)->cur_move, sizeof(sp.at(i)->cur_move));
+	DRD_IGNORE_VAR(sp.at(i)->cs.data );
+	DRD_IGNORE_VAR(sp.at(i)->cur_move);
+#endif
 
 	int last_fen_version = -1;
 
