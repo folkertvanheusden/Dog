@@ -59,7 +59,6 @@
 #include "main.h"
 #include "max-ascii.h"
 #include "nnue.h"
-#include "psq.h"
 #include "search.h"
 #include "str.h"
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
