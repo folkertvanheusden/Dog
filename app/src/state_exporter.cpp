@@ -4,6 +4,10 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#if !defined(_WIN32) && !defined(ESP32)
+#include <valgrind/drd.h>
+#include <valgrind/helgrind.h>
+#endif
 
 #include "state_exporter.h"
 
@@ -83,6 +87,13 @@ void state_exporter::clear()
 
 void state_exporter::handler()
 {
+#if !defined(_WIN32) && !defined(ESP32)
+	VALGRIND_HG_DISABLE_CHECKING(&sp->cs.data,  sizeof(sp->cs.data));
+	VALGRIND_HG_DISABLE_CHECKING(&sp->cur_move, sizeof(sp->cur_move));
+	DRD_IGNORE_VAR(sp->cs.data );
+	DRD_IGNORE_VAR(sp->cur_move);
+#endif
+
 	while(!stop) {
 		usleep(1000000 / hz);
 
