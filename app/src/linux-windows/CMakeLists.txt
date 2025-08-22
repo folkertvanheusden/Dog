@@ -82,7 +82,6 @@ set(APP_SOURCES
   ../max.cpp
   ../max-ascii.cpp
   ../nnue.cpp
-  ../psq.cpp
   ../san.cpp
   ../search.cpp
   ../state_exporter.cpp
