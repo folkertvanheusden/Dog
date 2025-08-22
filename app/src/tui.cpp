@@ -724,8 +724,28 @@ void tui()
 
 			if (sp.at(0)->pos.fullmoves() > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
-			if (sp.at(0)->pos.in_check())
-				my_printf("\x1b[4mCHECK\x1b[m!");
+			if (sp.at(0)->pos.in_check()) {
+				my_printf("\x1b[4mCHECK\x1b[m!\n");
+				switch(sp.at(0)->pos.game_state()) {
+					case libchess::Position::GameState::CHECKMATE:
+						my_printf("\x1b[6mMATE\x1b[m\n");
+						break;
+					case libchess::Position::GameState::STALEMATE:
+						my_printf("\x1b[6mSTALEMATE\x1b[m\n");
+						break;
+					case libchess::Position::GameState::THREEFOLD_REPETITION:
+						my_printf("\x1b[6mTHREEFOLD REPETITION\x1b[m\n");
+						break;
+					case libchess::Position::GameState::FIFTY_MOVES:
+						my_printf("\x1b[6mFIFTY MOVES\x1b[m\n");
+						break;
+					case libchess::Position::GameState::IN_PROGRESS:
+						break;
+					default:
+						my_printf("\x1b[5m(unknown game state)\x1b[m\n\n");
+						break;
+				}
+			}
 			int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
 			int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
