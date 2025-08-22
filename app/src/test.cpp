@@ -465,6 +465,7 @@ std::vector<std::pair<libchess::Position, const std::string> > load_epd(const st
 
 		out.push_back({ libchess::Position(fen), move });
 	}
+	fclose(fh);
 
 	return out;
 }

@@ -35,9 +35,10 @@ std::string myformat(const char *const fmt, ...)
         char *buffer = nullptr;
         va_list ap;
         va_start(ap, fmt);
-        if (vasprintf(&buffer, fmt, ap) == -1)
-                return fmt;
+        int rc = vasprintf(&buffer, fmt, ap);
         va_end(ap);
+	if (rc == -1)
+                return fmt;
 
         std::string result = buffer;
         free(buffer);
@@ -226,7 +227,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
 		line += " \x1b[m";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 	else if (t == T_VT100) {
 		std::string line;
@@ -238,7 +239,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 	else {
 		std::string line = "   +";
@@ -248,7 +249,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 
 	if (moves.has_value()) {
