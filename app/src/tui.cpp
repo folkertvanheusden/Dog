@@ -28,6 +28,8 @@
 
 typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
 
+bool do_ping = false;
+
 dog_clock_t clock_type = C_TOTAL;
 
 std::string myformat(const char *const fmt, ...)
@@ -539,6 +541,7 @@ void write_settings()
 	fprintf(fh, "%d\n", total_dog_time);
 	fprintf(fh, "%d\n", do_ponder);
 	fprintf(fh, "%d\n", clock_type);
+	fprintf(fh, "%d\n", do_ping);
 
 	fclose(fh);
 }
@@ -567,6 +570,8 @@ void load_settings()
 	do_ponder      = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
 	clock_type     = dog_clock_t(atoi(buffer));
+	fgets(buffer, sizeof buffer, fh);
+	do_ping        = atoi(buffer);
 
 	fclose(fh);
 }
@@ -589,6 +594,7 @@ static void help()
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
+	my_printf("ping     beep on/off\n");
 	my_printf("redraw   redraw screen\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
@@ -871,6 +877,14 @@ void tui()
 				write_settings();
 				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
 			}
+			else if (parts[0] == "ping") {
+				if (parts.size() == 2)
+					do_ping = parts[1] == "on";
+				else
+					do_ping = !do_ping;
+				write_settings();
+				my_printf("Beeping is now %senabled\n", do_ping ? "":"not ");
+			}
 			else if (parts[0] == "terminal" && parts.size() == 2) {
 				if (parts[1] == "ansi")
 					t = T_ANSI;
@@ -1033,6 +1047,10 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
+
+			if (do_ping)
+				my_printf("\07");
+
 			p_a_k      = true;
 			show_board = true;
 		}
