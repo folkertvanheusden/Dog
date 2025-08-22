@@ -582,6 +582,7 @@ static void help()
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
+	my_printf("redraw   redraw screen\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("fen      show a fen for the current position\n");
@@ -725,38 +726,44 @@ void tui()
 			if (sp.at(0)->pos.fullmoves() > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check()) {
-				my_printf("\x1b[4mCHECK\x1b[m!\n");
+				std::string result = "CHECK";
 				switch(sp.at(0)->pos.game_state()) {
 					case libchess::Position::GameState::CHECKMATE:
-						my_printf("\x1b[6mMATE\x1b[m\n");
+						result = "CHECKMATE";
 						break;
 					case libchess::Position::GameState::STALEMATE:
-						my_printf("\x1b[6mSTALEMATE\x1b[m\n");
+						result = "STALEMATE";
 						break;
 					case libchess::Position::GameState::THREEFOLD_REPETITION:
-						my_printf("\x1b[6mTHREEFOLD REPETITION\x1b[m\n");
+						result = "THREEFOLD REPETITION";
 						break;
 					case libchess::Position::GameState::FIFTY_MOVES:
-						my_printf("\x1b[6mFIFTY MOVES\x1b[m\n");
+						result = "FIFTY MOVES";
 						break;
 					case libchess::Position::GameState::IN_PROGRESS:
 						break;
 					default:
-						my_printf("\x1b[5m(unknown game state)\x1b[m\n\n");
+						result = "(unknown game state)";
 						break;
 				}
+				if (t != T_ASCII)
+					my_printf("\x1b[4m%s\x1b[m!\n", result.c_str());
+				else
+					my_printf("%s!\n", result.c_str());
 			}
 			int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
 			int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 
-			store_cursor_position();
-			my_printf("\x1b[15;69H / \\__");
-			my_printf("\x1b[16;69H(    @\\____");
-			my_printf("\x1b[17;69H /         O");
-			my_printf("\x1b[18;69H/   (_____/");
-			my_printf("\x1b[19;69H/_____/   U");
-			restore_cursor_position();
+			if (t != T_ASCII) {
+				store_cursor_position();
+				my_printf("\x1b[15;69H / \\__");
+				my_printf("\x1b[16;69H(    @\\____");
+				my_printf("\x1b[17;69H /         O");
+				my_printf("\x1b[18;69H/   (_____/");
+				my_printf("\x1b[19;69H/_____/   U");
+				restore_cursor_position();
+			}
 		}
 
 		if (peek_for_ctrl_c())
@@ -796,6 +803,8 @@ void tui()
 				reset_state();
 				show_board = true;
 			}
+			else if (parts[0] == "redraw")
+				show_board = true;
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
 					player = libchess::constants::WHITE;
