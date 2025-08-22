@@ -368,7 +368,7 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 	}
 }
 
-void show_stats(const chess_stats & cs)
+void show_stats(const chess_stats & cs, const bool verbose)
 {
 	my_printf("Nodes processed   : %u\n", cs.data.nodes);
 	my_printf("QS Nodes processed: %u\n", cs.data.qnodes);
@@ -392,6 +392,12 @@ void show_stats(const chess_stats & cs)
 		my_printf("Avg. move cutoff  : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
 		my_printf("Avg.qs move cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+	if (verbose) {
+#if defined(ESP32)
+		my_printf("Minimum free RAM  : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
+		my_printf("Largest free RAM  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
+#endif
+	}
 }
 
 void show_movelist(const libchess::Position & pos)
@@ -843,7 +849,7 @@ void tui()
 			else if (parts[0] == "board")
 				show_board = true;
 			else if (parts[0] == "stats")
-				show_stats(sp.at(0)->cs);
+				show_stats(sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
