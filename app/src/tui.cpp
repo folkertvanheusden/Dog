@@ -673,6 +673,9 @@ void tui()
 		dog_score_sum       = 0;
 		dog_score_n         = 0;
 		expected_move_count = 0;
+
+		for(auto & e: sp)
+			e->nnue_eval->reset();
 	};
 
 	for(;;) {
