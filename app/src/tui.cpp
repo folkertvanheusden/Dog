@@ -45,11 +45,12 @@ std::string myformat(const char *const fmt, ...)
         return result;
 }
 
-bool store_position(const std::string & fen)
+bool store_position(const std::string & fen, const int total_dog_time)
 {
 	FILE *fh = fopen(RECALL_FILE, "w");
 	if (fh) {
-		fprintf(fh, "%s", fen.c_str());
+		fprintf(fh, "%s\n", fen.c_str());
+		fprintf(fh, "%d\n", total_dog_time);
 		fclose(fh);
 
 		return true;
@@ -864,15 +865,20 @@ void tui()
 				if (fh) {
 					char buffer[128] { };
 					fgets(buffer, sizeof(buffer) - 1, fh);
-					fclose(fh);
 					my_printf("Use \"%s\"?\n", buffer);
 
 					if (is.get() == 'y') {
 						reset_state();
+
 						sp.at(0)->pos = libchess::Position(buffer);
+						fgets(buffer, sizeof(buffer) - 1, fh);
+						total_dog_time = atoi(buffer);
+
 						p_a_k      = true;
 						show_board = true;
 					}
+
+					fclose(fh);
 				}
 				else {
 					my_printf("No fen remembered\n");
@@ -907,7 +913,7 @@ void tui()
 					total_human_think += human_think_end - human_think_start;
 					n_human_think++;
 
-					store_position(sp.at(0)->pos.fen());
+					store_position(sp.at(0)->pos.fen(), total_dog_time);
 
 					show_board = true;
 					p_a_k      = true;
@@ -970,7 +976,7 @@ void tui()
 				scores.push_back(best_score);
 			}
 
-			store_position(sp.at(0)->pos.fen());
+			store_position(sp.at(0)->pos.fen(), total_dog_time);
 
 			int16_t score_after = get_score(sp.at(0)->pos, now_playing);
 			dog_score_sum += score_after - score_before;
