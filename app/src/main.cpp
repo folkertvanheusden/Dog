@@ -865,14 +865,12 @@ void main_task()
 		}
 	};
 
-#if defined(ESP32)
+#if !defined(ESP32)
 	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 2, thread_count_handler);
-#else
-	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 65536, thread_count_handler);
-#endif
 	uci_service->register_option(thread_count_option);
 	libchess::UCISpinOption hash_size_option("Hash", tti.get_size(), 1, 1024, hash_size_handler);
 	uci_service->register_option(hash_size_option);
+#endif
 	libchess::UCICheckOption allow_ponder_option("Ponder", allow_ponder, allow_ponder_handler);
 	uci_service->register_option(allow_ponder_option);
 	libchess::UCICheckOption allow_tracing_option("Trace", trace_enabled, allow_tracing_handler);
@@ -939,7 +937,7 @@ void hello() {
 #else
 	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
 #endif
-	my_printf("# Dog is a chess program written by Folkert van Heusden <mail@vanheusden.com>.\n");
+	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
 }
 

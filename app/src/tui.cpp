@@ -814,6 +814,8 @@ void tui()
 				help();
 			else if (parts[0] == "quit")
 				break;
+			else if (parts[0] == "version")
+				hello();
 			else if (parts[0] == "auto")
 				player.reset();
 			else if (parts[0] == "bench") {
