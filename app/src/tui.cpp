@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <cstring>
 #include <ctype.h>
+#if defined(ESP32)
+#include <esp_clk.h>
+#endif
 #include <thread>
 #include <sys/stat.h>
 
@@ -398,6 +401,8 @@ void show_stats(const chess_stats & cs, const bool verbose)
 #if defined(ESP32)
 		my_printf("Minimum free RAM  : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
 		my_printf("Largest free RAM  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
+		my_printf("Thread count      : %u\n", unsigned(sp.size()));
+		my_printf("CPU MHz           : %.3f MHz\n", esp_clk_cpu_freq() / 1000000.);
 #endif
 	}
 }
