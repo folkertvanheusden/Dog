@@ -498,8 +498,8 @@ void show_header(const terminal_t t)
 		return;
 
 	my_printf("\x1b[m\x1b[2J\x1b[1;7m\x1b[1;1H");
-	for(int i=0; i<80; i++)
-		my_printf(" ");
+	for(int i=0; i<8; i++)
+		my_printf("          ");
 	my_printf("\x1b[1;1HHELLO, THIS IS DOG");
 	my_printf("\x1b[m\x1b[2;1H");
 }
