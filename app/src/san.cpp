@@ -46,7 +46,10 @@ std::optional<libchess::Move> SAN_to_move(std::string san_move, const libchess::
 	 * a pawn
 	 */
 	if (isupper(san_move.at(0))) {
-		type     = libchess::PieceType::from(san_move.at(0)).value();
+		auto temp = libchess::PieceType::from(san_move.at(0));
+		if (temp.has_value() == false)
+			return { };
+		type     = temp.value();
 		san_move = san_move.substr(1);
 	}
 
