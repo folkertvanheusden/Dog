@@ -1042,8 +1042,9 @@ void run_bench(const bool long_bench)
 			"r3k2r/ppp2ppp/n7/1N1p4/Bb6/8/PPPP1PPP/RNBQ1RK1 w - - 2 1",     // Double check B and N, no castling rights
 		};
 
-		for(auto & fen: fens) {
-			printf("\33[2K\r%s\r", fen.c_str());
+		for(size_t i=0; i<fens.size(); i++) {
+			auto & fen = fens.at(i);
+			printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			fflush(stdout);
 			// put
 			{
