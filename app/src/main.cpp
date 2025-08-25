@@ -34,9 +34,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#if !defined(ESP32)
 #include "state_exporter.h"
-#endif
 #else
 #include <driver/uart.h>
 #include <driver/gpio.h>
@@ -45,6 +43,7 @@
 #include <esp_spiffs.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
+#include <nvs_flash.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -1204,13 +1203,20 @@ int main(int argc, char *argv[])
 #else
 extern "C" void app_main()
 {
+	esp_err_t ret_nvs = nvs_flash_init();
+	if (ret_nvs == ESP_ERR_NVS_NO_FREE_PAGES || ret_nvs == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		ret_nvs = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(ret_nvs);
+
 	gpio_config_t io_conf { };
-	io_conf.intr_type    = GPIO_INTR_DISABLE;//disable interrupt
-	io_conf.mode         = GPIO_MODE_OUTPUT;//set as output mode
-	io_conf.pin_bit_mask = (1ULL<<LED_INTERNAL) | (1ULL << LED_GREEN) | (1ULL << LED_BLUE) | (1ULL << LED_RED);//bit mask of the pins that you want to set,e.g.GPIO18
-	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;//disable pull-down mode
-	io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;//disable pull-up mode
-	esp_err_t error      = gpio_config(&io_conf);//configure GPIO with the given settings
+	io_conf.intr_type    = GPIO_INTR_DISABLE;  // disable interrupt
+	io_conf.mode         = GPIO_MODE_OUTPUT;  // set as output mode
+	io_conf.pin_bit_mask = (1ULL<<LED_INTERNAL) | (1ULL << LED_GREEN) | (1ULL << LED_BLUE) | (1ULL << LED_RED);  // bit mask of the pins that you want to set,e.g.GPIO18
+	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;  // disable pull-down mode
+	io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;  // disable pull-up mode
+	esp_err_t error      = gpio_config(&io_conf);  // configure GPIO with the given settings
 	if (error != ESP_OK)
 		printf("error configuring outputs\n");
 

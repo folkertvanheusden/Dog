@@ -5,6 +5,10 @@
 #include <ctype.h>
 #if defined(ESP32)
 #include <esp_clk.h>
+#include <esp_chip_info.h>
+#include <esp_http_client.h>
+#include <esp_wifi.h>
+#include <soc/rtc.h>
 #endif
 #include <thread>
 #include <sys/stat.h>
@@ -31,9 +35,110 @@
 
 typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
 
-bool do_ping = false;
-
+bool        do_ping    = false;
 dog_clock_t clock_type = C_TOTAL;
+std::string wifi_ssid;
+std::string wifi_psk;
+
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+EventGroupHandle_t s_wifi_event_group;
+int                s_retry_num        = 0;
+
+void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+	if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+		esp_wifi_connect();
+	else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+		if (s_retry_num < 5) {
+			esp_wifi_connect();
+			s_retry_num++;
+			my_printf("retring to connect to the AP\n");
+		}
+		else {
+			xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+			s_retry_num = 0;
+		}
+	}
+	else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+		my_printf("IP: " IPSTR "\n", IP2STR(&event->ip_info.ip));
+		s_retry_num = 0;
+		xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+	}
+}
+
+void push_pgn(const std::string & pgn)
+{
+	s_wifi_event_group = xEventGroupCreate();
+
+	ESP_ERROR_CHECK(esp_netif_init());
+
+	ESP_ERROR_CHECK(esp_event_loop_create_default());
+	void *p = esp_netif_create_default_wifi_sta();
+
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+	esp_event_handler_instance_t instance_any_id;
+	esp_event_handler_instance_t instance_got_ip;
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+				ESP_EVENT_ANY_ID,
+				&event_handler,
+				nullptr,
+				&instance_any_id));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+				IP_EVENT_STA_GOT_IP,
+				&event_handler,
+				nullptr,
+				&instance_got_ip));
+	wifi_config_t wifi_config { };
+	strcpy((char *)wifi_config.sta.ssid,     wifi_ssid.c_str());
+	strcpy((char *)wifi_config.sta.password, wifi_psk. c_str());
+
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+	ESP_ERROR_CHECK(esp_wifi_start());
+
+	EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+			WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+			pdFALSE,
+			pdFALSE,
+			portMAX_DELAY);
+
+	if (bits & WIFI_CONNECTED_BIT)
+		my_printf("Connected to %s\n", wifi_config.sta.ssid);
+	else
+		my_printf("Connection failed\n");
+
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, instance_got_ip));
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    instance_any_id));
+
+	vEventGroupDelete(s_wifi_event_group);
+	// wifi is setup now
+
+	esp_http_client_config_t http_config = { .url = "https://vanheusden.com/pgn/" };
+	esp_http_client_handle_t client = esp_http_client_init(&http_config);
+
+	// POST
+	esp_http_client_set_method(client, HTTP_METHOD_POST);
+	esp_http_client_set_header(client, "Content-Type", "application/json");
+	esp_http_client_set_post_field(client, pgn.data(), pgn.size());
+	esp_err_t err = esp_http_client_perform(client);
+	if (err == ESP_OK)
+		my_printf("PGN succesfully (%d) submitted\n", esp_http_client_get_status_code(client));
+	else {
+		my_printf("HTTP POST request failed: %s\n", esp_err_to_name(err));
+	}
+	esp_http_client_cleanup(client);
+
+	//
+	my_printf("stop wifi\n");
+	esp_wifi_disconnect();
+	esp_wifi_stop();
+	esp_netif_destroy_default_wifi(p);
+	esp_event_loop_delete_default();
+}
 
 std::string myformat(const char *const fmt, ...)
 {
@@ -590,7 +695,10 @@ static void help()
 	my_printf("clock    set clock type: \"incremental\" or \"total\"\n");
 	my_printf("eval     show current evaluation score\n");
 	my_printf("moves    show valid moves\n");
-#if !defined(ESP32)
+#if defined(ESP32)
+	my_printf("cfgwifi  ssid|password\n");
+	my_printf("submit   send current PGN to server, result is shown\n");
+#else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
 	my_printf("hint     show a hint\n");
@@ -674,6 +782,8 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
+
+	std::string pgn;
 
 	auto reset_state = [&]()
 	{
@@ -823,12 +933,25 @@ void tui()
 				hello();
 			else if (parts[0] == "auto")
 				player.reset();
+			else if (parts[0] == "cfgwifi") {
+				if (parts.size() != 2)
+					my_printf("Usage: cfgwifi ssid|password\n");
+				else {
+					auto parts_wifi = split(parts[1], "|");
+					wifi_ssid = parts_wifi[0];
+					wifi_psk  = parts_wifi[1];
+				}
+			}
+			else if (parts[0] == "submit") {
+				push_pgn(pgn);
+			}
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
 			}
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
+				pgn.clear();
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
