@@ -993,7 +993,17 @@ void tui()
 						pgn += "[White \"?\"]\n";
 						pgn += "[Black \"?\"]\n";
 					}
-					pgn += "[Result \"1/2-1/2\"]\n";
+					std::string result = "?";
+					auto game_state = sp.at(0)->pos.game_state();
+					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
+						if (game_state != libchess::Position::GameState::CHECKMATE)
+							result = "1/2-1/2";
+						else if ((moves_played.size() & 1) == 0)  // black played last
+							result = "0-1";
+						else
+							result = "1-0";
+					}
+					pgn += "[Result \"" + %s + "\"]\n";
 					pgn += "\n";
 
 					auto current_color = libchess::constants::WHITE;
@@ -1014,16 +1024,7 @@ void tui()
 						}
 					}
 
-					auto game_state = sp.at(0)->pos.game_state();
-					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
-						if (game_state != libchess::Position::GameState::CHECKMATE)
-							pgn += "1/2-1/2";
-						else if ((moves_played.size() & 1) == 0)  // black played last
-							pgn += "0-1";
-						else
-							pgn += "1-0";
-					}
-					pgn += "\n\n";
+					pgn += result + "\n\n";
 
 					my_printf("\n");
 					my_printf("\n");
