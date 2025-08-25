@@ -1003,7 +1003,7 @@ void tui()
 						else
 							result = "1-0";
 					}
-					pgn += "[Result \"" + %s + "\"]\n";
+					pgn += "[Result \"" + result + "\"]\n";
 					pgn += "\n";
 
 					auto current_color = libchess::constants::WHITE;
