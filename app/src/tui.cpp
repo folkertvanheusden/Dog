@@ -68,7 +68,36 @@ void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, voi
 	}
 }
 
-void push_pgn(const std::string & pgn)
+esp_err_t _http_event_handler(esp_http_client_event_handle_t evt)
+{
+	switch (evt->event_id)
+	{
+		case HTTP_EVENT_ON_DATA:
+			my_printf("HTTP_EVENT_ON_DATA, len=%d\n", evt->data_len);
+			memcpy(evt->user_data, evt->data, std::min(evt->data_len, 16));
+			break;
+	}
+
+	return ESP_OK;
+}
+
+std::string myformat(const char *const fmt, ...)
+{
+        char *buffer = nullptr;
+        va_list ap;
+        va_start(ap, fmt);
+        int rc = vasprintf(&buffer, fmt, ap);
+        va_end(ap);
+	if (rc == -1)
+                return fmt;
+
+        std::string result = buffer;
+        free(buffer);
+
+        return result;
+}
+
+std::string push_pgn(const std::string & pgn)
 {
 	s_wifi_event_group = xEventGroupCreate();
 
@@ -117,7 +146,12 @@ void push_pgn(const std::string & pgn)
 	vEventGroupDelete(s_wifi_event_group);
 	// wifi is setup now
 
-	esp_http_client_config_t http_config = { .url = "https://vanheusden.com/pgn/" };
+	char recv_buffer[16] { };
+	esp_http_client_config_t http_config = {
+		.url = "https://vanheusden.com/pgn/",
+		.event_handler = _http_event_handler,
+		.user_data     = recv_buffer,
+	};
 	esp_http_client_handle_t client = esp_http_client_init(&http_config);
 
 	// POST
@@ -138,22 +172,11 @@ void push_pgn(const std::string & pgn)
 	esp_wifi_stop();
 	esp_netif_destroy_default_wifi(p);
 	esp_event_loop_delete_default();
-}
 
-std::string myformat(const char *const fmt, ...)
-{
-        char *buffer = nullptr;
-        va_list ap;
-        va_start(ap, fmt);
-        int rc = vasprintf(&buffer, fmt, ap);
-        va_end(ap);
-	if (rc == -1)
-                return fmt;
+	if (strncmp(recv_buffer, "OK:", 3) == 0)
+		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
 
-        std::string result = buffer;
-        free(buffer);
-
-        return result;
+	return "";
 }
 
 bool store_position(const std::string & fen, const int total_dog_time)
@@ -652,6 +675,8 @@ void write_settings()
 	fprintf(fh, "%d\n", do_ponder);
 	fprintf(fh, "%d\n", clock_type);
 	fprintf(fh, "%d\n", do_ping);
+	fprintf(fh, "%s\n", wifi_ssid.c_str());
+	fprintf(fh, "%s\n", wifi_psk .c_str());
 
 	fclose(fh);
 }
@@ -682,6 +707,10 @@ void load_settings()
 	clock_type     = dog_clock_t(atoi(buffer));
 	fgets(buffer, sizeof buffer, fh);
 	do_ping        = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	wifi_ssid      = buffer;
+	fgets(buffer, sizeof buffer, fh);
+	wifi_psk       = buffer;
 
 	fclose(fh);
 }
@@ -782,8 +811,6 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
-
-	std::string pgn;
 
 	auto reset_state = [&]()
 	{
@@ -940,10 +967,73 @@ void tui()
 					auto parts_wifi = split(parts[1], "|");
 					wifi_ssid = parts_wifi[0];
 					wifi_psk  = parts_wifi[1];
+					write_settings();
 				}
 			}
 			else if (parts[0] == "submit") {
-				push_pgn(pgn);
+				if (moves_played.empty())
+					my_printf("No moves played yet\n");
+				else {
+					std::string pgn = "[Event \"Computer chess event\"]\n"
+							  "[Site \"-\"]\n"
+							  "[Date \"-\"]\n"
+							  "[Round \"-\"]\n";
+
+					if (player.has_value()) {
+						if (player.value() == libchess::constants::WHITE) {
+							pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+							pgn += "[Black \"?\"]\n";
+						}
+						else {
+							pgn += "[White \"?\"]\n";
+							pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+						}
+					}
+					else {
+						pgn += "[White \"?\"]\n";
+						pgn += "[Black \"?\"]\n";
+					}
+					pgn += "[Result \"1/2-1/2\"]\n";
+					pgn += "\n";
+
+					auto current_color = libchess::constants::WHITE;
+					int  move_nr       = 0;
+					for(auto & move: moves_played) {
+						if (current_color == libchess::constants::WHITE) {
+							move_nr++;
+							pgn += myformat("%d. %s ", move_nr, move.to_str().c_str());
+							current_color = libchess::constants::BLACK;
+						}
+						else {
+							pgn += move.to_str();
+							if ((move_nr % 10) == 0)
+								pgn += "\n";
+							else
+								pgn += " ";
+							current_color = libchess::constants::WHITE;
+						}
+					}
+
+					auto game_state = sp.at(0)->pos.game_state();
+					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
+						if (game_state != libchess::Position::GameState::CHECKMATE)
+							pgn += "1/2-1/2";
+						else if ((moves_played.size() & 1) == 0)  // black played last
+							pgn += "0-1";
+						else
+							pgn += "1-0";
+					}
+					pgn += "\n\n";
+
+					my_printf("\n");
+					my_printf("\n");
+					const std::string result_url = push_pgn(pgn);
+					if (result_url.empty())
+						my_printf(" > Submit failed!\n");
+					else
+						my_printf("PGN can be found at: %s\n", result_url.c_str());
+					my_printf("\n");
+				}
 			}
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
@@ -951,7 +1041,6 @@ void tui()
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
-				pgn.clear();
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
