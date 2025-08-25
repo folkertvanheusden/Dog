@@ -823,6 +823,82 @@ void tui()
 				hello();
 			else if (parts[0] == "auto")
 				player.reset();
+			else if (parts[0] == "cfgwifi") {
+				if (parts.size() != 2)
+					my_printf("Usage: cfgwifi ssid|password\n");
+				else {
+					auto parts_wifi = split(parts[1], "|");
+					wifi_ssid = parts_wifi[0];
+					wifi_psk  = parts_wifi[1];
+					write_settings();
+				}
+			}
+			else if (parts[0] == "submit") {
+				if (moves_played.empty())
+					my_printf("No moves played yet\n");
+				else {
+					std::string pgn = "[Event \"Computer chess event\"]\n"
+							  "[Site \"-\"]\n"
+							  "[Date \"-\"]\n"
+							  "[Round \"-\"]\n";
+
+					if (player.has_value()) {
+						if (player.value() == libchess::constants::WHITE) {
+							pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+							pgn += "[Black \"?\"]\n";
+						}
+						else {
+							pgn += "[White \"?\"]\n";
+							pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+						}
+					}
+					else {
+						pgn += "[White \"?\"]\n";
+						pgn += "[Black \"?\"]\n";
+					}
+					std::string result = "?";
+					auto game_state = sp.at(0)->pos.game_state();
+					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
+						if (game_state != libchess::Position::GameState::CHECKMATE)
+							result = "1/2-1/2";
+						else if ((moves_played.size() & 1) == 0)  // black played last
+							result = "0-1";
+						else
+							result = "1-0";
+					}
+					pgn += "[Result \"" + %s + "\"]\n";
+					pgn += "\n";
+
+					auto current_color = libchess::constants::WHITE;
+					int  move_nr       = 0;
+					for(auto & move: moves_played) {
+						if (current_color == libchess::constants::WHITE) {
+							move_nr++;
+							pgn += myformat("%d. %s ", move_nr, move.to_str().c_str());
+							current_color = libchess::constants::BLACK;
+						}
+						else {
+							pgn += move.to_str();
+							if ((move_nr % 10) == 0)
+								pgn += "\n";
+							else
+								pgn += " ";
+							current_color = libchess::constants::WHITE;
+						}
+					}
+
+					pgn += result + "\n\n";
+
+					my_printf("\n");
+					my_printf("\n");
+					const std::string result_url = push_pgn(pgn);
+					if (result_url.empty())
+						my_printf(" > Submit failed!\n");
+					else
+						my_printf("PGN can be found at: %s\n", result_url.c_str());
+					my_printf("\n");
+				}
+			}
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
 			}
