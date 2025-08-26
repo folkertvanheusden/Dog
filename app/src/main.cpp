@@ -36,6 +36,7 @@
 
 #include "state_exporter.h"
 #else
+#include <fcntl.h>
 #include <driver/uart.h>
 #include <driver/gpio.h>
 #include <esp32/rom/uart.h>
@@ -1266,6 +1267,12 @@ extern "C" void app_main()
 			my_printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
 		my_printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
+
+	setvbuf(stdin,  nullptr, _IONBF, 0);
+	setvbuf(stdout, nullptr, _IONBF, 0);
+	// Enable non-blocking mode on stdin and stdout
+	fcntl(fileno(stdout), F_SETFL, 0);
+	fcntl(fileno(stdin),  F_SETFL, 0);
 
 	hello();
 
