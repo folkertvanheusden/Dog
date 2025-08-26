@@ -970,7 +970,7 @@ void tui()
 					write_settings();
 				}
 			}
-			else if (parts[0] == "submit") {
+			else if (parts[0] == "submit" || parts[0] == "publish") {
 				if (moves_played.empty())
 					my_printf("No moves played yet\n");
 				else {
