@@ -971,6 +971,8 @@ void tui()
 			else if (parts[0] == "submit" || parts[0] == "publish") {
 				if (moves_played.empty())
 					my_printf("No moves played yet\n");
+				else if (wifi_ssid.empty())
+					my_printf("WiFi is not configured yet (see cfgwifi)\n");
 				else {
 					std::string pgn = "[Event \"Computer chess event\"]\n"
 							  "[Site \"-\"]\n"
