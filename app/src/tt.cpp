@@ -47,9 +47,16 @@ void tt::allocate()
 	}
 	else {
 		printf("No PSRAM\n");
-		auto n_bytes = n_entries * sizeof(tt_entry);
-		printf("Using %zu bytes of RAM\n", size_t(n_bytes));
-		entries = reinterpret_cast<tt_entry *>(malloc(n_bytes));
+		for(;;) {
+			auto n_bytes = n_entries * sizeof(tt_entry);
+			printf("Using %zu bytes of RAM\n", size_t(n_bytes));
+			entries = reinterpret_cast<tt_entry *>(malloc(n_bytes));
+			if (entries)
+				break;
+			n_entries = std::max(uint64_t(0), n_entries - 1024 / sizeof(tt_entry));
+			if (n_entries == 0)
+				break;
+		}
 	}
 #else
 	entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));
@@ -58,7 +65,7 @@ void tt::allocate()
 
 void tt::set_size(const uint64_t s)
 {
-	n_entries = s / sizeof(tt_entry);
+	n_entries = std::max(uint64_t(2), s / sizeof(tt_entry));
 	free(entries);
 	allocate();
 	reset();
@@ -67,7 +74,7 @@ void tt::set_size(const uint64_t s)
 
 int tt::get_size() const
 {
-	return (n_entries * sizeof(tt_entry) + 1024 * 1024 - 1) / (1024 * 1024);
+	return n_entries * sizeof(tt_entry);
 }
 
 void tt::reset()

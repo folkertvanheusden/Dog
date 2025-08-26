@@ -99,6 +99,9 @@ std::string myformat(const char *const fmt, ...)
 
 std::string push_pgn(const std::string & pgn)
 {
+	uint64_t org_tt_size = tti.get_size();
+	tti.set_size(0);
+
 	my_printf("free heap size: %d, min_free_heap_size: %d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
 	my_printf("Connecting to SSID %s...\n", wifi_ssid.c_str());
 
@@ -177,6 +180,8 @@ std::string push_pgn(const std::string & pgn)
 	esp_wifi_stop();
 	esp_netif_destroy_default_wifi(p);
 	esp_event_loop_delete_default();
+
+	tti.set_size(org_tt_size);
 
 	if (strncmp(recv_buffer, "OK:", 3) == 0)
 		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
