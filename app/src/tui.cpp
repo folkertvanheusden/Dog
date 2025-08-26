@@ -41,18 +41,19 @@ std::string wifi_psk;
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
-EventGroupHandle_t s_wifi_event_group;
-int                s_retry_num        = 0;
+EventGroupHandle_t  s_wifi_event_group;
+int                 s_retry_num        = 0;
+constexpr const int max_retry          = 15;
 
 void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
 	if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
 		esp_wifi_connect();
 	else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-		if (s_retry_num < 5) {
+		if (s_retry_num < max_retry) {
 			esp_wifi_connect();
 			s_retry_num++;
-			my_printf("retring to connect to the AP\n");
+			my_printf("retring to connect to the AP (%d)\n", max_retry - s_retry_num);
 		}
 		else {
 			xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
@@ -98,12 +99,16 @@ std::string myformat(const char *const fmt, ...)
 
 std::string push_pgn(const std::string & pgn)
 {
+	my_printf("Connecting to SSID %s...\n", wifi_ssid.c_str());
+
 	s_wifi_event_group = xEventGroupCreate();
 
 	ESP_ERROR_CHECK(esp_netif_init());
 
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
-	void *p = esp_netif_create_default_wifi_sta();
+	esp_netif_t *p = esp_netif_create_default_wifi_sta();
+
+	esp_netif_set_hostname(p, "Dog " DOG_VERSION);
 
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -529,6 +534,25 @@ void show_stats(const chess_stats & cs, const bool verbose)
 		my_printf("Minimum free RAM  : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
 		my_printf("Largest free RAM  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
 		my_printf("Thread count      : %u\n", unsigned(sp.size()));
+		rtc_cpu_freq_config_t conf;
+		rtc_clk_cpu_freq_get_config(&conf);
+		my_printf("CPU MHz           : %u MHz\n", unsigned(conf.freq_mhz));
+		my_printf("Model             : ");
+		esp_chip_info_t chip_info;
+		esp_chip_info(&chip_info);
+		switch (chip_info.model) {
+			case CHIP_ESP32S3:  my_printf("ESP32-S3"); break;
+			case CHIP_ESP32C3:  my_printf("ESP32-C3"); break;
+			case CHIP_ESP32C2:  my_printf("ESP32-C2"); break;
+			case CHIP_ESP32C6:  my_printf("ESP32-C6"); break;
+			case CHIP_ESP32H2:  my_printf("ESP32-H2"); break;
+			case CHIP_ESP32P4:  my_printf("ESP32-P4"); break;
+			case CHIP_ESP32C5:  my_printf("ESP32-C5"); break;
+			case CHIP_ESP32C61: my_printf("ESP32-C61"); break;
+					    //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
+			default: my_printf("UNKNOWN"); break;
+		}
+		my_printf("\n");
 #endif
 	}
 }
