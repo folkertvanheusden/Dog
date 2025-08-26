@@ -39,6 +39,7 @@
 #include <driver/uart.h>
 #include <driver/gpio.h>
 #include <esp32/rom/uart.h>
+#include <esp_chip_info.h>
 #include <esp_err.h>
 #include <esp_spiffs.h>
 #include <esp_task_wdt.h>
@@ -1225,9 +1226,8 @@ extern "C" void app_main()
 	gpio_set_level(LED_BLUE,     0);
 	gpio_set_level(LED_RED,      0);
 
-	// esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
-	// esp_task_wdt_init(&wdtcfg);
-	esp_task_wdt_init(30, false);
+	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
+	esp_task_wdt_init(&wdtcfg);
 
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
 	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
