@@ -99,6 +99,7 @@ std::string myformat(const char *const fmt, ...)
 
 std::string push_pgn(const std::string & pgn)
 {
+	my_printf("free heap size: %d, min_free_heap_size: %d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
 	my_printf("Connecting to SSID %s...\n", wifi_ssid.c_str());
 
 	s_wifi_event_group = xEventGroupCreate();
@@ -730,8 +731,14 @@ void load_settings()
 	fgets(buffer, sizeof buffer, fh);
 	do_ping        = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
+	char *lf = strchr(buffer, '\n');
+	if (lf)
+		*lf = 0x00;
 	wifi_ssid      = buffer;
 	fgets(buffer, sizeof buffer, fh);
+	lf = strchr(buffer, '\n');
+	if (lf)
+		*lf = 0x00;
 	wifi_psk       = buffer;
 
 	fclose(fh);
