@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cinttypes>
 #include <cstdarg>
 #include <cstdio>
@@ -415,8 +416,10 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 
 	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
 		my_printf("Game is finished\n");
-	else
+	else {
 		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
+		my_printf("%s\n", p.fen().c_str());
+	}
 }
 
 // determine how many pieces cannot move because they are protecting an other piece
@@ -856,12 +859,12 @@ void tui()
 		human_think_start   = 0;
 		total_human_think   = 0;
 		n_human_think       = 0;
-		initial_think_time  = 0;
 		human_score_sum     = 0;
 		human_score_n       = 0;
 		dog_score_sum       = 0;
 		dog_score_n         = 0;
 		expected_move_count = 0;
+		player              = libchess::constants::WHITE;
 
 		for(auto & e: sp)
 			e->nnue_eval->reset();
@@ -1250,7 +1253,8 @@ void tui()
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
 			auto move = pb->query(sp.at(0)->pos);
-			if (move.has_value()) {
+			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
+			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
@@ -1306,7 +1310,7 @@ void tui()
 #endif
 
 			if (do_ping)
-				my_printf("\07");
+				my_printf("\07");  // bell
 
 			p_a_k      = true;
 			show_board = true;
