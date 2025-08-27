@@ -109,7 +109,7 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
-	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && (sq_to.rank() == 3 || sq_to.rank() == 4)) {
+	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && ((sq_to.rank() == 3 && sq_from.rank() == 1) || (sq_to.rank() == 4 && sq_from.rank() == 6))) {
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
 	else {
