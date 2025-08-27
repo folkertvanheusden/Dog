@@ -1270,7 +1270,7 @@ extern "C" void app_main()
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
 #if defined(ESP32_S3_XIAO)  // assuming seed xiao
-//	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)); <--- is UART0(?)
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 1, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));  // 43,44 is UART0(?), 1/2 = A0,A1
 #elif defined(ESP32_S3_QTPY)  // assuming adafruit qtpy
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 5, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 #else  // assuming wemos32

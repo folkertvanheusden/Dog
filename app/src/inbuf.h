@@ -12,7 +12,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
-const uart_port_t uart_num = UART_NUM_2;
+const uart_port_t uart_num = UART_NUM_1;
 #endif
 
 
