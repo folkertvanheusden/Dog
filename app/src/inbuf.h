@@ -66,7 +66,7 @@ protected:
 			if (c >= 0)
 				break;
 
-#if defined(ESP32)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
 			size_t length = 0;
 			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
 			if (length) {
@@ -79,7 +79,6 @@ protected:
 					break;
 				}
 			}
-
 			vTaskDelay(1);
 #endif
 		}

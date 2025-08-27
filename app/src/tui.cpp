@@ -200,7 +200,7 @@ bool store_position(const std::string & fen, const int total_dog_time)
 
 void to_uart(const char *const buffer, int buffer_len)
 {
-#if defined(ESP32)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
         ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
         uart_write_bytes(uart_num, buffer, buffer_len);
 	if (buffer[buffer_len - 1] == '\n') {
@@ -212,7 +212,7 @@ void to_uart(const char *const buffer, int buffer_len)
 
 bool peek_for_ctrl_c()
 {
-#if defined(ESP32)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
 	char   buffer = 0;
 	size_t length = 0;
 	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));

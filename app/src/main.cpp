@@ -1210,7 +1210,7 @@ int main(int argc, char *argv[])
 
 static void init_uart()
 {
-    esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
+    esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
     esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
 
     usb_serial_jtag_driver_config_t usb_serial_jtag_config;
@@ -1253,13 +1253,12 @@ extern "C" void app_main()
 	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
 	esp_task_wdt_init(&wdtcfg);
 
-	init_uart();
 #if 0
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
 	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
 	esp_timer_create(&led_red_timer_pars,   &led_red_timer  );
 #endif
-
+#if 1
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
 		.baud_rate  = 38400,
@@ -1270,15 +1269,19 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
-#if defined(ESP32_S3)  // assuming seed xiao
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+#if defined(ESP32_S3_XIAO)  // assuming seed xiao
+//	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)); <--- is UART0(?)
+#elif defined(ESP32_S3_QTPY)  // assuming adafruit qtpy
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 5, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 #else  // assuming wemos32
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
 #endif
-	constexpr int uart_buffer_size = 1024 * 2;
+	constexpr const int uart_buffer_size = 1024;
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
+#endif
+	init_uart();
 
 	// flash filesystem
 	esp_vfs_spiffs_conf_t conf = {
