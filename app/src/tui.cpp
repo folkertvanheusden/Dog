@@ -39,6 +39,7 @@ dog_clock_t clock_type = C_TOTAL;
 std::string wifi_ssid;
 std::string wifi_psk;
 
+#if defined(ESP32)
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
 EventGroupHandle_t  s_wifi_event_group;
@@ -75,6 +76,7 @@ esp_err_t _http_event_handler(esp_http_client_event_handle_t evt)
 
 	return ESP_OK;
 }
+#endif
 
 std::string myformat(const char *const fmt, ...)
 {
@@ -92,6 +94,7 @@ std::string myformat(const char *const fmt, ...)
         return result;
 }
 
+#if defined(ESP32)
 std::string push_pgn(const std::string & pgn)
 {
 	uint64_t org_tt_size = tti.get_size();
@@ -183,6 +186,7 @@ std::string push_pgn(const std::string & pgn)
 
 	return "";
 }
+#endif
 
 bool store_position(const std::string & fen, const int total_dog_time)
 {
@@ -989,6 +993,7 @@ void tui()
 				hello();
 			else if (parts[0] == "auto")
 				player.reset();
+#if defined(ESP32)
 			else if (parts[0] == "cfgwifi") {
 				if (parts.size() != 2)
 					my_printf("Usage: cfgwifi ssid|password\n");
@@ -1067,6 +1072,7 @@ void tui()
 					my_printf("\n");
 				}
 			}
+#endif
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
 			}

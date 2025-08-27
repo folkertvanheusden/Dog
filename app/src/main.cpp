@@ -918,7 +918,7 @@ void main_task()
 			break;
 		}
 		else {
-			my_printf("? %s\n", line.c_str());
+//			my_printf("? %s\n", line.c_str());
 		}
 	}
 
