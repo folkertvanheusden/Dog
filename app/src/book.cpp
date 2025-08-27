@@ -71,6 +71,24 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 	auto sq_to   = libchess::Square::from(libchess::File(move & 7       ), libchess::Rank(to_y)           ).value();
 	auto sq_from = libchess::Square::from(libchess::File((move >> 6) & 7), libchess::Rank((move >> 9) & 7)).value();
 
+	libchess::Move::Type type { libchess::Move::Type::NONE };
+
+	if (sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1) &&
+			p.piece_type_on(sq_from).value() == libchess::constants::KING &&
+			p.piece_type_on(sq_to).value() == libchess::constants::ROOK){
+		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H1 ? libchess::constants::G1 : libchess::constants::C1;
+	}
+	else if (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8) &&
+			p.piece_type_on(sq_from).value() == libchess::constants::KING &&
+			p.piece_type_on(sq_to).value() == libchess::constants::ROOK) {
+		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H8 ? libchess::constants::G8 : libchess::constants::C8;
+	}
+
+	if (type != libchess::Move::Type::NONE)  // castling
+		return libchess::Move(sq_from, sq_to, type);
+
 	assert(p.piece_on(sq_from).has_value());
 	bool is_capture = p.piece_on(sq_to).has_value();
 
@@ -84,8 +102,6 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 		promote_to = promotions[promotion_type];
 	}
 
-	libchess::Move::Type type { libchess::Move::Type::NONE };
-
 	if (promotion_type) {
 		type = is_capture ? libchess::Move::Type::CAPTURE_PROMOTION : libchess::Move::Type::PROMOTION;
 		return libchess::Move(sq_from, sq_to, promote_to, type);
@@ -93,14 +109,6 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
-	else if (sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) {
-		type = libchess::Move::Type::CASTLING;
-		sq_to = sq_to == libchess::constants::H1 ? libchess::constants::G1 : libchess::constants::C1;
-	}
-	else if (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8)) {
-		type = libchess::Move::Type::CASTLING;
-		sq_to = sq_to == libchess::constants::H8 ? libchess::constants::G8 : libchess::constants::C8;
-	}
 	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && (sq_to.rank() == 3 || sq_to.rank() == 4)) {
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
