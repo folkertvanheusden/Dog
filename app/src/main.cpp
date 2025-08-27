@@ -1046,7 +1046,7 @@ void run_bench(const bool long_bench)
 
 		for(size_t i=0; i<fens.size(); i++) {
 			auto & fen = fens.at(i);
-			printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+			my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			fflush(stdout);
 			// put
 			{
@@ -1103,10 +1103,10 @@ void run_bench(const bool long_bench)
 	uint64_t node_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 	uint64_t t_diff     = end_ts - start_ts;
 
-	printf("===========================\n");
-	printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
-	printf("Nodes searched  : %" PRIu64 "\n", node_count);
-	printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+	my_printf("===========================\n");
+	my_printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+	my_printf("Nodes searched  : %" PRIu64 "\n", node_count);
+	my_printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
