@@ -70,13 +70,8 @@ void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, voi
 
 esp_err_t _http_event_handler(esp_http_client_event_handle_t evt)
 {
-	switch (evt->event_id)
-	{
-		case HTTP_EVENT_ON_DATA:
-			my_printf("HTTP_EVENT_ON_DATA, len=%d\n", evt->data_len);
-			memcpy(evt->user_data, evt->data, std::min(evt->data_len, 16));
-			break;
-	}
+	if (evt->event_id == HTTP_EVENT_ON_DATA)
+		memcpy(evt->user_data, evt->data, std::min(evt->data_len, 16));
 
 	return ESP_OK;
 }
@@ -699,7 +694,7 @@ void write_settings()
 
 	fprintf(fh, "%d\n", t);
 	fprintf(fh, "%d\n", default_trace);
-	fprintf(fh, "%d\n", total_dog_time);
+	fprintf(fh, "%lu\n", total_dog_time);
 	fprintf(fh, "%d\n", do_ponder);
 	fprintf(fh, "%d\n", clock_type);
 	fprintf(fh, "%d\n", do_ping);
@@ -1092,7 +1087,7 @@ void tui()
 					initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
 					write_settings();
 				}
-				catch(std::invalid_argument ia) {
+				catch(std::invalid_argument & ia) {
 					my_printf("Please enter a value for time, not something else.\n");
 					my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
 				}

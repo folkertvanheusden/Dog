@@ -13,21 +13,21 @@ struct Network {
 	Accumulator output_weights[2];
 	std::int16_t output_bias;
 
-	int IRAM_ATTR evaluate(const Accumulator& us, const Accumulator& them) const {
+	int evaluate(const Accumulator& us, const Accumulator& them) const {
 		static_assert(sizeof(Network) == 197440);
 
 		int output = 0;
 
 		// side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(us.vals[i], std::int16_t{0}, QA);
+			std::int16_t input  = std::clamp(us.vals[i], std::int16_t{0}, QA);
 			std::int16_t weight = input * this->output_weights[0].vals[i];
 			output += int{input} * int{weight};
 		}
 
 		// not side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(them.vals[i], std::int16_t{0}, QA);
+			std::int16_t input  = std::clamp(them.vals[i], std::int16_t{0}, QA);
 			std::int16_t weight = input * this->output_weights[1].vals[i];
 			output += int{input} * int{weight};
 		}

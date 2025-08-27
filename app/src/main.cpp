@@ -39,7 +39,6 @@
 #include <fcntl.h>
 #include <driver/uart.h>
 #include <driver/gpio.h>
-#include <esp32/rom/uart.h>
 #include <esp_chip_info.h>
 #include <esp_err.h>
 #include <esp_spiffs.h>
@@ -164,10 +163,10 @@ void think_timeout(void *arg)
 #define LED_BLUE     0
 #define LED_RED      0
 #else
-#define LED_INTERNAL (GPIO_NUM_2 )
-#define LED_GREEN    (GPIO_NUM_27)
-#define LED_BLUE     (GPIO_NUM_25)
-#define LED_RED      (GPIO_NUM_22)
+#define LED_INTERNAL gpio_num_t(2 )
+#define LED_GREEN    gpio_num_t(27)
+#define LED_BLUE     gpio_num_t(25)
+#define LED_RED      gpio_num_t(22)
 
 QueueHandle_t uart_queue;
 
@@ -180,11 +179,10 @@ esp_timer_create_args_t think_timeout_pars = {
 void blink_led(void *arg)
 {
 	led_t *l = reinterpret_cast<led_t *>(arg);
-	gpio_set_level(l->pin_nr, l->state);
-// doesn't work with VT510? --> too much data via serial connection
-//	if (l->screen_x != -1 && t == T_VT100)
-//		my_printf("\x1b7\x1b[1;%dH\x1b[1m%d\x1b8", l->screen_x, l->state);
-	l->state = !l->state;
+	if (l->pin_nr) {
+		gpio_set_level(l->pin_nr, l->state);
+		l->state = !l->state;
+	}
 }
 
 void start_blink(esp_timer_handle_t handle)
@@ -509,7 +507,7 @@ void vTaskGetRunTimeStats()
 
 void show_esp32_info()
 {
-	printf("# heap free: %u, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+	printf("# heap free: %lu, max block size: %u\n", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 	printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	vTaskGetRunTimeStats();
@@ -1222,10 +1220,12 @@ extern "C" void app_main()
 	if (error != ESP_OK)
 		printf("error configuring outputs\n");
 
+#if 0
 	gpio_set_level(LED_INTERNAL, 1);
 	gpio_set_level(LED_GREEN,    0);
 	gpio_set_level(LED_BLUE,     0);
 	gpio_set_level(LED_RED,      0);
+#endif
 
 	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
 	esp_task_wdt_init(&wdtcfg);
@@ -1244,7 +1244,11 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
+#if defined(ESP32_S3)  // assuming seed xiao
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, -1, -1));
+#else  // assuming wemos32
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
+#endif
 	constexpr int uart_buffer_size = 1024 * 2;
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
@@ -1282,7 +1286,9 @@ extern "C" void app_main()
 
 	allow_ponder = true;
 
+#if 0
 	gpio_set_level(LED_INTERNAL, 0);
+#endif
 
 	main_task();
 
