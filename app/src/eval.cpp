@@ -55,6 +55,8 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 
 	bool is_white     = pos.side_to_move() == constants::WHITE;
 
+	assert(move.type() != Move::Type::ENPASSANT || (is_white && move.to_square().rank() == 5) || (!is_white && move.to_square().rank() == 2));
+
 	switch(move.type()) {
 		case Move::Type::NORMAL:
 		case Move::Type::DOUBLE_PUSH:
@@ -133,6 +135,20 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 	}
 
 	pos.make_move(move);
+
+#if !defined(NDEBUG)
+	if (pos.enpassant_square().has_value()) {
+		auto file = pos.enpassant_square().value().file();
+		if (is_white) {
+			assert(pos.enpassant_square().value().rank() == 2);
+			assert(pos.piece_on(libchess::Square::from(file, libchess::Rank(1)).value()).has_value() == false);
+		}
+		else {
+			assert(pos.enpassant_square().value().rank() == 5);
+			assert(pos.piece_on(libchess::Square::from(file, libchess::Rank(6)).value()).has_value() == false);
+		}
+	}
+#endif
 
 	return actions;
 }
