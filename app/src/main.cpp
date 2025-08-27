@@ -917,6 +917,9 @@ void main_task()
 		else if (line == "quit") {
 			break;
 		}
+		else {
+			my_printf("? %s\n", line.c_str());
+		}
 	}
 
 	delete_threads();
@@ -1201,6 +1204,26 @@ int main(int argc, char *argv[])
 	return 0;
 }
 #else
+#include <driver/usb_serial_jtag.h>
+#include <esp_vfs_usb_serial_jtag.h>
+#include <esp_vfs_dev.h>
+
+static void init_uart()
+{
+    esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
+    esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
+
+    usb_serial_jtag_driver_config_t usb_serial_jtag_config;
+    usb_serial_jtag_config.rx_buffer_size = 1024;
+    usb_serial_jtag_config.tx_buffer_size = 1024;
+
+    esp_err_t ret = usb_serial_jtag_driver_install(&usb_serial_jtag_config);
+    if (ret != ESP_OK)
+            printf("usb_serial_jtag_driver_install failed\n");
+
+    esp_vfs_usb_serial_jtag_use_driver();
+}
+
 extern "C" void app_main()
 {
 	esp_err_t ret_nvs = nvs_flash_init();
@@ -1230,22 +1253,25 @@ extern "C" void app_main()
 	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
 	esp_task_wdt_init(&wdtcfg);
 
+	init_uart();
+#if 0
 	esp_timer_create(&led_green_timer_pars, &led_green_timer);
 	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
 	esp_timer_create(&led_red_timer_pars,   &led_red_timer  );
+#endif
 
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
-		.baud_rate = 19200,
-		.data_bits = UART_DATA_8_BITS,
-		.parity = UART_PARITY_DISABLE,
-		.stop_bits = UART_STOP_BITS_1,
-		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.baud_rate  = 38400,
+		.data_bits  = UART_DATA_8_BITS,
+		.parity     = UART_PARITY_DISABLE,
+		.stop_bits  = UART_STOP_BITS_1,
+		.flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
 #if defined(ESP32_S3)  // assuming seed xiao
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, -1, -1));
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 #else  // assuming wemos32
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
 #endif
