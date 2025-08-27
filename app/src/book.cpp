@@ -93,9 +93,13 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
-	else if ((sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) ||
-		 (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8))) {
+	else if (sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) {
 		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H1 ? libchess::constants::G1 : libchess::constants::C1;
+	}
+	else if (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8)) {
+		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H8 ? libchess::constants::G8 : libchess::constants::C8;
 	}
 	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && (sq_to.rank() == 3 || sq_to.rank() == 4)) {
 		type = libchess::Move::Type::DOUBLE_PUSH;
