@@ -918,9 +918,17 @@ void tui()
 				}
 				else {
 					my_printf("\x1b[2;63HHuman think time:");
-					my_printf("\x1b[3;65H%.3f seconds", total_human_think / 1000000.);
+					constexpr const uint32_t ms = 1000;
+					constexpr const uint32_t us = ms * ms;
+					my_printf("\x1b[3;65H%02d:%02d.%03d",
+							total_human_think / (60 * us),
+							(total_human_think / us) % 60,
+							(total_human_think / ms) % ms);
 					my_printf("\x1b[4;63HDog time left:");
-					my_printf("\x1b[5;65H%.3f seconds", total_dog_time / 1000.);
+					my_printf("\x1b[5;65H%02d:%02d.%03d",
+							total_dog_time / (60 * ms),
+							(total_dog_time / ms) % 60,
+							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
 						my_printf("\x1b[7;63HAvg.score gain:");
 						if (human_score_n)
