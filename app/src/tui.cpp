@@ -766,6 +766,7 @@ static void help()
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
+	my_printf("book     check for a move in the book\n");
 	my_printf("hint     show a hint\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
@@ -1207,6 +1208,13 @@ void tui()
 			}
 			else if (parts[0] == "hint")
 				tt_lookup();
+			else if (parts[0] == "book") {
+				auto move = pb->query(sp.at(0)->pos);
+				if (move.has_value())
+					my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
+				else
+					my_printf("Book has no entry/entries for this position\n");
+			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else if (parts[0].size() >= 2) {
