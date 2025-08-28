@@ -526,15 +526,15 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
 	my_printf("Draws         : %u\n", cs.data.n_draws);
 	my_printf("QS early stop : %u\n", cs.data.n_qs_early_stop);
-	my_printf("TT queries    : %u (total), %s (hits), %s (store), %s (invalid)\n",
+	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,
 			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
-			perc(cs.data.tt_query, cs.data.tt_store).c_str(),
+			cs.data.tt_store,
 			perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
-	my_printf("QS TT queries : %u (total), %s (hits), %s (store)\n",
+	my_printf("QS TT queries : %u (total), %s (hits), %u (store)\n",
 			cs.data.qtt_query,
 			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),
-			perc(cs.data.qtt_query, cs.data.qtt_store).c_str());
+			cs.data.qtt_store);
 	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
 	my_printf("LMR           : %u (total), %s (hits)\n",
 			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());
@@ -546,13 +546,9 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
                 my_printf("Avg.qs c/o    : %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
 	if (verbose) {
 #if defined(ESP32)
-		my_printf("Min. free RAM : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
-		my_printf("Largest free  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
-		my_printf("Thread count  : %u\n", unsigned(sp.size()));
-		rtc_cpu_freq_config_t conf;
-		rtc_clk_cpu_freq_get_config(&conf);
-		my_printf("CPU MHz       : %u MHz\n", unsigned(conf.freq_mhz));
-		my_printf("Model         : ");
+		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
+				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		my_printf("SOC           : ");
 		esp_chip_info_t chip_info;
 		esp_chip_info(&chip_info);
 		switch (chip_info.model) {
@@ -567,7 +563,9 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 					    //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
 			default: my_printf("UNKNOWN"); break;
 		}
-		my_printf("\n");
+		rtc_cpu_freq_config_t conf;
+		rtc_clk_cpu_freq_get_config(&conf);
+		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
 #endif
 	}
 	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));
@@ -575,6 +573,9 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("Mobility      : %d/%d (w/b)\n", mobility.first, mobility.second);
 	auto dev      = development(pos);
 	my_printf("Development   : %d/%d (w/b)\n", dev.first, dev.second);
+	int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
+	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
+	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 }
 
 void show_movelist(const libchess::Position & pos)
@@ -962,9 +963,6 @@ void tui()
 				else
 					my_printf("%s!\n", result.c_str());
 			}
-			int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
-			int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
-			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 
 			if (t != T_ASCII) {
 				store_cursor_position();
