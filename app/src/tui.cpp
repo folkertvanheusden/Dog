@@ -778,7 +778,9 @@ static void help()
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
 	my_printf("fen      show a fen for the current position\n");
+	my_printf("setfen   set the current position\n");
 	my_printf("bench    run a benchmark: \"short\" or \"long\"\n");
+	my_printf("perft x  run perft for depth x starting at current position\n");
 	my_printf("recall   go to the latest position recorded\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
@@ -1086,6 +1088,9 @@ void tui()
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
 			}
+			else if (parts[0] == "perft") {
+				perft(sp.at(0)->pos, parts.size() == 2 ? std::stoi(parts[1]) : 3);
+			}
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
@@ -1127,6 +1132,17 @@ void tui()
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
 				my_printf("Fen: %s\n", sp.at(0)->pos.fen().c_str());
+			else if (parts[0] == "setfen" && parts.size() >= 2) {
+				reset_state();
+				std::string fen;
+				for(size_t i=1; i<parts.size(); i++) {
+					if (fen.empty() == false)
+						fen += " ";
+					fen += parts.at(i);
+				}
+				sp.at(0)->pos = libchess::Position(fen);
+				show_board = true;
+			}
 			else if (parts[0] == "cls") {
 				if (t != T_ASCII)
 					my_printf("\x1b[2J");
