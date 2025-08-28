@@ -190,6 +190,9 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			scan(p, index,  1,  n, moves);  // forward serach
 
 			printf("Selecting from %zu move(s) (", moves.size());
+
+			// weighted random, see https://stackoverflow.com/a/56006340/216582
+			std::vector<std::pair<double, libchess::Move> > work;
 			bool first = true;
 			for(auto & m: moves) {
 				if (first)
@@ -197,25 +200,15 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 				else
 					printf(" ");
 				printf("%s", m.first.to_str().c_str());
+				work.push_back({ -log(rand() + 1) / (m.second + 1), m.first });
 			}
 			printf(")...\n");
 
-			int use_weight = 0;
-			if (moves.size() > 4) {
-				int sum = 0;
-				for(auto & m : moves)
-					sum += m.second;
-				use_weight = sum / moves.size();
-			}
+			if (work.empty() == false) {
+				std::sort(work.begin(), work.end(), [](const auto & lhs, const auto & rhs) { return lhs.first < rhs.first; });
+				printf("%f %f\n", work.at(0).first, work.at(work.size() - 1).first);
 
-			for(;;) {
-				std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
-				size_t nr = dist(rng);
-				auto & m  = moves.at(nr);
-				if (m.second >= use_weight) {
-					my_printf("Minimum move weight: %d, chosen move weight: %d\n", use_weight, m.second);
-					return m.first;
-				}
+				return work.at(0).second;
 			}
 		}
 	}
