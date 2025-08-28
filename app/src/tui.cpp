@@ -1123,7 +1123,16 @@ void tui()
 			}
 			else if (parts[0] == "time" && parts.size() == 2) {
 				try {
-					initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
+					total_dog_time = 0;
+
+					auto time_parts = split(parts[1], ":");
+					for(auto & time_part: time_parts) {
+						total_dog_time *= 60;
+						total_dog_time += std::stod(time_part);
+					}
+					total_dog_time *= 1000;
+
+					initial_think_time = total_dog_time;
 					write_settings();
 				}
 				catch(std::invalid_argument & ia) {
