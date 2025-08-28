@@ -525,7 +525,6 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
 	my_printf("Draws         : %u\n", cs.data.n_draws);
-	my_printf("QS early stop : %u\n", cs.data.n_qs_early_stop);
 	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,
 			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
@@ -535,6 +534,9 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 			cs.data.qtt_query,
 			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),
 			cs.data.qtt_store);
+	my_printf("TT cut-off    : %s (search), %s (qs)\n",
+			perc(cs.data.tt_query,  cs.data.tt_cutoff ).c_str(),
+			perc(cs.data.qtt_query, cs.data.qtt_cutoff).c_str());
 	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
 	my_printf("LMR           : %u (total), %s (hits)\n",
 			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());

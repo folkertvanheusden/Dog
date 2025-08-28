@@ -219,8 +219,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
-		if (te.value().M)  // move stored in TT?
-			tt_move = uint_to_libchessmove(te.value().M);
 
 		{
 			int score      = te.value().score;
@@ -229,9 +227,14 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
                         bool use       = flag == EXACT ||
                                         (flag == LOWERBOUND && work_score >= beta) ||
                                         (flag == UPPERBOUND && work_score <= alpha);
-			if (use)
+			if (use) {
+				sp.cs.data.qtt_cutoff++;
 				return work_score;
+			}
 		}
+
+		if (te.value().M)  // move stored in TT?
+			tt_move = uint_to_libchessmove(te.value().M);
 	}
 	////////
 
@@ -395,6 +398,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
+				sp.cs.data.tt_cutoff++;
 				if (tt_move.has_value()) {
 					*m = tt_move.value();  // move in TT is valid
 					return work_score;
