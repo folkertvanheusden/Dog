@@ -78,6 +78,7 @@ ENDIF ()
 set(APP_SOURCES
   ../book.cpp
   ../eval.cpp
+  ../eval-stats.cpp
   ../main.cpp
   ../max.cpp
   ../max-ascii.cpp

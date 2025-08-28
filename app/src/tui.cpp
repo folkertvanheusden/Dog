@@ -17,6 +17,7 @@
 
 #include "book.h"
 #include "eval.h"
+#include "eval-stats.h"
 #include "main.h"
 #include "max-ascii.h"
 #include "nnue.h"
@@ -513,39 +514,45 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 	}
 }
 
-void show_stats(const chess_stats & cs, const bool verbose)
+std::string perc(const unsigned total, const unsigned part)
 {
-	my_printf("Nodes processed   : %u\n", cs.data.nodes);
-	my_printf("QS Nodes processed: %u\n", cs.data.qnodes);
-	my_printf("Standing pats     : %u\n", cs.data.n_standing_pat);
-	my_printf("Draws             : %u\n", cs.data.n_draws);
-	my_printf("QS early stop     : %u\n", cs.data.n_qs_early_stop);
-	my_printf("TT queries        : %u\n", cs.data.tt_query);
-	my_printf("TT hits           : %u\n", cs.data.tt_hit);
-	my_printf("TT store          : %u\n", cs.data.tt_store);
-	my_printf("TT invalid        : %u\n", cs.data.tt_invalid);
-	my_printf("QS TT queries     : %u\n", cs.data.qtt_query);
-	my_printf("QS TT hits        : %u\n", cs.data.qtt_hit);
-	my_printf("QS TT store       : %u\n", cs.data.qtt_store);
-	my_printf("Null moves        : %u\n", cs.data.n_null_move);
-	my_printf("Null moves hit    : %u\n", cs.data.n_null_move_hit);
-	my_printf("LMR               : %u\n", cs.data.n_lmr);
-	my_printf("LMR hit           : %u\n", cs.data.n_lmr_hit);
-	my_printf("Static eval       : %u\n", cs.data.n_static_eval);
-	my_printf("Static eval hit   : %u\n", cs.data.n_static_eval_hit);
+	return myformat("%.2f%%", part * 100. / total);
+}
+
+void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose)
+{
+	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
+	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
+	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
+	my_printf("Draws         : %u\n", cs.data.n_draws);
+	my_printf("QS early stop : %u\n", cs.data.n_qs_early_stop);
+	my_printf("TT queries    : %u (total), %s (hits), %s (store), %s (invalid)\n",
+			cs.data.tt_query,
+			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
+			perc(cs.data.tt_query, cs.data.tt_store).c_str(),
+			perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
+	my_printf("QS TT queries : %u (total), %s (hits), %s (store)\n",
+			cs.data.qtt_query,
+			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),
+			perc(cs.data.qtt_query, cs.data.qtt_store).c_str());
+	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
+	my_printf("LMR           : %u (total), %s (hits)\n",
+			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());
+	my_printf("Static eval   : %u (total), %s (hits)\n",
+			cs.data.n_static_eval, perc(cs.data.n_static_eval, cs.data.n_static_eval_hit).c_str());
 	if (cs.data.nmc_nodes)
-		my_printf("Avg. move cutoff  : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
+		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
-		my_printf("Avg.qs move cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+                my_printf("Avg.qs c/o    : %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
 	if (verbose) {
 #if defined(ESP32)
-		my_printf("Minimum free RAM  : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
-		my_printf("Largest free RAM  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
-		my_printf("Thread count      : %u\n", unsigned(sp.size()));
+		my_printf("Min. free RAM : %u\n", uint32_t(heap_caps_get_minimum_free_size (MALLOC_CAP_DEFAULT)));
+		my_printf("Largest free  : %u\n", uint32_t(heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT)));
+		my_printf("Thread count  : %u\n", unsigned(sp.size()));
 		rtc_cpu_freq_config_t conf;
 		rtc_clk_cpu_freq_get_config(&conf);
-		my_printf("CPU MHz           : %u MHz\n", unsigned(conf.freq_mhz));
-		my_printf("Model             : ");
+		my_printf("CPU MHz       : %u MHz\n", unsigned(conf.freq_mhz));
+		my_printf("Model         : ");
 		esp_chip_info_t chip_info;
 		esp_chip_info(&chip_info);
 		switch (chip_info.model) {
@@ -563,6 +570,11 @@ void show_stats(const chess_stats & cs, const bool verbose)
 		my_printf("\n");
 #endif
 	}
+	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));
+	auto mobility = count_mobility(pos);
+	my_printf("Mobility      : %d/%d (w/b)\n", mobility.first, mobility.second);
+	auto dev      = development(pos);
+	my_printf("Development   : %d/%d (w/b)\n", dev.first, dev.second);
 }
 
 void show_movelist(const libchess::Position & pos)
@@ -1127,7 +1139,7 @@ void tui()
 			else if (parts[0] == "board")
 				show_board = true;
 			else if (parts[0] == "stats")
-				show_stats(sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
+				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
