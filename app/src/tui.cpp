@@ -838,6 +838,7 @@ void tui()
 
 	bool show_board = true;
 	bool p_a_k      = false;
+	bool first      = true;
 
 	uint64_t human_think_start   = 0;
 	uint64_t total_human_think   = 0;
@@ -960,6 +961,11 @@ void tui()
 				my_printf("\x1b[19;69H/_____/   U");
 				restore_cursor_position();
 			}
+		}
+
+		if (first) {
+			first = false;
+			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
 
 		if (peek_for_ctrl_c())
