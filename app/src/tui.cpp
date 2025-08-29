@@ -519,7 +519,7 @@ std::string perc(const unsigned total, const unsigned part)
 	return myformat("%.2f%%", part * 100. / total);
 }
 
-void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose)
+void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose)
 {
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
 	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
@@ -579,6 +579,7 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
 	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
+	my_printf("Book size     : %zu\n", pb->size());
 }
 
 void show_movelist(const libchess::Position & pos)
@@ -1157,7 +1158,7 @@ void tui()
 			else if (parts[0] == "board")
 				show_board = true;
 			else if (parts[0] == "stats")
-				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
+				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
