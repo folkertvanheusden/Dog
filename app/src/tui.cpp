@@ -550,6 +550,7 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 #if defined(ESP32)
 		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
 				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		my_printf("Largestackfail: %u\n", cs.data.large_stack);
 		my_printf("SOC           : ");
 		esp_chip_info_t chip_info;
 		esp_chip_info(&chip_info);

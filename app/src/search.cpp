@@ -195,8 +195,10 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		return 0;
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
-		if (check_min_stack_size(1, sp))
+		if (check_min_stack_size(1, sp)) {
+			sp.cs.data.large_stack++;
 			return 0;
+		}
 
 		sp.md = qsdepth;
 	}
@@ -356,8 +358,10 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	const int csd = max_depth - depth;
 #if defined(ESP32)
 	if (csd > sp.md) {
-		if (check_min_stack_size(0, sp))
+		if (check_min_stack_size(0, sp)) {
+			sp.cs.data.large_stack++;
 			return 0;
+		}
 		sp.md = csd;
 	}
 #endif
