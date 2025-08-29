@@ -55,14 +55,26 @@ static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in 
 polyglot_book::polyglot_book(const std::string & filename)
 {
 	fh = fopen(filename.c_str(), "rb");
-	if (!fh)
+	if (fh) {
+		fseek(fh, 0, SEEK_END);
+		const long size = ftell(fh);
+		n = size / sizeof(polyglot_entry);
+		assert((size % sizeof(polyglot_entry)) == 0);
+	}
+	else {
 		printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
+	}
 }
 
 polyglot_book::~polyglot_book()
 {
 	if (fh)
 		fclose(fh);
+}
+
+size_t polyglot_book::size() const
+{
+	return n;
 }
 
 libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Position & p)
@@ -154,10 +166,7 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 
 	const uint64_t hash = p.hash();
 
-	fseek(fh, 0, SEEK_END);
-	const long size = ftell(fh);
-	const long n    = size / sizeof(polyglot_entry);
-	assert((size % sizeof(polyglot_entry)) == 0);
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 1 << 30);
 
 	long low  = 0;
 	long high = n;
@@ -200,7 +209,7 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 				else
 					printf(" ");
 				printf("%s", m.first.to_str().c_str());
-				work.push_back({ -log(rand() + 1) / (m.second + 1), m.first });
+				work.push_back({ -log(dist(rng) + 1) / (m.second + 1), m.first });
 			}
 			printf(")...\n");
 
