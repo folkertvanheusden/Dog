@@ -41,8 +41,6 @@ public:
 
 		uint64_t  syzygy_queries;
 		uint64_t  syzygy_query_hits;
-
-		uint32_t  large_stack;
 	} data;
 
 	chess_stats();

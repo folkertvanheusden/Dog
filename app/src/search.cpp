@@ -193,16 +193,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 {
 	if (sp.stop->flag)
 		return 0;
-#if defined(ESP32)
-	if (qsdepth > sp.md) {
-		if (check_min_stack_size(1, sp)) {
-			sp.cs.data.large_stack++;
-			return 0;
-		}
 
-		sp.md = qsdepth;
-	}
-#endif
 	if (qsdepth >= 127)
 		return nnue_evaluate(sp.nnue_eval, sp.pos);
 
@@ -355,17 +346,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (depth == 0)
 		return qs(alpha, beta, max_depth, sp);
 
-	const int csd = max_depth - depth;
-#if defined(ESP32)
-	if (csd > sp.md) {
-		if (check_min_stack_size(0, sp)) {
-			sp.cs.data.large_stack++;
-			return 0;
-		}
-		sp.md = csd;
-	}
-#endif
-
 	sp.cs.data.nodes++;
 
 	bool is_root_position = max_depth == depth;
@@ -374,6 +354,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		return 0;
 	}
 
+	const int  csd         = max_depth - depth;
 	const int  start_alpha = alpha;
 	const bool is_pv       = alpha != beta -1;
 
@@ -721,9 +702,6 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 		uint64_t previous_node_count = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
-#if defined(ESP32)
-			sp->md = 0;
-#endif
 			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
