@@ -1170,6 +1170,8 @@ void tui()
 					fen += parts.at(i);
 				}
 				sp.at(0)->pos = libchess::Position(fen);
+				my_printf("FEN set, hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
+				p_a_k      = true;
 				show_board = true;
 			}
 			else if (parts[0] == "cls") {
