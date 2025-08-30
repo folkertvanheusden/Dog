@@ -7,6 +7,16 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+v3.1-network-native is base
+v3.2-netv1b+v2-Bd009365: network v1b (new) and v2 (old) merged
+v3.2-netv1bred-Bd009365-native: network v1b (new) resized to size of v2
+v3.2-netv1b-Bd009365_17bdcab: only the v1b network
+   # PLAYER                            :  RATING  POINTS  PLAYED   (%)
+   1 v3.2-netv1b+v2-Bd009365           :  2323.9   584.0    1104    53  <-- +20,3 elo
+   2 v3.1-network-native               :  2303.6  2381.5    4702    51
+   3 v3.2-netv1bred-Bd009365-native    :  2295.8  1351.5    2764    49
+   4 v3.2-netv1b-Bd009365_17bdcab      :  2276.6   385.0     834    46
+
 
 v3.2-native
 	Results of Dog-v3.2-native vs Dog-v3.1-native (8+0.08, 1t, 256MB, STS1-STS15_LAN_v6.epd):
