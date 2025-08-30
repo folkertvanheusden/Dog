@@ -195,12 +195,11 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		return 0;
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
-		if (check_min_stack_size(1, sp)) {
+		sp.md = qsdepth;
+		if (check_min_stack_size(sp)) {
 			sp.cs.data.large_stack++;
 			return nnue_evaluate(sp.nnue_eval, sp.pos);
 		}
-
-		sp.md = qsdepth;
 	}
 #endif
 	if (qsdepth >= 127)

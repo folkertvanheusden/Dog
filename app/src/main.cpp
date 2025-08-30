@@ -518,7 +518,7 @@ void show_esp32_info()
 }
 
 int64_t esp_start_ts = 0;
-int check_min_stack_size(const int nr, const search_pars_t & sp)
+int check_min_stack_size(const search_pars_t & sp)
 {
 	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
 
@@ -527,17 +527,13 @@ int check_min_stack_size(const int nr, const search_pars_t & sp)
 	if (level < 768) {
 		set_flag(sp.stop);
 		start_blink(led_red_timer);
-
-		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
-		show_esp32_info();
-
+		printf("# stack protector engaged (%d), full stop\n", level);
 		return 2;
 	}
 
 	if (level < 1280) {
-		printf("# stack protector %d engaged (%d), stop QS\n", nr, level);
+		printf("# stack protector engaged (%d), stop QS\n", level);
 		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
-
 		return 1;
 	}
 

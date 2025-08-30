@@ -83,7 +83,7 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, const search_pars_t & sp);
+int check_min_stack_size(const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #else
 #define IRAM_ATTR
