@@ -1,8 +1,10 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
-#if (!defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)) && DEBUG==1
+#if !defined(NDEBUG)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 #include <valgrind/helgrind.h>
+#endif
 #endif
 
 #if defined(ESP32)
@@ -31,8 +33,10 @@ tt::~tt()
 
 void tt::debug_helper()
 {
-#if (!defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)) && DEBUG==1
+#if !defined(NDEBUG)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_entry));
+#endif
 #endif
 }
 
