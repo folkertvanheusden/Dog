@@ -15,6 +15,11 @@ There are 2 ways:
 ```
 
 That's it! Interrupt the program whenever you like.
+To completely delete the docker you created for Dog, enter:
+
+```
+    docker rm -f dog
+```
 
 
 * WITHOUT DOCKER
