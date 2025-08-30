@@ -562,12 +562,34 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 			case CHIP_ESP32P4:  my_printf("ESP32-P4"); break;
 			case CHIP_ESP32C5:  my_printf("ESP32-C5"); break;
 			case CHIP_ESP32C61: my_printf("ESP32-C61"); break;
-					    //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
+		      //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
 			default: my_printf("UNKNOWN"); break;
 		}
 		rtc_cpu_freq_config_t conf;
 		rtc_clk_cpu_freq_get_config(&conf);
 		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
+		my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
+		my_printf("reset reason  : ");
+		switch(esp_reset_reason()) {
+			case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
+			case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
+			case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
+			case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
+			case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
+			case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
+			case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
+			case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
+			case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
+			case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
+			case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
+			case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
+			case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
+			case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
+			case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
+			case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
+			default:
+				my_printf("?\n"); break;
+		}
 #endif
 	}
 	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));

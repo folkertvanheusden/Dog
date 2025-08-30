@@ -20,14 +20,11 @@ typedef struct {
 
 typedef struct
 {
-	int16_t   *const history  { nullptr };
-	end_t           *stop     { nullptr };
+	int16_t   *const history   { nullptr };
+	end_t           *stop      { nullptr };
 	const int        thread_nr;
 	chess_stats      cs;
-	uint32_t         cur_move { 0       };
-#if defined(ESP32)
-	uint16_t         md;
-#endif
+	uint32_t         cur_move  { 0       };
 
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
 	libchess::Move   best_moves[128];
@@ -77,7 +74,6 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #else
 #define IRAM_ATTR

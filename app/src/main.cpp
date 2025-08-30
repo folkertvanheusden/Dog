@@ -321,16 +321,10 @@ void searcher(const int i)
 void prepare_threads_state()
 {
 	clear_flag(sp.at(0)->stop);
-#if defined(ESP32)
-	sp.at(0)->md = 1;
-#endif
-	init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
+	init_move (sp.at(0)->nnue_eval, sp.at(0)->pos);
 	for(size_t i=1; i<sp.size(); i++) {
 		sp.at(i)->pos = sp.at(0)->pos;
-		init_move(sp.at(i)->nnue_eval, sp.at(i)->pos);
-#if defined(ESP32)
-		sp.at(i)->md  = 1;
-#endif
+		init_move (sp.at(i)->nnue_eval, sp.at(i)->pos);
 		clear_flag(sp.at(i)->stop);
 	}
 }
@@ -348,8 +342,8 @@ void start_ponder()
 	work.search_max_n_nodes.reset();
 	work.search_version++;
 	work.search_best_move.reset();
-	work.search_best_score = -32768;
-	work.search_output     = false;
+	work.search_best_score  = -32768;
+	work.search_output      = false;
 	work.search_cv.notify_all();
 	my_trace("# ponder started\n");
 
@@ -511,33 +505,6 @@ void show_esp32_info()
 	printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
 	vTaskGetRunTimeStats();
-}
-
-int64_t esp_start_ts = 0;
-int check_min_stack_size(const int nr, const search_pars_t & sp)
-{
-	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
-
-	my_trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
-
-	if (level < 768) {
-		set_flag(sp.stop);
-		start_blink(led_red_timer);
-
-		printf("# stack protector %d engaged (%d), full stop\n", nr, level);
-		show_esp32_info();
-
-		return 2;
-	}
-
-	if (level < 1280) {
-		printf("# stack protector %d engaged (%d), stop QS\n", nr, level);
-		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
-
-		return 1;
-	}
-
-	return 0;
 }
 #endif
 
@@ -736,7 +703,6 @@ void main_task()
 			my_trace("# position: %s\n", sp.at(0)->pos.fen().c_str());
 
 #if defined(ESP32)
-			esp_start_ts = start_ts;
 			stop_blink(led_red_timer, &led_red);
 			start_blink(led_green_timer);
 #endif
@@ -1270,7 +1236,7 @@ extern "C" void app_main()
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
 #if defined(ESP32_S3_XIAO)  // assuming seed xiao
-	ESP_ERROR_CHECK(uart_set_pin(uart_num, 1, 2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));  // 43,44 is UART0(?), 1/2 = A0,A1
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 1,  2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));  // 43,44 is UART0(?), 1/2 = A0,A1
 #elif defined(ESP32_S3_QTPY)  // assuming adafruit qtpy
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 5, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 #else  // assuming wemos32
