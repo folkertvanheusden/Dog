@@ -1,8 +1,15 @@
+#include <cassert>
 #include <cinttypes>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <ctype.h>
+#if defined(ESP32)
+#include <esp_chip_info.h>
+#include <esp_http_client.h>
+#include <esp_wifi.h>
+#include <soc/rtc.h>
+#endif
 #include <thread>
 #include <sys/stat.h>
 
@@ -10,6 +17,7 @@
 
 #include "book.h"
 #include "eval.h"
+#include "eval-stats.h"
 #include "main.h"
 #include "max-ascii.h"
 #include "nnue.h"
@@ -20,18 +28,67 @@
 #include "tui.h"
 
 
+#if defined(ESP32)
+#define RECALL_FILE "/spiffs/recall.txt"
+#else
+#define RECALL_FILE ".dog-recall.txt"
+#endif
+
 typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
 
+bool        do_ping    = false;
 dog_clock_t clock_type = C_TOTAL;
+std::string wifi_ssid;
+std::string wifi_psk;
+
+#if defined(ESP32)
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+EventGroupHandle_t  s_wifi_event_group;
+int                 s_retry_num        = 0;
+constexpr const int max_retry          = 15;
+
+void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+	if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+		esp_wifi_connect();
+	else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+		if (s_retry_num < max_retry) {
+			esp_wifi_connect();
+			s_retry_num++;
+			my_printf("retring to connect to the AP (%d)\n", max_retry - s_retry_num);
+		}
+		else {
+			xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+			s_retry_num = 0;
+		}
+	}
+	else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+		my_printf("IP: " IPSTR "\n", IP2STR(&event->ip_info.ip));
+		s_retry_num = 0;
+		xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+	}
+}
+
+esp_err_t _http_event_handler(esp_http_client_event_handle_t evt)
+{
+	if (evt->event_id == HTTP_EVENT_ON_DATA)
+		memcpy(evt->user_data, evt->data, std::min(evt->data_len, 16));
+
+	return ESP_OK;
+}
+#endif
 
 std::string myformat(const char *const fmt, ...)
 {
         char *buffer = nullptr;
         va_list ap;
         va_start(ap, fmt);
-        if (vasprintf(&buffer, fmt, ap) == -1)
-                return fmt;
+        int rc = vasprintf(&buffer, fmt, ap);
         va_end(ap);
+	if (rc == -1)
+                return fmt;
 
         std::string result = buffer;
         free(buffer);
@@ -39,9 +96,117 @@ std::string myformat(const char *const fmt, ...)
         return result;
 }
 
+#if defined(ESP32)
+std::string push_pgn(const std::string & pgn)
+{
+	uint64_t org_tt_size = tti.get_size();
+	tti.set_size(0);
+
+	my_printf("free heap size: %d, min_free_heap_size: %d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
+	my_printf("Connecting to SSID %s...\n", wifi_ssid.c_str());
+
+	s_wifi_event_group = xEventGroupCreate();
+
+	ESP_ERROR_CHECK(esp_netif_init());
+
+	ESP_ERROR_CHECK(esp_event_loop_create_default());
+	esp_netif_t *p = esp_netif_create_default_wifi_sta();
+
+	esp_netif_set_hostname(p, "Dog " DOG_VERSION);
+
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+	esp_event_handler_instance_t instance_any_id;
+	esp_event_handler_instance_t instance_got_ip;
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+				ESP_EVENT_ANY_ID,
+				&event_handler,
+				nullptr,
+				&instance_any_id));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+				IP_EVENT_STA_GOT_IP,
+				&event_handler,
+				nullptr,
+				&instance_got_ip));
+	wifi_config_t wifi_config { };
+	strcpy((char *)wifi_config.sta.ssid,     wifi_ssid.c_str());
+	strcpy((char *)wifi_config.sta.password, wifi_psk. c_str());
+
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+	ESP_ERROR_CHECK(esp_wifi_start());
+
+	EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+			WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+			pdFALSE,
+			pdFALSE,
+			portMAX_DELAY);
+
+	if (bits & WIFI_CONNECTED_BIT)
+		my_printf("Connected to %s\n", wifi_config.sta.ssid);
+	else
+		my_printf("Connection failed\n");
+
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, instance_got_ip));
+	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    instance_any_id));
+
+	vEventGroupDelete(s_wifi_event_group);
+	// wifi is setup now
+
+	char recv_buffer[16] { };
+	esp_http_client_config_t http_config = {
+		.url = "https://vanheusden.com/pgn/",
+		.event_handler = _http_event_handler,
+		.user_data     = recv_buffer,
+	};
+	esp_http_client_handle_t client = esp_http_client_init(&http_config);
+
+	// POST
+	esp_http_client_set_method(client, HTTP_METHOD_POST);
+	esp_http_client_set_header(client, "Content-Type", "application/json");
+	esp_http_client_set_post_field(client, pgn.data(), pgn.size());
+	esp_err_t err = esp_http_client_perform(client);
+	if (err == ESP_OK)
+		my_printf("PGN succesfully (%d) submitted\n", esp_http_client_get_status_code(client));
+	else {
+		my_printf("HTTP POST request failed: %s\n", esp_err_to_name(err));
+	}
+	esp_http_client_cleanup(client);
+
+	//
+	my_printf("stop wifi\n");
+	esp_wifi_disconnect();
+	esp_wifi_stop();
+	esp_netif_destroy_default_wifi(p);
+	esp_event_loop_delete_default();
+
+	tti.set_size(org_tt_size);
+
+	if (strncmp(recv_buffer, "OK:", 3) == 0)
+		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
+
+	return "";
+}
+#endif
+
+bool store_position(const std::string & fen, const int total_dog_time)
+{
+	FILE *fh = fopen(RECALL_FILE, "w");
+	if (fh) {
+		fprintf(fh, "%s\n", fen.c_str());
+		fprintf(fh, "%d\n", total_dog_time);
+		fclose(fh);
+
+		return true;
+	}
+
+	return false;
+}
+
 void to_uart(const char *const buffer, int buffer_len)
 {
-#if defined(ESP32)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
         ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
         uart_write_bytes(uart_num, buffer, buffer_len);
 	if (buffer[buffer_len - 1] == '\n') {
@@ -53,7 +218,7 @@ void to_uart(const char *const buffer, int buffer_len)
 
 bool peek_for_ctrl_c()
 {
-#if defined(ESP32)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
 	char   buffer = 0;
 	size_t length = 0;
 	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
@@ -206,7 +371,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
 		line += " \x1b[m";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 	else if (t == T_VT100) {
 		std::string line;
@@ -218,7 +383,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 	else {
 		std::string line = "   +";
@@ -228,7 +393,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
-		lines.push_back(line);
+		lines.push_back(std::move(line));
 	}
 
 	if (moves.has_value()) {
@@ -252,8 +417,10 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 
 	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
 		my_printf("Game is finished\n");
-	else
+	else {
 		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
+		my_printf("%s\n", p.fen().c_str());
+	}
 }
 
 // determine how many pieces cannot move because they are protecting an other piece
@@ -347,30 +514,97 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 	}
 }
 
-void show_stats(const chess_stats & cs)
+std::string perc(const unsigned total, const unsigned part)
 {
-	my_printf("Nodes processed   : %u\n", cs.data.nodes);
-	my_printf("QS Nodes processed: %u\n", cs.data.qnodes);
-	my_printf("Standing pats     : %u\n", cs.data.n_standing_pat);
-	my_printf("Draws             : %u\n", cs.data.n_draws);
-	my_printf("QS early stop     : %u\n", cs.data.n_qs_early_stop);
-	my_printf("TT queries        : %u\n", cs.data.tt_query);
-	my_printf("TT hits           : %u\n", cs.data.tt_hit);
-	my_printf("TT store          : %u\n", cs.data.tt_store);
-	my_printf("TT invalid        : %u\n", cs.data.tt_invalid);
-	my_printf("QS TT queries     : %u\n", cs.data.qtt_query);
-	my_printf("QS TT hits        : %u\n", cs.data.qtt_hit);
-	my_printf("QS TT store       : %u\n", cs.data.qtt_store);
-	my_printf("Null moves        : %u\n", cs.data.n_null_move);
-	my_printf("Null moves hit    : %u\n", cs.data.n_null_move_hit);
-	my_printf("LMR               : %u\n", cs.data.n_lmr);
-	my_printf("LMR hit           : %u\n", cs.data.n_lmr_hit);
-	my_printf("Static eval       : %u\n", cs.data.n_static_eval);
-	my_printf("Static eval hit   : %u\n", cs.data.n_static_eval_hit);
+	if (total == 0)
+		return "-";
+	return myformat("%.2f%%", part * 100. / total);
+}
+
+void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
+{
+	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
+	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
+	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
+	my_printf("Draws         : %u\n", cs.data.n_draws);
+	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
+			cs.data.tt_query,
+			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
+			cs.data.tt_store,
+			perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
+	my_printf("QS TT queries : %u (total), %s (hits), %u (store)\n",
+			cs.data.qtt_query,
+			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),
+			cs.data.qtt_store);
+	my_printf("TT cut-off    : %s (search), %s (qs)\n",
+			perc(cs.data.tt_query,  cs.data.tt_cutoff ).c_str(),
+			perc(cs.data.qtt_query, cs.data.qtt_cutoff).c_str());
+	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
+	my_printf("LMR           : %u (total), %s (hits)\n",
+			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());
+	my_printf("Static eval   : %u (total), %s (hits)\n",
+			cs.data.n_static_eval, perc(cs.data.n_static_eval, cs.data.n_static_eval_hit).c_str());
 	if (cs.data.nmc_nodes)
-		my_printf("Avg. move cutoff  : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
+		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
-		my_printf("Avg.qs move cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+                my_printf("Avg.qs c/o    : %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+	if (verbose) {
+#if defined(ESP32)
+		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
+				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+		my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
+		my_printf("SOC           : ");
+		esp_chip_info_t chip_info;
+		esp_chip_info(&chip_info);
+		switch (chip_info.model) {
+			case CHIP_ESP32S3:  my_printf("ESP32-S3"); break;
+			case CHIP_ESP32C3:  my_printf("ESP32-C3"); break;
+			case CHIP_ESP32C2:  my_printf("ESP32-C2"); break;
+			case CHIP_ESP32C6:  my_printf("ESP32-C6"); break;
+			case CHIP_ESP32H2:  my_printf("ESP32-H2"); break;
+			case CHIP_ESP32P4:  my_printf("ESP32-P4"); break;
+			case CHIP_ESP32C5:  my_printf("ESP32-C5"); break;
+			case CHIP_ESP32C61: my_printf("ESP32-C61"); break;
+		      //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
+			default: my_printf("UNKNOWN"); break;
+		}
+		rtc_cpu_freq_config_t conf;
+		rtc_clk_cpu_freq_get_config(&conf);
+		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
+		my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
+		my_printf("reset reason  : ");
+		switch(esp_reset_reason()) {
+			case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
+			case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
+			case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
+			case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
+			case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
+			case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
+			case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
+			case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
+			case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
+			case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
+			case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
+			case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
+			case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
+			case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
+			case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
+			case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
+			default:
+				my_printf("?\n"); break;
+		}
+#endif
+	}
+	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));
+	auto mobility = count_mobility(pos);
+	my_printf("Mobility      : %d/%d (w/b)\n", mobility.first, mobility.second);
+	auto dev      = development(pos);
+	my_printf("Development   : %d/%d (w/b)\n", dev.first, dev.second);
+	int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
+	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
+	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
+	my_printf("Book size     : %zu\n", pb->size());
+	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
 }
 
 void show_movelist(const libchess::Position & pos)
@@ -464,8 +698,8 @@ void show_header(const terminal_t t)
 		return;
 
 	my_printf("\x1b[m\x1b[2J\x1b[1;7m\x1b[1;1H");
-	for(int i=0; i<80; i++)
-		my_printf(" ");
+	for(int i=0; i<8; i++)
+		my_printf("          ");
 	my_printf("\x1b[1;1HHELLO, THIS IS DOG");
 	my_printf("\x1b[m\x1b[2;1H");
 }
@@ -509,9 +743,12 @@ void write_settings()
 
 	fprintf(fh, "%d\n", t);
 	fprintf(fh, "%d\n", default_trace);
-	fprintf(fh, "%d\n", total_dog_time);
+	fprintf(fh, "%lu\n", total_dog_time);
 	fprintf(fh, "%d\n", do_ponder);
 	fprintf(fh, "%d\n", clock_type);
+	fprintf(fh, "%d\n", do_ping);
+	fprintf(fh, "%s\n", wifi_ssid.c_str());
+	fprintf(fh, "%s\n", wifi_psk .c_str());
 
 	fclose(fh);
 }
@@ -540,6 +777,18 @@ void load_settings()
 	do_ponder      = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
 	clock_type     = dog_clock_t(atoi(buffer));
+	fgets(buffer, sizeof buffer, fh);
+	do_ping        = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	char *lf = strchr(buffer, '\n');
+	if (lf)
+		*lf = 0x00;
+	wifi_ssid      = buffer;
+	fgets(buffer, sizeof buffer, fh);
+	lf = strchr(buffer, '\n');
+	if (lf)
+		*lf = 0x00;
+	wifi_psk       = buffer;
 
 	fclose(fh);
 }
@@ -553,17 +802,28 @@ static void help()
 	my_printf("clock    set clock type: \"incremental\" or \"total\"\n");
 	my_printf("eval     show current evaluation score\n");
 	my_printf("moves    show valid moves\n");
-#if !defined(ESP32)
+#if defined(ESP32)
+	my_printf("cfgwifi  ssid|password\n");
+	my_printf("submit   send current PGN to server, result is shown\n");
+#else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
+	my_printf("book     check for a move in the book\n");
 	my_printf("hint     show a hint\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
+	my_printf("ping     beep on/off\n");
+	my_printf("redraw   redraw screen\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
+	my_printf("fen      show a fen for the current position\n");
+	my_printf("setfen   set the current position\n");
+	my_printf("bench    run a benchmark: \"short\" or \"long\"\n");
+	my_printf("perft x  run perft for depth x starting at current position\n");
+	my_printf("recall   go to the latest position recorded\n");
 	my_printf("...or enter a move (SAN/LAN)\n");
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
@@ -622,6 +882,7 @@ void tui()
 
 	bool show_board = true;
 	bool p_a_k      = false;
+	bool first      = true;
 
 	uint64_t human_think_start   = 0;
 	uint64_t total_human_think   = 0;
@@ -632,6 +893,28 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
+
+	auto reset_state = [&]()
+	{
+		memset(sp.at(0)->history, 0x00, history_malloc_size);
+		tti.reset();
+		moves_played.clear();
+		scores.clear();
+		sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
+		total_dog_time      = initial_think_time;
+		human_think_start   = 0;
+		total_human_think   = 0;
+		n_human_think       = 0;
+		human_score_sum     = 0;
+		human_score_n       = 0;
+		dog_score_sum       = 0;
+		dog_score_n         = 0;
+		expected_move_count = 0;
+		player              = libchess::constants::WHITE;
+
+		for(auto & e: sp)
+			e->nnue_eval->reset();
+	};
 
 	for(;;) {
 		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
@@ -664,9 +947,17 @@ void tui()
 				}
 				else {
 					my_printf("\x1b[2;63HHuman think time:");
-					my_printf("\x1b[3;65H%.3f seconds", total_human_think / 1000000.);
+					constexpr const uint32_t ms = 1000;
+					constexpr const uint32_t us = ms * ms;
+					my_printf("\x1b[3;65H%02d:%02d.%03d",
+							total_human_think / (60 * us),
+							(total_human_think / us) % 60,
+							(total_human_think / ms) % ms);
 					my_printf("\x1b[4;63HDog time left:");
-					my_printf("\x1b[5;65H%.3f seconds", total_dog_time / 1000.);
+					my_printf("\x1b[5;65H%02d:%02d.%03d",
+							total_dog_time / (60 * ms),
+							(total_dog_time / ms) % 60,
+							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
 						my_printf("\x1b[7;63HAvg.score gain:");
 						if (human_score_n)
@@ -683,19 +974,47 @@ void tui()
 
 			if (sp.at(0)->pos.fullmoves() > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
-			if (sp.at(0)->pos.in_check())
-				my_printf("\x1b[4mCHECK\x1b[m!");
-			int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
-			int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
-			my_printf("Position complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
+			if (sp.at(0)->pos.in_check()) {
+				std::string result = "CHECK";
+				switch(sp.at(0)->pos.game_state()) {
+					case libchess::Position::GameState::CHECKMATE:
+						result = "CHECKMATE";
+						break;
+					case libchess::Position::GameState::STALEMATE:
+						result = "STALEMATE";
+						break;
+					case libchess::Position::GameState::THREEFOLD_REPETITION:
+						result = "THREEFOLD REPETITION";
+						break;
+					case libchess::Position::GameState::FIFTY_MOVES:
+						result = "FIFTY MOVES";
+						break;
+					case libchess::Position::GameState::IN_PROGRESS:
+						break;
+					default:
+						result = "(unknown game state)";
+						break;
+				}
+				if (t != T_ASCII)
+					my_printf("\x1b[4m%s\x1b[m!\n", result.c_str());
+				else
+					my_printf("%s!\n", result.c_str());
+			}
 
-			store_cursor_position();
-			my_printf("\x1b[15;69H / \\__");
-			my_printf("\x1b[16;69H(    @\\____");
-			my_printf("\x1b[17;69H /         O");
-			my_printf("\x1b[18;69H/   (_____/");
-			my_printf("\x1b[19;69H/_____/   U");
-			restore_cursor_position();
+			if (t != T_ASCII) {
+				store_cursor_position();
+				my_printf("\x1b[15;69H / \\__");
+				my_printf("\x1b[16;69H(    @\\____");
+				my_printf("\x1b[17;69H /         O");
+				my_printf("\x1b[18;69H/   (_____/");
+				my_printf("\x1b[19;69H/_____/   U");
+				restore_cursor_position();
+			}
+		}
+
+		if (first) {
+			first = false;
+			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
 
 		if (peek_for_ctrl_c())
@@ -729,26 +1048,102 @@ void tui()
 				help();
 			else if (parts[0] == "quit")
 				break;
+			else if (parts[0] == "version")
+				hello();
 			else if (parts[0] == "auto")
 				player.reset();
-			else if (parts[0] == "new") {
-				memset(sp.at(0)->history, 0x00, history_malloc_size);
-				tti.reset();
-				moves_played.clear();
-				scores.clear();
-				sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
-				total_dog_time      = initial_think_time;
-				human_think_start   = 0;
-				total_human_think   = 0;
-				n_human_think       = 0;
-				initial_think_time  = 0;
-				human_score_sum     = 0;
-				human_score_n       = 0;
-				dog_score_sum       = 0;
-				dog_score_n         = 0;
-				expected_move_count = 0;
-				show_board          = true;
+#if defined(ESP32)
+			else if (parts[0] == "cfgwifi") {
+				if (parts.size() != 2)
+					my_printf("Usage: cfgwifi ssid|password\n");
+				else {
+					auto parts_wifi = split(parts[1], "|");
+					wifi_ssid = parts_wifi[0];
+					wifi_psk  = parts_wifi[1];
+					write_settings();
+				}
 			}
+			else if (parts[0] == "submit" || parts[0] == "publish") {
+				if (moves_played.empty())
+					my_printf("No moves played yet\n");
+				else if (wifi_ssid.empty())
+					my_printf("WiFi is not configured yet (see cfgwifi)\n");
+				else {
+					std::string pgn = "[Event \"Computer chess event\"]\n"
+							  "[Site \"-\"]\n"
+							  "[Date \"-\"]\n"
+							  "[Round \"-\"]\n";
+
+					if (player.has_value()) {
+						if (player.value() == libchess::constants::WHITE) {
+							pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+							pgn += "[Black \"?\"]\n";
+						}
+						else {
+							pgn += "[White \"?\"]\n";
+							pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+						}
+					}
+					else {
+						pgn += "[White \"?\"]\n";
+						pgn += "[Black \"?\"]\n";
+					}
+					std::string result = "?";
+					auto game_state = sp.at(0)->pos.game_state();
+					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
+						if (game_state != libchess::Position::GameState::CHECKMATE)
+							result = "1/2-1/2";
+						else if ((moves_played.size() & 1) == 0)  // black played last
+							result = "0-1";
+						else
+							result = "1-0";
+					}
+					pgn += "[Result \"" + result + "\"]\n";
+					pgn += "\n";
+
+					auto current_color = libchess::constants::WHITE;
+					int  move_nr       = 0;
+					for(auto & move: moves_played) {
+						if (current_color == libchess::constants::WHITE) {
+							move_nr++;
+							pgn += myformat("%d. %s ", move_nr, move.to_str().c_str());
+							current_color = libchess::constants::BLACK;
+						}
+						else {
+							pgn += move.to_str();
+							if ((move_nr % 10) == 0)
+								pgn += "\n";
+							else
+								pgn += " ";
+							current_color = libchess::constants::WHITE;
+						}
+					}
+
+					pgn += result + "\n\n";
+
+					my_printf("\n");
+					my_printf("\n");
+					const std::string result_url = push_pgn(pgn);
+					if (result_url.empty())
+						my_printf(" > Submit failed!\n");
+					else
+						my_printf("PGN can be found at: %s\n", result_url.c_str());
+					my_printf("\n");
+				}
+			}
+#endif
+			else if (parts[0] == "bench") {
+				run_bench(parts.size() == 2 && parts[1] == "long");
+			}
+			else if (parts[0] == "perft") {
+				perft(sp.at(0)->pos, parts.size() == 2 ? std::stoi(parts[1]) : 3);
+			}
+			else if (parts[0] == "new") {
+				reset_state();
+				show_board = true;
+			}
+			else if (parts[0] == "redraw")
+				show_board = true;
 			else if (parts[0] == "player" && parts.size() == 2) {
 				if (parts[1] == "white" || parts[1] == "w")
 					player = libchess::constants::WHITE;
@@ -757,10 +1152,19 @@ void tui()
 			}
 			else if (parts[0] == "time" && parts.size() == 2) {
 				try {
-					initial_think_time = total_dog_time = std::stod(parts[1]) * 1000;
+					total_dog_time = 0;
+
+					auto time_parts = split(parts[1], ":");
+					for(auto & time_part: time_parts) {
+						total_dog_time *= 60;
+						total_dog_time += std::stod(time_part);
+					}
+					total_dog_time *= 1000;
+
+					initial_think_time = total_dog_time;
 					write_settings();
 				}
-				catch(std::invalid_argument ia) {
+				catch(std::invalid_argument & ia) {
 					my_printf("Please enter a value for time, not something else.\n");
 					my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
 				}
@@ -778,10 +1182,31 @@ void tui()
 				show_movelist(sp.at(0)->pos);
 			else if (parts[0] == "board")
 				show_board = true;
-			else if (parts[0] == "stats")
-				show_stats(sp.at(0)->cs);
+			else if (parts[0] == "stats") {
+				uint16_t md_limit = 65535;
+#if defined(ESP32)
+				for(auto & t: sp)
+					md_limit = std::min(md_limit, sp.at(0)->md_limit);
+#endif
+				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
+			}
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
+			else if (parts[0] == "fen")
+				my_printf("Fen: %s\n", sp.at(0)->pos.fen().c_str());
+			else if (parts[0] == "setfen" && parts.size() >= 2) {
+				reset_state();
+				std::string fen;
+				for(size_t i=1; i<parts.size(); i++) {
+					if (fen.empty() == false)
+						fen += " ";
+					fen += parts.at(i);
+				}
+				sp.at(0)->pos = libchess::Position(fen);
+				my_printf("FEN set, hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
+				p_a_k      = true;
+				show_board = true;
+			}
 			else if (parts[0] == "cls") {
 				if (t != T_ASCII)
 					my_printf("\x1b[2J");
@@ -798,6 +1223,14 @@ void tui()
 				default_trace = trace_enabled;
 				write_settings();
 				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
+			}
+			else if (parts[0] == "ping") {
+				if (parts.size() == 2)
+					do_ping = parts[1] == "on";
+				else
+					do_ping = !do_ping;
+				write_settings();
+				my_printf("Beeping is now %senabled\n", do_ping ? "":"not ");
 			}
 			else if (parts[0] == "terminal" && parts.size() == 2) {
 				if (parts[1] == "ansi")
@@ -831,8 +1264,43 @@ void tui()
 				int nnue_score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 				my_printf("evaluation score: %.2f\n", nnue_score / 100.);
 			}
+			else if (parts[0] == "recall") {
+				FILE *fh = fopen(RECALL_FILE, "r");
+				if (fh) {
+					char buffer[128] { };
+					fgets(buffer, sizeof(buffer) - 1, fh);
+					char *lf = strchr(buffer, '\n');
+					if (lf)
+						*lf = 0x00;
+					my_printf("Use \"%s\"?\n", buffer);
+
+					if (is.get() == 'y') {
+						reset_state();
+
+						sp.at(0)->pos = libchess::Position(buffer);
+						fgets(buffer, sizeof(buffer) - 1, fh);
+						total_dog_time = atoi(buffer);
+
+						p_a_k      = true;
+						show_board = true;
+					}
+
+					fclose(fh);
+				}
+				else {
+					my_printf("No fen remembered\n");
+					p_a_k = true;
+				}
+			}
 			else if (parts[0] == "hint")
 				tt_lookup();
+			else if (parts[0] == "book") {
+				auto move = pb->query(sp.at(0)->pos);
+				if (move.has_value())
+					my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
+				else
+					my_printf("Book has no entry/entries for this position\n");
+			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
 			else if (parts[0].size() >= 2) {
@@ -859,6 +1327,8 @@ void tui()
 					total_human_think += human_think_end - human_think_start;
 					n_human_think++;
 
+					store_position(sp.at(0)->pos.fen(), total_dog_time);
+
 					show_board = true;
 					p_a_k      = true;
 				}
@@ -877,7 +1347,8 @@ void tui()
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
 			auto move = pb->query(sp.at(0)->pos);
-			if (move.has_value()) {
+			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
+			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
@@ -920,6 +1391,8 @@ void tui()
 				scores.push_back(best_score);
 			}
 
+			store_position(sp.at(0)->pos.fen(), total_dog_time);
+
 			int16_t score_after = get_score(sp.at(0)->pos, now_playing);
 			dog_score_sum += score_after - score_before;
 			dog_score_n++;
@@ -929,6 +1402,10 @@ void tui()
 #if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
 			stop_blink(led_green_timer, &led_green);
 #endif
+
+			if (do_ping)
+				my_printf("\07");  // bell
+
 			p_a_k      = true;
 			show_board = true;
 		}

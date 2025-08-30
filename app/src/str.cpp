@@ -14,7 +14,7 @@ std::vector<std::string> split(std::string in, std::string splitter)
 			break;
 
 		std::string before = in.substr(0, pos);
-		out.push_back(before);
+		out.push_back(std::move(before));
 
 		size_t bytes_left = in.size() - (pos + splitter_size);
 		if (bytes_left == 0)
@@ -27,7 +27,7 @@ std::vector<std::string> split(std::string in, std::string splitter)
 	}
 
 	if (in.size() > 0)
-		out.push_back(in);
+		out.push_back(std::move(in));
 
 	return out;
 }

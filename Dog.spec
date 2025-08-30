@@ -1,5 +1,5 @@
 Name:       Dog
-Version:    3.1
+Version:    3.2
 Release:    0
 Summary:    A chess playing program
 License:    MIT
@@ -25,5 +25,5 @@ cp app/src/linux-windows/build/redhat-linux-build/Dog %{buildroot}/usr/games
 /usr/games/Dog
 
 %changelog
-* Mon Jan 27 2025 Folkert van Heusden <mail@vanheusden.com>
+* Sat Aug 30 2025 Folkert van Heusden <folkert@vanheusden.com>
 -

@@ -55,8 +55,15 @@ static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in 
 polyglot_book::polyglot_book(const std::string & filename)
 {
 	fh = fopen(filename.c_str(), "rb");
-	if (!fh)
+	if (fh) {
+		fseek(fh, 0, SEEK_END);
+		const long size = ftell(fh);
+		n = size / sizeof(polyglot_entry);
+		assert((size % sizeof(polyglot_entry)) == 0);
+	}
+	else {
 		printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
+	}
 }
 
 polyglot_book::~polyglot_book()
@@ -65,11 +72,34 @@ polyglot_book::~polyglot_book()
 		fclose(fh);
 }
 
+size_t polyglot_book::size() const
+{
+	return n;
+}
+
 libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Position & p)
 {
 	int  to_y    = (move >> 3) & 7;
 	auto sq_to   = libchess::Square::from(libchess::File(move & 7       ), libchess::Rank(to_y)           ).value();
 	auto sq_from = libchess::Square::from(libchess::File((move >> 6) & 7), libchess::Rank((move >> 9) & 7)).value();
+
+	libchess::Move::Type type { libchess::Move::Type::NONE };
+
+	if (sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1) &&
+			p.piece_type_on(sq_from).value() == libchess::constants::KING &&
+			p.piece_type_on(sq_to).value() == libchess::constants::ROOK){
+		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H1 ? libchess::constants::G1 : libchess::constants::C1;
+	}
+	else if (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8) &&
+			p.piece_type_on(sq_from).value() == libchess::constants::KING &&
+			p.piece_type_on(sq_to).value() == libchess::constants::ROOK) {
+		type = libchess::Move::Type::CASTLING;
+		sq_to = sq_to == libchess::constants::H8 ? libchess::constants::G8 : libchess::constants::C8;
+	}
+
+	if (type != libchess::Move::Type::NONE)  // castling
+		return libchess::Move(sq_from, sq_to, type);
 
 	assert(p.piece_on(sq_from).has_value());
 	bool is_capture = p.piece_on(sq_to).has_value();
@@ -84,8 +114,6 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 		promote_to = promotions[promotion_type];
 	}
 
-	libchess::Move::Type type { libchess::Move::Type::NONE };
-
 	if (promotion_type) {
 		type = is_capture ? libchess::Move::Type::CAPTURE_PROMOTION : libchess::Move::Type::PROMOTION;
 		return libchess::Move(sq_from, sq_to, promote_to, type);
@@ -93,11 +121,7 @@ libchess::Move convert_polyglot_move(const uint16_t & move, const libchess::Posi
 
 	if (is_capture)
 		type = libchess::Move::Type::CAPTURE;
-	else if ((sq_from == libchess::constants::E1 && (sq_to == libchess::constants::A1 || sq_to == libchess::constants::H1)) ||
-		 (sq_from == libchess::constants::E8 && (sq_to == libchess::constants::A8 || sq_to == libchess::constants::H8))) {
-		type = libchess::Move::Type::CASTLING;
-	}
-	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && (sq_to.rank() == 3 || sq_to.rank() == 4)) {
+	else if (p.piece_type_on(sq_from).value() == libchess::constants::PAWN && ((sq_to.rank() == 3 && sq_from.rank() == 1) || (sq_to.rank() == 4 && sq_from.rank() == 6))) {
 		type = libchess::Move::Type::DOUBLE_PUSH;
 	}
 	else {
@@ -142,10 +166,7 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 
 	const uint64_t hash = p.hash();
 
-	fseek(fh, 0, SEEK_END);
-	const long size = ftell(fh);
-	const long n    = size / sizeof(polyglot_entry);
-	assert((size % sizeof(polyglot_entry)) == 0);
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, 1 << 30);
 
 	long low  = 0;
 	long high = n;
@@ -178,6 +199,9 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			scan(p, index,  1,  n, moves);  // forward serach
 
 			printf("Selecting from %zu move(s) (", moves.size());
+
+			// weighted random, see https://stackoverflow.com/a/56006340/216582
+			std::vector<std::pair<double, libchess::Move> > work;
 			bool first = true;
 			for(auto & m: moves) {
 				if (first)
@@ -185,25 +209,15 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 				else
 					printf(" ");
 				printf("%s", m.first.to_str().c_str());
+				work.push_back({ -log(dist(rng) + 1) / (m.second + 1), m.first });
 			}
 			printf(")...\n");
 
-			int use_weight = 0;
-			if (moves.size() > 4) {
-				int sum = 0;
-				for(auto & m : moves)
-					sum += m.second;
-				use_weight = sum / moves.size();
-			}
+			if (work.empty() == false) {
+				std::sort(work.begin(), work.end(), [](const auto & lhs, const auto & rhs) { return lhs.first < rhs.first; });
+				printf("%f %f\n", work.at(0).first, work.at(work.size() - 1).first);
 
-			for(;;) {
-				std::uniform_int_distribution<std::mt19937::result_type> dist(0, moves.size() - 1);
-				size_t nr = dist(rng);
-				auto & m  = moves.at(nr);
-				if (m.second >= use_weight) {
-					my_printf("Minimum move weight: %d, chosen move weight: %d\n", use_weight, m.second);
-					return m.first;
-				}
+				return work.at(0).second;
 			}
 		}
 	}

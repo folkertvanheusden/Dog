@@ -11,7 +11,6 @@
 #include "inbuf.h"
 #include "main.h"
 #include "max-ascii.h"
-#include "psq.h"
 #include "search.h"
 #include "str.h"
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
@@ -196,10 +195,16 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		return 0;
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
-		if (check_min_stack_size(1, sp))
-			return 0;
-
 		sp.md = qsdepth;
+		if (check_min_stack_size(sp)) {
+			sp.md_limit = sp.md;
+			sp.cs.data.large_stack++;
+			return nnue_evaluate(sp.nnue_eval, sp.pos);
+		}
+	}
+	else if (qsdepth >= sp.md_limit) {
+		sp.cs.data.large_stack++;
+		return nnue_evaluate(sp.nnue_eval, sp.pos);
 	}
 #endif
 	if (qsdepth >= 127)
@@ -220,8 +225,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
-		if (te.value().M)  // move stored in TT?
-			tt_move = uint_to_libchessmove(te.value().M);
 
 		{
 			int score      = te.value().score;
@@ -230,9 +233,14 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
                         bool use       = flag == EXACT ||
                                         (flag == LOWERBOUND && work_score >= beta) ||
                                         (flag == UPPERBOUND && work_score <= alpha);
-			if (use)
+			if (use) {
+				sp.cs.data.qtt_cutoff++;
 				return work_score;
+			}
 		}
+
+		if (te.value().M)  // move stored in TT?
+			tt_move = uint_to_libchessmove(te.value().M);
 	}
 	////////
 
@@ -351,15 +359,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (depth == 0)
 		return qs(alpha, beta, max_depth, sp);
 
-	const int csd = max_depth - depth;
-#if defined(ESP32)
-	if (csd > sp.md) {
-		if (check_min_stack_size(0, sp))
-			return 0;
-		sp.md = csd;
-	}
-#endif
-
 	sp.cs.data.nodes++;
 
 	bool is_root_position = max_depth == depth;
@@ -368,6 +367,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		return 0;
 	}
 
+	const int  csd         = max_depth - depth;
 	const int  start_alpha = alpha;
 	const bool is_pv       = alpha != beta -1;
 
@@ -396,6 +396,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
                                         (flag == UPPERBOUND && work_score <= alpha);
 
 			if (use) {
+				sp.cs.data.tt_cutoff++;
 				if (tt_move.has_value()) {
 					*m = tt_move.value();  // move in TT is valid
 					return work_score;

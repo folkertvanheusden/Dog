@@ -20,14 +20,14 @@ struct Network {
 
 		// side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(us.vals[i], std::int16_t{0}, QA);
+			std::int16_t input  = std::clamp(us.vals[i], std::int16_t{0}, QA);
 			std::int16_t weight = input * this->output_weights[0].vals[i];
 			output += int{input} * int{weight};
 		}
 
 		// not side to move
 		for (int i = 0; i < HIDDEN_SIZE; i++) {
-			std::int16_t input = std::clamp(them.vals[i], std::int16_t{0}, QA);
+			std::int16_t input  = std::clamp(them.vals[i], std::int16_t{0}, QA);
 			std::int16_t weight = input * this->output_weights[1].vals[i];
 			output += int{input} * int{weight};
 		}
@@ -92,7 +92,7 @@ void Eval::set(const libchess::Position & pos)
         }
 }
 
-int Eval::evaluate(bool white_to_move) const
+int IRAM_ATTR Eval::evaluate(bool white_to_move) const
 {
 	if (white_to_move)
 		return NNUE->evaluate(this->white, this->black);
@@ -100,7 +100,7 @@ int Eval::evaluate(bool white_to_move) const
 	return NNUE->evaluate(this->black, this->white);
 }
 
-void Eval::add_piece(const int piece, const int square, const bool is_white)
+void IRAM_ATTR Eval::add_piece(const int piece, const int square, const bool is_white)
 {
 	assert(piece >= 0 && piece < 6);
 	if (is_white) {
@@ -113,7 +113,7 @@ void Eval::add_piece(const int piece, const int square, const bool is_white)
 	}
 }
 
-void Eval::remove_piece(const int piece, const int square, const bool is_white)
+void IRAM_ATTR Eval::remove_piece(const int piece, const int square, const bool is_white)
 {
 	assert(piece >= 0 && piece < 6);
 	if (is_white) {

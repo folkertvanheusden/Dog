@@ -12,7 +12,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
-const int uart_num = UART_NUM_2;
+const uart_port_t uart_num = UART_NUM_1;
 #endif
 
 
@@ -66,7 +66,7 @@ protected:
 			if (c >= 0)
 				break;
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
 			size_t length = 0;
 			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
 			if (length) {
@@ -79,7 +79,6 @@ protected:
 					break;
 				}
 			}
-
 			vTaskDelay(1);
 #endif
 		}

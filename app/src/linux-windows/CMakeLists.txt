@@ -23,6 +23,13 @@ else()
 	set(MY_DEBUG 0)
 endif()
 
+if (GPROF EQUAL 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+	MESSAGE("WITH GPROF")
+else()
+	MESSAGE("without GPROF")
+endif()
+
 if (ASAN EQUAL 1)
 	set(MY_DEBUG 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined")
@@ -48,7 +55,7 @@ else()
 endif()
 
 set(PROJECT_VERSION_MAJOR 3)
-set(PROJECT_VERSION_MINOR 1)
+set(PROJECT_VERSION_MINOR 2)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic")
 
@@ -71,11 +78,11 @@ ENDIF ()
 set(APP_SOURCES
   ../book.cpp
   ../eval.cpp
+  ../eval-stats.cpp
   ../main.cpp
   ../max.cpp
   ../max-ascii.cpp
   ../nnue.cpp
-  ../psq.cpp
   ../san.cpp
   ../search.cpp
   ../state_exporter.cpp
@@ -143,6 +150,10 @@ else()
 		target_link_libraries(Dog-avx PRIVATE Threads::Threads)
 		target_link_libraries(Dog-native PRIVATE Threads::Threads)
 	endif()
+endif()
+
+if (GPROF EQUAL 1)
+	target_link_libraries(Dog PRIVATE -pg)
 endif()
 
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)

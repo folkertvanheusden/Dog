@@ -43,6 +43,8 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 {
 	std::vector<undo_t> actions;
 
+//	fprintf(stderr, "%s | %s\n", pos.fen().c_str(), move.to_str().c_str());
+
 	Square from_square = move.from_square();
 	Square to_square   = move.to_square  ();
 
@@ -53,6 +55,8 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 
 	bool is_white     = pos.side_to_move() == constants::WHITE;
 
+	assert(move.type() != Move::Type::ENPASSANT || (is_white && move.to_square().rank() == 5) || (!is_white && move.to_square().rank() == 2));
+
 	switch(move.type()) {
 		case Move::Type::NORMAL:
 		case Move::Type::DOUBLE_PUSH:
@@ -62,33 +66,44 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			break;
 		case Move::Type::CAPTURE:
 			assert(captured_pt.has_value());
+			assert(pos.color_of(from_square) != pos.color_of(to_square));
 			remove_piece(e, to_square, *captured_pt, !is_white, &actions);
 			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
 			break;
 		case Move::Type::ENPASSANT:
 			assert(*moving_pt == constants::PAWN);
+			assert(pos.color_of(from_square) != pos.color_of(is_white ? Square(to_square - 8) : Square(to_square + 8)));
 			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions);
 			assert(pos.piece_type_on(is_white ? Square(to_square - 8) : Square(to_square + 8)) == constants::PAWN);
 			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, !is_white, &actions);
 			break;
 		case Move::Type::CASTLING:
 			assert(*moving_pt == constants::KING);
+			assert(pos.color_of(from_square) == (is_white ? constants::WHITE : constants::BLACK));
 			move_piece(e, from_square, to_square, constants::KING, is_white, &actions);
 			switch (to_square) {
 				case constants::C1:
 					assert(is_white);
+					assert(pos.color_of(constants::A1) == constants::WHITE);
+					assert(pos.piece_type_on(constants::D1).has_value() == false);
 					move_piece(e, constants::A1, constants::D1, constants::ROOK, true, &actions);
 					break;
 				case constants::G1:
 					assert(is_white);
+					assert(pos.color_of(constants::H1) == constants::WHITE);
+					assert(pos.piece_type_on(constants::F1).has_value() == false);
 					move_piece(e, constants::H1, constants::F1, constants::ROOK, true, &actions);
 					break;
 				case constants::C8:
 					assert(!is_white);
+					assert(pos.color_of(constants::A8) == constants::BLACK);
+					assert(pos.piece_type_on(constants::D8).has_value() == false);
 					move_piece(e, constants::A8, constants::D8, constants::ROOK, false, &actions);
 					break;
 				case constants::G8:
 					assert(!is_white);
+					assert(pos.color_of(constants::H8) == constants::BLACK);
+					assert(pos.piece_type_on(constants::F8).has_value() == false);
 					move_piece(e, constants::H8, constants::F8, constants::ROOK, false, &actions);
 					break;
 				default:
@@ -97,25 +112,43 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			}
 			break;
 		case Move::Type::PROMOTION:
-			assert(*moving_pt == constants::PAWN);
+			assert(*moving_pt    == constants::PAWN);
 			assert(*promotion_pt != constants::PAWN);
+			assert((pos.color_of(from_square) == constants::WHITE && to_square.rank() == 7) ||
+			       (pos.color_of(from_square) == constants::BLACK && to_square.rank() == 0));
 			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
 			break;
 		case Move::Type::CAPTURE_PROMOTION:
 			assert(*moving_pt == constants::PAWN);
 			assert(*promotion_pt != constants::PAWN);
+			assert((pos.color_of(from_square) == constants::WHITE && to_square.rank() == 7) ||
+			       (pos.color_of(from_square) == constants::BLACK && to_square.rank() == 0));
 			remove_piece(e, to_square,  *captured_pt,    !is_white, &actions);
 			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
 			break;
 		default:
-			printf("type is %d\n", move.type());
+			printf("type is %d\n", int(move.type()));
 			assert(false);
 			break;
 	}
 
 	pos.make_move(move);
+
+#if !defined(NDEBUG)
+	if (pos.enpassant_square().has_value()) {
+		auto file = pos.enpassant_square().value().file();
+		if (is_white) {
+			assert(pos.enpassant_square().value().rank() == 2);
+			assert(pos.piece_on(libchess::Square::from(file, libchess::Rank(1)).value()).has_value() == false);
+		}
+		else {
+			assert(pos.enpassant_square().value().rank() == 5);
+			assert(pos.piece_on(libchess::Square::from(file, libchess::Rank(6)).value()).has_value() == false);
+		}
+	}
+#endif
 
 	return actions;
 }
