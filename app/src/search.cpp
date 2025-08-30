@@ -197,9 +197,14 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	if (qsdepth > sp.md) {
 		sp.md = qsdepth;
 		if (check_min_stack_size(sp)) {
+			sp.md_limit = sp.md;
 			sp.cs.data.large_stack++;
 			return nnue_evaluate(sp.nnue_eval, sp.pos);
 		}
+	}
+	else if (qsdepth >= sp.md_limit) {
+		sp.cs.data.large_stack++;
+		return nnue_evaluate(sp.nnue_eval, sp.pos);
 	}
 #endif
 	if (qsdepth >= 127)

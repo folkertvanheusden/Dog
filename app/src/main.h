@@ -33,6 +33,7 @@ typedef struct
 #if defined(ESP32)
 	TaskHandle_t     th        { nullptr };
 	uint16_t         md        { 0       };
+	uint16_t         md_limit  { 65535   };
 #endif
 
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };

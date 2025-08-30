@@ -521,7 +521,7 @@ std::string perc(const unsigned total, const unsigned part)
 	return myformat("%.2f%%", part * 100. / total);
 }
 
-void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose)
+void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
 	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
@@ -552,7 +552,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 #if defined(ESP32)
 		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
 				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		my_printf("Largestackfail: %u\n", cs.data.large_stack);
+		my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
 		my_printf("SOC           : ");
 		esp_chip_info_t chip_info;
 		esp_chip_info(&chip_info);
@@ -1181,8 +1181,14 @@ void tui()
 				show_movelist(sp.at(0)->pos);
 			else if (parts[0] == "board")
 				show_board = true;
-			else if (parts[0] == "stats")
-				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
+			else if (parts[0] == "stats") {
+				uint16_t md_limit = 65535;
+#if defined(ESP32)
+				for(auto & t: sp)
+					md_limit = std::min(md_limit, sp.at(0)->md_limit);
+#endif
+				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
+			}
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
