@@ -13,7 +13,7 @@
 #include <signal.h>
 #include <streambuf>
 #include <string>
-#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
+#if (!defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)) && DEBUG==1
 #include <valgrind/drd.h>
 #include <valgrind/helgrind.h>
 #endif
