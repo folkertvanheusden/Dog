@@ -516,6 +516,8 @@ void emit_pv(Eval *const nnue_eval, const libchess::Position & pos, const libche
 
 std::string perc(const unsigned total, const unsigned part)
 {
+	if (total == 0)
+		return "-";
 	return myformat("%.2f%%", part * 100. / total);
 }
 
