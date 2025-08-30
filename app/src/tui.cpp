@@ -604,6 +604,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 	my_printf("Book size     : %zu\n", pb->size());
+	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
 }
 
 void show_movelist(const libchess::Position & pos)
