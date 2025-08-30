@@ -520,7 +520,7 @@ void show_esp32_info()
 int64_t esp_start_ts = 0;
 int check_min_stack_size(const search_pars_t & sp)
 {
-	UBaseType_t level = uxTaskGetStackHighWaterMark(nullptr);
+	UBaseType_t level = uxTaskGetStackHighWaterMark(sp.th);
 
 	my_trace("# dts: %lld depth %d nodes %u lower_bound: %d, task name: %s\n", esp_timer_get_time() - esp_start_ts, sp.md, sp.cs.data.nodes, level, pcTaskGetName(xTaskGetCurrentTaskHandle()));
 
