@@ -31,7 +31,7 @@ tt::~tt()
 
 void tt::debug_helper()
 {
-#if !defined(_WIN32) && !defined(ESP32)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_entry));
 #endif
 }
