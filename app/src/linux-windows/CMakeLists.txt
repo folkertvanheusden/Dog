@@ -99,7 +99,6 @@ add_executable(
   Dog
   ${APP_SOURCES}
 )
-target_compile_options(Dog PRIVATE -march=native -mtune=native -O3)
 
 add_executable(
   Dog-avx
@@ -162,7 +161,7 @@ target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
 
-pkg_check_modules(VALGRIND OPTIONAL valgrind)
+pkg_check_modules(VALGRIND valgrind)
 target_link_libraries(Dog ${VALGRIND_LIBRARIES})
 target_include_directories(Dog PRIVATE ${VALGRIND_INCLUDE_DIRS})
 target_compile_options(Dog PRIVATE ${VALGRIND_CFLAGS_OTHER})
