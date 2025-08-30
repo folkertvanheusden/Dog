@@ -94,12 +94,12 @@ set(APP_SOURCES
   ../tui.cpp
   ../fathom/src/tbprobe.c
 )
-target_compile_options(Dog PRIVATE -march=native -mtune=native -O3)
 
 add_executable(
   Dog
   ${APP_SOURCES}
 )
+target_compile_options(Dog PRIVATE -march=native -mtune=native -O3)
 
 add_executable(
   Dog-avx
@@ -161,6 +161,20 @@ target_include_directories(Dog PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
+
+pkg_check_modules(VALGRIND OPTIONAL valgrind)
+target_link_libraries(Dog ${VALGRIND_LIBRARIES})
+target_include_directories(Dog PRIVATE ${VALGRIND_INCLUDE_DIRS})
+target_compile_options(Dog PRIVATE ${VALGRIND_CFLAGS_OTHER})
+target_link_libraries(Dog-avx ${VALGRIND_LIBRARIES})
+target_include_directories(Dog-avx PRIVATE ${VALGRIND_INCLUDE_DIRS})
+target_compile_options(Dog-avx PRIVATE ${VALGRIND_CFLAGS_OTHER})
+target_link_libraries(Dog-native ${VALGRIND_LIBRARIES})
+target_include_directories(Dog-native PRIVATE ${VALGRIND_INCLUDE_DIRS})
+target_compile_options(Dog-native PRIVATE ${VALGRIND_CFLAGS_OTHER})
+target_link_libraries(Dog-stats-prober ${VALGRIND_LIBRARIES})
+target_include_directories(Dog-stats-prober PRIVATE ${VALGRIND_INCLUDE_DIRS})
+target_compile_options(Dog-stats-prober PRIVATE ${VALGRIND_CFLAGS_OTHER})
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
 
