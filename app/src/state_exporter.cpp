@@ -87,7 +87,7 @@ void state_exporter::clear()
 
 void state_exporter::handler()
 {
-#if !defined(_WIN32) && !defined(ESP32)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	VALGRIND_HG_DISABLE_CHECKING(&sp->cs.data,  sizeof(sp->cs.data));
 	VALGRIND_HG_DISABLE_CHECKING(&sp->cur_move, sizeof(sp->cur_move));
 	DRD_IGNORE_VAR(sp->cs.data );

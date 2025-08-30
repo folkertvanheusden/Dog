@@ -13,7 +13,7 @@
 #include <signal.h>
 #include <streambuf>
 #include <string>
-#if !defined(_WIN32) && !defined(ESP32)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 #include <valgrind/drd.h>
 #include <valgrind/helgrind.h>
 #endif
@@ -267,7 +267,7 @@ void searcher(const int i)
 	sp.at(i)->th = xTaskGetCurrentTaskHandle();
 #endif
 
-#if !defined(_WIN32) && !defined(ESP32)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
 	VALGRIND_HG_DISABLE_CHECKING(&sp.at(i)->cs.data,  sizeof(sp.at(i)->cs.data));
 	VALGRIND_HG_DISABLE_CHECKING(&sp.at(i)->cur_move, sizeof(sp.at(i)->cur_move));
 	DRD_IGNORE_VAR(sp.at(i)->cs.data );
