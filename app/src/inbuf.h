@@ -12,7 +12,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
-const int uart_num = UART_NUM_2;
+const uart_port_t uart_num = UART_NUM_1;
 #endif
 
 
@@ -25,7 +25,6 @@ protected:
 	 * - at most, six characters in ordinary read buffer
 	 */
 	char buffer[bufferSize];            // data buffer
-	bool local_echo { false };
 
 public:
 	/* constructor
@@ -34,23 +33,9 @@ public:
 	 * => force underflow()
 	 */
 	inbuf() {
-		setg (buffer+4,     // beginning of putback area
+		setg(buffer+4,     // beginning of putback area
 			buffer+4,     // read position
 			buffer+4);    // end position
-	}
-
-	void set_local_echo(const bool state) {
-		local_echo = state;
-	}
-
-	void echo(const int c) {
-		if (local_echo) {
-#if defined(ESP32)
-			char buffer = c;
-			uart_write_bytes(uart_num, &buffer, 1);
-#endif
-			printf("%c", c);
-		}
 	}
 
 protected:
@@ -64,46 +49,36 @@ protected:
 		 * - use number of characters read
 		 * - but at most four
 		 */
-		int numPutback;
-		numPutback = gptr() - eback();
-		if (numPutback > 4) {
+		int numPutback = gptr() - eback();
+		if (numPutback > 4)
 			numPutback = 4;
-		}
 
 		/* copy up to four characters previously read into
 		 * the putback buffer (area of first four characters)
 		 */
-		std::memmove (buffer+(4-numPutback), gptr()-numPutback,
-				numPutback);
+		std::memmove(buffer+(4-numPutback), gptr()-numPutback, numPutback);
 
 		// read new characters
 		int c = 0;
 
 		for(;;) {
 			c = fgetc(stdin);
-			if (c >= 0) {
-				echo(c);
+			if (c >= 0)
 				break;
-			}
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
-			int length = 0;
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
+			size_t length = 0;
 			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
 			if (length) {
 				char buffer = 0;
 				if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
-					if (buffer == 13) {
-						echo(13);
+					if (buffer == 13)
 						c = 10;
-					}
-					else {
+					else
 						c = buffer;
-					}
-					echo(c);
 					break;
 				}
 			}
-
 			vTaskDelay(1);
 #endif
 		}
@@ -113,7 +88,7 @@ protected:
 		int num = 1;
 
 		// reset buffer pointers
-		setg (buffer+(4-numPutback),   // beginning of putback area
+		setg(buffer+(4-numPutback),   // beginning of putback area
 				buffer+4,                // read position
 				buffer+4+num);           // end of buffer
 

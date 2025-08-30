@@ -23,6 +23,13 @@ else()
 	set(MY_DEBUG 0)
 endif()
 
+if (GPROF EQUAL 1)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+	MESSAGE("WITH GPROF")
+else()
+	MESSAGE("without GPROF")
+endif()
+
 if (ASAN EQUAL 1)
 	set(MY_DEBUG 1)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined")
@@ -47,8 +54,8 @@ else()
 	MESSAGE("without TSAN")
 endif()
 
-set(PROJECT_VERSION_MAJOR 2)
-set(PROJECT_VERSION_MINOR 9)
+set(PROJECT_VERSION_MAJOR 3)
+set(PROJECT_VERSION_MINOR 2)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic")
 
@@ -63,28 +70,55 @@ else()
 	MESSAGE("without LTO")
 endif()
 
-add_executable(
-  Dog
+IF (WIN32 OR MSYS OR MINGW OR MSVC)
+	MESSAGE("Windows build")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields")
+ENDIF ()
+
+set(APP_SOURCES
   ../book.cpp
   ../eval.cpp
-  ../eval_par.cpp
+  ../eval-stats.cpp
   ../main.cpp
   ../max.cpp
   ../max-ascii.cpp
-  ../psq.cpp
+  ../nnue.cpp
   ../san.cpp
   ../search.cpp
+  ../state_exporter.cpp
   ../stats.cpp
   ../str.cpp
   ../syzygy.cpp
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
-  ../tuner.cpp
-  ../usb-device.cpp
   ../fathom/src/tbprobe.c
 )
 target_compile_options(Dog PRIVATE -march=native -mtune=native -O3)
+
+add_executable(
+  Dog
+  ${APP_SOURCES}
+)
+
+add_executable(
+  Dog-avx
+  ${APP_SOURCES}
+)
+
+target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3)
+
+add_executable(
+  Dog-native
+  ${APP_SOURCES}
+)
+
+target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3)
+
+add_executable(
+    Dog-stats-prober
+    ../emit_stats.cpp
+)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -114,10 +148,19 @@ else()
 		target_link_libraries(Dog PRIVATE -fsanitize=memory Threads::Threads)
 	else()
 		target_link_libraries(Dog PRIVATE Threads::Threads)
+		target_link_libraries(Dog-avx PRIVATE Threads::Threads)
+		target_link_libraries(Dog-native PRIVATE Threads::Threads)
 	endif()
 endif()
 
+if (GPROF EQUAL 1)
+	target_link_libraries(Dog PRIVATE -pg)
+endif()
+
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
 
 set_target_properties(Dog PROPERTIES OUTPUT_NAME Dog)
 

@@ -5,9 +5,12 @@
 #include <thread>
 #include <libchess/Position.h>
 
-#include "eval_par.h"
+#include "nnue.h"
 #include "stats.h"
 
+
+constexpr const int max_eval = 30000;
+constexpr const int max_non_mate = 29500;
 
 typedef struct {
 	std::atomic_bool        flag;
@@ -15,26 +18,29 @@ typedef struct {
 	std::mutex              cv_lock;
 } end_t;
 
+#if defined(ESP32)
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 typedef struct
 {
-	const eval_par & parameters;
-	int16_t *const   history;
-	end_t           *stop;
-	const int        thread_nr;
-	chess_stats      cs;
+	int16_t   *const history   { nullptr };
+	end_t           *stop      { nullptr };
+	const int        thread_nr { 0       };
+	chess_stats      cs        {         };
+	uint32_t         cur_move  { 0       };
 #if defined(ESP32)
-	uint16_t         md;
+	TaskHandle_t     th        { nullptr };
+	uint16_t         md        { 0       };
+	uint16_t         md_limit  { 65535   };
 #endif
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	char             move[5];
-	int              score;
-#endif
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
+	libchess::Move   best_moves[128];
 
-	libchess::Move     best_moves[128];
-
-	std::thread       *thread_handle;
+	std::thread     *thread_handle { nullptr };
+	Eval            *nnue_eval     { nullptr };
 } search_pars_t;
 
 extern std::vector<search_pars_t *> sp;
@@ -53,8 +59,6 @@ extern bool               trace_enabled;
 extern inbuf              i;
 extern std::istream       is;
 extern tt                 tti;
-extern uint64_t           bboard;
-extern uint64_t           wboard;
 extern bool               with_syzygy;
 
 #if defined(ESP32)
@@ -64,6 +68,7 @@ extern bool               with_syzygy;
 typedef struct {
 	gpio_num_t pin_nr;
 	bool       state;
+	int        screen_x;
 } led_t;
 
 extern led_t led_green;
@@ -79,8 +84,10 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
-int check_min_stack_size(const int nr, const search_pars_t & sp);
+int check_min_stack_size(const search_pars_t & sp);
 void vTaskGetRunTimeStats();
+#else
+#define IRAM_ATTR
 #endif
 
 void my_trace(const char *const fmt, ...);
@@ -93,3 +100,5 @@ chess_stats calculate_search_statistics();
 std::pair<uint64_t, uint64_t> simple_search_statistics();  // nodes, syzyg hits
 void allocate_threads(const int n);
 void delete_threads();
+void run_bench(const bool long_bench);
+void hello();

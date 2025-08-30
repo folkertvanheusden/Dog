@@ -15,7 +15,7 @@ typedef struct __PRAGMA_PACKED__
 	uint16_t hash;
 	int16_t  score;
 	uint8_t  depth  : 8;
-	uint32_t m      : 18;
+	uint32_t M      : 18;
 	uint8_t  flags  : 2;
 	uint8_t  filler : 4;
 } tt_entry;
@@ -25,7 +25,7 @@ class tt
 private:
 	tt_entry *entries { nullptr };
 #if defined(ESP32)
-#define ESP32_TT_RAM_SIZE 49152
+#define ESP32_TT_RAM_SIZE 98304
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
 #elif defined(__ANDROID__)
 	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };
@@ -38,6 +38,7 @@ public:
 	tt();
 	~tt();
 
+	void debug_helper();
 	void reset();
 	void set_size(const uint64_t s);
 	int  get_size() const;  // in MB
@@ -51,5 +52,7 @@ public:
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move);
 int eval_to_tt  (const int eval, const int ply);
 int eval_from_tt(const int eval, const int ply);
+uint32_t       libchessmove_to_uint(const libchess::Move & m);
+libchess::Move uint_to_libchessmove(const uint32_t v);
 
 extern tt tti;

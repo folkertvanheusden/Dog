@@ -1,5 +1,7 @@
 #include <optional>
 
+#include "main.h"
+#include "search.h"
 #include "fathom/src/tbprobe.h"
 #include "libchess/Position.h"
 
@@ -18,7 +20,7 @@ struct pos {
 	bool     turn;
 };
 
-static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(unsigned *results, unsigned wdl)
+static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(const libchess::Position & pos, unsigned *results, unsigned wdl)
 {
 	unsigned selected_move = 0;
 	int      best_dtz      = 1000;
@@ -57,7 +59,7 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(unsigned
 		}
 
 		char move_str[6] { char('a' + (from & 7)), char('1' + (from >> 3)), char('a' + (to & 7)), char('1' + (to >> 3)), to_type };
-		auto move = libchess::Move::from(move_str);
+		auto move = str_to_move(pos, move_str);
 		if (move.has_value())
 			rc = std::pair{ move.value(), best_dtz };
 	}
@@ -126,25 +128,25 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	std::optional<std::pair<libchess::Move, int> > m;
 
-	m = get_best_dtz_move(results, TB_WIN);
+	m = get_best_dtz_move(lpos, results, TB_WIN);
 	if (m.has_value())
-		return { { m.value().first, 10000 - m.value().second } };
+		return { { m.value().first, max_eval - m.value().second } };
 
-	m = get_best_dtz_move(results, TB_CURSED_WIN);
+	m = get_best_dtz_move(lpos, results, TB_CURSED_WIN);
 	if (m.has_value())
-		return { { m.value().first, 10000 - m.value().second } };
+		return { { m.value().first, max_eval - m.value().second } };
 
-	m = get_best_dtz_move(results, TB_DRAW);
+	m = get_best_dtz_move(lpos, results, TB_DRAW);
 	if (m.has_value())
 		return { { m.value().first, - m.value().second } };  // Dog doesn't like draws
 
-	m = get_best_dtz_move(results, TB_BLESSED_LOSS);
+	m = get_best_dtz_move(lpos, results, TB_BLESSED_LOSS);
 	if (m.has_value())
-		return { { m.value().first, -(10000 - m.value().second) } };
+		return { { m.value().first, -(max_eval - m.value().second) } };
 
-	m = get_best_dtz_move(results, TB_LOSS);
+	m = get_best_dtz_move(lpos, results, TB_LOSS);
 	if (m.has_value())
-		return { { m.value().first, -(10000 - m.value().second) } };
+		return { { m.value().first, -(max_eval - m.value().second) } };
 
 	return { };
 }
@@ -161,11 +163,11 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 	int score  = 0;
 	int result = TB_GET_WDL(res);
 	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
-		score = -9999;
+		score = -(max_eval - 1);
 	else if (result == TB_DRAW)
 		score = 0;
 	else if (result == TB_CURSED_WIN || result == TB_WIN)
-		score = 9999;
+		score = max_eval - 1;
 	else {
 		printf("# unexpected return code from fathom: %d (%d)\n", result, res);
 		return { };

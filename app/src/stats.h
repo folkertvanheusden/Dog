@@ -1,14 +1,14 @@
+#pragma once
 #include <cstdint>
 
 class chess_stats
 {
 public:
-	struct {
+	struct _data_ {
 		uint32_t  nodes;
 		uint32_t  qnodes;
 		uint32_t  n_standing_pat;
 		uint32_t  n_draws;
-		uint32_t  n_qs_early_stop;
 
 		uint32_t  alpha_distance;
 		uint32_t  beta_distance;
@@ -19,6 +19,11 @@ public:
 		uint32_t  tt_hit;
 		uint32_t  tt_store;
 		uint32_t  tt_invalid;
+		uint32_t  tt_cutoff;
+		uint32_t  qtt_query;
+		uint32_t  qtt_hit;
+		uint32_t  qtt_store;
+		uint32_t  qtt_cutoff;
 
 		uint32_t  n_null_move;
 		uint32_t  n_null_move_hit;
@@ -36,6 +41,8 @@ public:
 
 		uint64_t  syzygy_queries;
 		uint64_t  syzygy_query_hits;
+
+		uint32_t  large_stack;
 	} data;
 
 	chess_stats();

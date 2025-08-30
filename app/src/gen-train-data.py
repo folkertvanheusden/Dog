@@ -18,7 +18,7 @@ import time
 #logging.basicConfig(level=logging.DEBUG)
 
 host = 'dog.vanheusden.com'
-port = 31250
+port = 31251
 proc = None
 node_count = 10000
 nth = os.sysconf('SC_NPROCESSORS_ONLN')

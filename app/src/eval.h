@@ -1,14 +1,16 @@
-#include "eval_par.h"
+#include "nnue.h"
 
-int eval_piece(const libchess::PieceType piece, const eval_par & parameters);
-int eval(const libchess::Position & pos, const eval_par & parameters);
+int nnue_evaluate(Eval *const e, const libchess::Position & pos);
+int nnue_evaluate(Eval *const e, const libchess::Color & c);
 
-// exported for testing
-bool is_piece   (const libchess::Position & pos, const libchess::Color side, const libchess::PieceType pt, const int file, const int rank);
-int  game_phase (const int counts[2][6], const eval_par & parameters);
-int  game_phase (const libchess::Position & pos, const eval_par & parameters);
-void count_board(const libchess::Position & pos, int counts[2][6]);
-void scan_pawns (const libchess::Position & pos, int whiteYmax[8], int blackYmin[8], int n_pawns_w[8], int n_pawns_b[8]);
-int  calc_psq   (const libchess::Position & pos, const int phase, const eval_par & parameters);
-int  calc_passed_pawns(const libchess::Position & pos, int whiteYmax[8], int blackYmin[8], int n_pawns_w[8], int n_pawns_b[8], const eval_par & parameters);
-int  king_shield(const libchess::Position & pos, const libchess::Color side);
+struct undo_t
+{
+	bool                is_put;  // else remove
+	libchess::Square    location;
+	libchess::PieceType type;
+	bool                is_white;
+};
+
+void                init_move  (Eval *const e, const libchess::Position & pos);
+void                unmake_move(Eval *const e, libchess::Position & pos, const std::vector<undo_t> & actions);
+std::vector<undo_t> make_move  (Eval *const e, libchess::Position & pos, const libchess::Move & move);

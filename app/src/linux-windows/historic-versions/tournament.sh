@@ -1,6 +1,5 @@
-cutechess-cli \
+fastchess \
 -engine cmd=/usr/local/bin/stash-18.0-linux-x86_64 proto=uci name=stash-18.0 \
--engine cmd=/home/folkert/Projects/Dog/app/src/linux-windows/build/Dorpsgek-A-to-E/dorpsgek proto=xboard name='dorpsgek' \
 \
 -engine cmd=./0.4b proto=uci  name='0.4b' \
 -engine cmd=./ccc-blitz-oct-2022 proto=uci name='ccc-blitz-oct-2022' \
@@ -12,14 +11,16 @@ cutechess-cli \
 -engine cmd=./v0.9 proto=uci  name='v0.9' \
 -engine cmd=./v1.0 proto=uci  name='v1.0' \
 -engine cmd=./v1.1 proto=uci  name='v1.1' \
--engine cmd=./v2.1 proto=uci arg='-t 1' name='v2.1' \
--engine cmd=./v2.2 proto=uci arg='-t 1' name='v2.2' \
--engine cmd=./v2.3 proto=uci arg='-t 1' name='v2.3' \
--engine cmd=./v2.4 proto=uci arg='-t 1' name='v2.4' \
--engine cmd=./v2.5 proto=uci arg='-t 1' name='v2.5' \
--engine cmd=./v2.5b proto=uci arg='-t 1' name='v2.5b' \
--engine cmd=./v2.6c proto=uci arg='-t 1' name='v2.6c' \
--engine cmd=./v2.7 proto=uci arg='-t 1 -H 256' name='v2.7' \
--engine cmd=./v2.8 proto=uci arg='-t 1 -H 256' name='v2.8' \
--seeds 2 \
--concurrency 20 -each tc=8+0.08 book=/home/folkert/bin/data/dc-3200.bin -rounds 5000 -games 2 -bookmode disk -recover -pgnout historic-versions-t.pgn -site 'cutechess' -tournament gauntlet
+-engine cmd=./v2.1 proto=uci args='-t 1' name='v2.1' \
+-engine cmd=./v2.2 proto=uci args='-t 1' name='v2.2' \
+-engine cmd=./v2.3 proto=uci args='-t 1' name='v2.3' \
+-engine cmd=./v2.4 proto=uci args='-t 1' name='v2.4' \
+-engine cmd=./v2.5 proto=uci args='-t 1' name='v2.5' \
+-engine cmd=./v2.5b proto=uci args='-t 1' name='v2.5b' \
+-engine cmd=./v2.6c proto=uci args='-t 1' name='v2.6c' \
+-engine cmd=./v2.7 proto=uci args='-t 1 -H 256' name='v2.7' \
+-engine cmd=./v2.8 proto=uci args='-t 1 -H 256' name='v2.8' \
+-engine cmd=./v2.9 proto=uci args='-t 1 -H 256' name='v2.9' \
+-engine cmd=./v3.0 proto=uci args='-t 1 -H 256' name='v3.0' \
+-engine cmd=./v3.1 proto=uci args='-t 1 -H 256' name='v3.1' \
+-concurrency 20 -each tc=8+0.08 -openings file=lichess-big3-resolved.epd format=epd -rounds 5000 -games 2 -recover -pgnout historic-versions-t.pgn -site 'cutechess'
