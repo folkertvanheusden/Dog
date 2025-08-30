@@ -48,4 +48,6 @@ void chess_stats::add(const chess_stats & source)
 	this->data.nmc_nodes       += source.data.nmc_nodes;
 	this->data.n_qmoves_cutoff += source.data.n_qmoves_cutoff;
 	this->data.nmc_qnodes      += source.data.nmc_qnodes;
+
+	this->data.large_stack     += source.data.large_stack;
 }

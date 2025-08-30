@@ -18,13 +18,22 @@ typedef struct {
 	std::mutex              cv_lock;
 } end_t;
 
+#if defined(ESP32)
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
+
 typedef struct
 {
 	int16_t   *const history   { nullptr };
 	end_t           *stop      { nullptr };
-	const int        thread_nr;
-	chess_stats      cs;
+	const int        thread_nr { 0       };
+	chess_stats      cs        {         };
 	uint32_t         cur_move  { 0       };
+#if defined(ESP32)
+	TaskHandle_t     th        { nullptr };
+	uint16_t         md        { 0       };
+#endif
 
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
 	libchess::Move   best_moves[128];
@@ -74,6 +83,7 @@ extern esp_timer_handle_t think_timeout_timer;
 void start_blink(esp_timer_handle_t handle);
 void stop_blink(esp_timer_handle_t handle, led_t *l);
 
+int check_min_stack_size(const int nr, const search_pars_t & sp);
 void vTaskGetRunTimeStats();
 #else
 #define IRAM_ATTR
