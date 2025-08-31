@@ -45,6 +45,8 @@ void tt::allocate()
 #if defined(ESP32)
 	size_t psram_size = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 	if (psram_size > ESP32_TT_RAM_SIZE) {
+		constexpr const size_t max_sp_size = 4 * 1024l * 1024l;
+		psram_size = std::min(psram_size, max_sp_size);
 		printf("Using %zu bytes of PSRAM\n", psram_size);
 		n_entries = psram_size / sizeof(tt_entry);
 		entries = reinterpret_cast<tt_entry *>(heap_caps_malloc(n_entries * sizeof(tt_entry), MALLOC_CAP_SPIRAM));
