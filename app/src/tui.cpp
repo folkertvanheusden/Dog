@@ -156,7 +156,7 @@ std::string push_pgn(const std::string & pgn)
 
 	char recv_buffer[16] { };
 	esp_http_client_config_t http_config = {
-		.url = "https://vanheusden.com/pgn/",
+		.url           = "https://vanheusden.com/pgn/",
 		.event_handler = _http_event_handler,
 		.user_data     = recv_buffer,
 	};
