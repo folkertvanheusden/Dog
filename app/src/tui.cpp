@@ -677,11 +677,11 @@ void press_any_key()
 		my_printf("\n");
 }
 
-void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
+std::optional<double> compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
 	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
-		return;
+		return { };
 
 	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
 	if (tt_move != m) {
@@ -691,10 +691,11 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m, int *cons
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
 			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
+		return { eval_opp * 100. / eval_me };
 	}
-	else {
-		(*expected_move_count)++;
-	}
+
+	(*expected_move_count)++;
+	return { 100.0 };
 }
 
 void show_header(const terminal_t t)
@@ -898,6 +899,8 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
+	double   match_percentage    = 0.;
+	int      n_match_percentage  = 0;
 
 	auto reset_state = [&]()
 	{
@@ -916,6 +919,8 @@ void tui()
 		dog_score_n         = 0;
 		expected_move_count = 0;
 		player              = libchess::constants::WHITE;
+		match_percentage    = 0.;
+		n_match_percentage  = 0;
 
 		for(auto & e: sp)
 			e->nnue_eval->reset();
@@ -977,7 +982,7 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (sp.at(0)->pos.fullmoves() > 1)
+			if (expected_move_count > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check()) {
 				std::string result = "CHECK";
@@ -1337,7 +1342,13 @@ void tui()
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
+					auto cm_rc = compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
+					if (cm_rc.has_value()) {
+						match_percentage   += cm_rc.value();
+						n_match_percentage++;
+						if (n_match_percentage > 1)
+							my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
+					}
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
