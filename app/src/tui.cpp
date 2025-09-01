@@ -1028,7 +1028,7 @@ void tui()
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
-			if (do_ponder) {
+			if (do_ponder && !finished) {
 				fen = sp.at(0)->pos.fen();
 				start_ponder();
 			}
@@ -1043,7 +1043,7 @@ void tui()
 				sp.at(0)->pos = libchess::Position(fen);
 			}
 
-			if (do_ponder) {
+			if (do_ponder && !finished) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 				my_printf("While you were thinking, Dog considered %" PRIu64 " positions.\n", end_position_count - start_position_count);
 			}
