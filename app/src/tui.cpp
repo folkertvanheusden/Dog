@@ -1230,8 +1230,11 @@ void tui()
 				show_board = true;
 			}
 			else if (parts[0] == "cls" || parts[0] == "clear") {
-				if (t != T_ASCII)
+				if (t == T_ASCII)
+					my_printf("\x0c");  // form feed
+				else
 					my_printf("\x1b[2J");
+				show_board = parts.size() == 2 && is_on(parts[1]);
 			}
 #if !defined(ESP32)
 			else if (parts[0] == "syzygy")
