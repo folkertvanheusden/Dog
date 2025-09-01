@@ -1182,10 +1182,9 @@ void tui()
 						my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
 					}
 				}
-				else {
-					my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
+				my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
+				if (parts.size() != 2)
 					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time     / 1000.);
-				}
 			}
 			else if (parts[0] == "clock") {
 				if (parts.size() == 2) {
@@ -1277,8 +1276,6 @@ void tui()
 				if (parts.size() == 2) {
 					do_ponder = is_on(parts[1]);
 					write_settings();
-					p_a_k      = true;
-					show_board = true;
 				}
 				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
 			}
@@ -1317,7 +1314,6 @@ void tui()
 				}
 				else {
 					my_printf("No fen remembered\n");
-					p_a_k = true;
 				}
 			}
 			else if (parts[0] == "hint")
