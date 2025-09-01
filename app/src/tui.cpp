@@ -250,6 +250,11 @@ void my_printf(const char *const fmt, ...)
 #endif
 }
 
+bool is_on(const std::string & what)
+{
+	return what == "true" || what == "on" || what == "1";
+}
+
 uint64_t do_perft(libchess::Position &pos, int depth)
 {
 	libchess::MoveList move_list = pos.legal_move_list();
@@ -1054,8 +1059,10 @@ void tui()
 				player.reset();
 #if defined(ESP32)
 			else if (parts[0] == "cfgwifi") {
-				if (parts.size() != 2)
+				if (parts.size() != 2) {
 					my_printf("Usage: cfgwifi ssid|password\n");
+					my_printf("Current: %s|%s\n", wifi_ssid.c_str(), wifi_psk.c_str());
+				}
 				else {
 					auto parts_wifi = split(parts[1], "|");
 					wifi_ssid = parts_wifi[0];
@@ -1144,38 +1151,54 @@ void tui()
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
-			else if (parts[0] == "player" && parts.size() == 2) {
-				if (parts[1] == "white" || parts[1] == "w")
-					player = libchess::constants::WHITE;
-				else
-					player = libchess::constants::BLACK;
-			}
-			else if (parts[0] == "time" && parts.size() == 2) {
-				try {
-					total_dog_time = 0;
-
-					auto time_parts = split(parts[1], ":");
-					for(auto & time_part: time_parts) {
-						total_dog_time *= 60;
-						total_dog_time += std::stod(time_part);
-					}
-					total_dog_time *= 1000;
-
-					initial_think_time = total_dog_time;
-					write_settings();
-				}
-				catch(std::invalid_argument & ia) {
-					my_printf("Please enter a value for time, not something else.\n");
-					my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
-				}
-			}
-			else if (parts[0] == "clock" && parts.size() == 2) {
-				if (parts[1] == "incremental" || parts[1] == "total") {
-					clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
-					my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+			else if (parts[0] == "player") {
+				if (parts.size() == 2) {
+					if (parts[1] == "white" || parts[1] == "w")
+						player = libchess::constants::WHITE;
+					else
+						player = libchess::constants::BLACK;
 				}
 				else {
-					my_printf("Parameter for \"clock\" must be \"incremental\" or \"total\".\n");
+					my_printf("Current player: %s\n", player == libchess::constants::WHITE ? "white":"black");
+				}
+			}
+			else if (parts[0] == "time") {
+				if (parts.size() == 2) {
+					try {
+						total_dog_time = 0;
+
+						auto time_parts = split(parts[1], ":");
+						for(auto & time_part: time_parts) {
+							total_dog_time *= 60;
+							total_dog_time += std::stod(time_part);
+						}
+						total_dog_time *= 1000;
+
+						initial_think_time = total_dog_time;
+						write_settings();
+					}
+					catch(std::invalid_argument & ia) {
+						my_printf("Please enter a value for time, not something else.\n");
+						my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
+					}
+				}
+				else {
+					my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
+					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time     / 1000.);
+				}
+			}
+			else if (parts[0] == "clock") {
+				if (parts.size() == 2) {
+					if (parts[1] == "incremental" || parts[1] == "total") {
+						clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
+						my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+					}
+					else {
+						my_printf("Parameter for \"clock\" must be \"incremental\" or \"total\".\n");
+					}
+				}
+				else {
+					my_printf("Clock: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
 				}
 			}
 			else if (parts[0] == "moves")
@@ -1207,7 +1230,7 @@ void tui()
 				p_a_k      = true;
 				show_board = true;
 			}
-			else if (parts[0] == "cls") {
+			else if (parts[0] == "cls" || parts[0] == "clear") {
 				if (t != T_ASCII)
 					my_printf("\x1b[2J");
 			}
@@ -1216,43 +1239,48 @@ void tui()
 				do_syzygy(sp.at(0)->pos);
 #endif
 			else if (parts[0] == "trace") {
-				if (parts.size() == 2)
-					trace_enabled = parts[1] == "on";
-				else
-					trace_enabled = !trace_enabled;
-				default_trace = trace_enabled;
-				write_settings();
-				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
+				if (parts.size() == 2) {
+					trace_enabled = is_on(parts[1]);
+					default_trace = trace_enabled;
+					write_settings();
+				}
+				my_printf("Tracing is %senabled\n", trace_enabled ? "":"not ");
 			}
 			else if (parts[0] == "ping") {
-				if (parts.size() == 2)
-					do_ping = parts[1] == "on";
-				else
-					do_ping = !do_ping;
-				write_settings();
-				my_printf("Beeping is now %senabled\n", do_ping ? "":"not ");
-			}
-			else if (parts[0] == "terminal" && parts.size() == 2) {
-				if (parts[1] == "ansi")
-					t = T_ANSI;
-				else if (parts[1] == "vt100")
-					t = T_VT100;
-				else {
-					t = T_ASCII;
-					parts[1] = "text";
+				if (parts.size() == 2) {
+					do_ping = is_on(parts[1]);
+					write_settings();
 				}
-				write_settings();
-				my_printf("Terminal type is now: %s\n", parts[1].c_str());
+				my_printf("Beeping is %senabled\n", do_ping ? "":"not ");
+			}
+			else if (parts[0] == "terminal") {
+				if (parts.size() == 2) {
+					if (parts[1] == "ansi")
+						t = T_ANSI;
+					else if (parts[1] == "vt100")
+						t = T_VT100;
+					else {
+						t = T_ASCII;
+						parts[1] = "text";
+					}
+					write_settings();
+				}
+				my_printf("Terminal type is: ");
+				if (t == T_ANSI)
+					my_printf("ANSI\n");
+				else if (t == T_VT100)
+					my_printf("VT100\n");
+				else
+					my_printf("text\n");
 			}
 			else if (parts[0] == "ponder") {
-				if (parts.size() == 2)
-					do_ponder = parts[1] == "on";
-				else
-					do_ponder = !do_ponder;
-				write_settings();
-				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
-				p_a_k      = true;
-				show_board = true;
+				if (parts.size() == 2) {
+					do_ponder = is_on(parts[1]);
+					write_settings();
+					p_a_k      = true;
+					show_board = true;
+				}
+				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
 			}
 			else if (parts[0] == "undo") {
 				sp.at(0)->pos.unmake_move();  /// TODO
