@@ -922,8 +922,10 @@ void tui()
 		match_percentage    = 0.;
 		n_match_percentage  = 0;
 
-		for(auto & e: sp)
+		for(auto & e: sp) {
 			e->nnue_eval->reset();
+			e->cs.reset();
+		}
 	};
 
 	for(;;) {
