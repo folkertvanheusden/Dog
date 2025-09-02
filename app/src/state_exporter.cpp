@@ -1,4 +1,4 @@
-#if defined(linux)
+#if defined(linux) || defined(__APPLE__)
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
