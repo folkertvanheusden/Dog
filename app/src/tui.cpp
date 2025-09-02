@@ -156,7 +156,7 @@ std::string push_pgn(const std::string & pgn)
 
 	char recv_buffer[16] { };
 	esp_http_client_config_t http_config = {
-		.url = "https://vanheusden.com/pgn/",
+		.url           = "https://vanheusden.com/pgn/",
 		.event_handler = _http_event_handler,
 		.user_data     = recv_buffer,
 	};
@@ -248,6 +248,11 @@ void my_printf(const char *const fmt, ...)
         vprintf(fmt, ap);
         va_end(ap);
 #endif
+}
+
+bool is_on(const std::string & what)
+{
+	return what == "true" || what == "on" || what == "1";
 }
 
 uint64_t do_perft(libchess::Position &pos, int depth)
@@ -672,11 +677,11 @@ void press_any_key()
 		my_printf("\n");
 }
 
-void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
+std::optional<double> compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
 	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
-		return;
+		return { };
 
 	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
 	if (tt_move != m) {
@@ -686,10 +691,11 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m, int *cons
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
 			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
+		return { eval_opp * 100. / eval_me };
 	}
-	else {
-		(*expected_move_count)++;
-	}
+
+	(*expected_move_count)++;
+	return { 100.0 };
 }
 
 void show_header(const terminal_t t)
@@ -893,6 +899,8 @@ void tui()
 	int32_t  dog_score_sum       = 0;
 	int      dog_score_n         = 0;
 	int      expected_move_count = 0;
+	double   match_percentage    = 0.;
+	int      n_match_percentage  = 0;
 
 	auto reset_state = [&]()
 	{
@@ -911,6 +919,8 @@ void tui()
 		dog_score_n         = 0;
 		expected_move_count = 0;
 		player              = libchess::constants::WHITE;
+		match_percentage    = 0.;
+		n_match_percentage  = 0;
 
 		for(auto & e: sp)
 			e->nnue_eval->reset();
@@ -972,7 +982,7 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (sp.at(0)->pos.fullmoves() > 1)
+			if (expected_move_count > 1)
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
 			if (sp.at(0)->pos.in_check()) {
 				std::string result = "CHECK";
@@ -1023,7 +1033,7 @@ void tui()
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
-			if (do_ponder) {
+			if (do_ponder && !finished) {
 				fen = sp.at(0)->pos.fen();
 				start_ponder();
 			}
@@ -1038,7 +1048,7 @@ void tui()
 				sp.at(0)->pos = libchess::Position(fen);
 			}
 
-			if (do_ponder) {
+			if (do_ponder && !finished) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 				my_printf("While you were thinking, Dog considered %" PRIu64 " positions.\n", end_position_count - start_position_count);
 			}
@@ -1054,8 +1064,10 @@ void tui()
 				player.reset();
 #if defined(ESP32)
 			else if (parts[0] == "cfgwifi") {
-				if (parts.size() != 2)
+				if (parts.size() != 2) {
 					my_printf("Usage: cfgwifi ssid|password\n");
+					my_printf("Current: %s|%s\n", wifi_ssid.c_str(), wifi_psk.c_str());
+				}
 				else {
 					auto parts_wifi = split(parts[1], "|");
 					wifi_ssid = parts_wifi[0];
@@ -1144,38 +1156,53 @@ void tui()
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
-			else if (parts[0] == "player" && parts.size() == 2) {
-				if (parts[1] == "white" || parts[1] == "w")
-					player = libchess::constants::WHITE;
-				else
-					player = libchess::constants::BLACK;
-			}
-			else if (parts[0] == "time" && parts.size() == 2) {
-				try {
-					total_dog_time = 0;
-
-					auto time_parts = split(parts[1], ":");
-					for(auto & time_part: time_parts) {
-						total_dog_time *= 60;
-						total_dog_time += std::stod(time_part);
-					}
-					total_dog_time *= 1000;
-
-					initial_think_time = total_dog_time;
-					write_settings();
-				}
-				catch(std::invalid_argument & ia) {
-					my_printf("Please enter a value for time, not something else.\n");
-					my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
-				}
-			}
-			else if (parts[0] == "clock" && parts.size() == 2) {
-				if (parts[1] == "incremental" || parts[1] == "total") {
-					clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
-					my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+			else if (parts[0] == "player") {
+				if (parts.size() == 2) {
+					if (parts[1] == "white" || parts[1] == "w")
+						player = libchess::constants::WHITE;
+					else
+						player = libchess::constants::BLACK;
 				}
 				else {
-					my_printf("Parameter for \"clock\" must be \"incremental\" or \"total\".\n");
+					my_printf("Current player: %s\n", player == libchess::constants::WHITE ? "white":"black");
+				}
+			}
+			else if (parts[0] == "time") {
+				if (parts.size() == 2) {
+					try {
+						total_dog_time = 0;
+
+						auto time_parts = split(parts[1], ":");
+						for(auto & time_part: time_parts) {
+							total_dog_time *= 60;
+							total_dog_time += std::stod(time_part);
+						}
+						total_dog_time *= 1000;
+
+						initial_think_time = total_dog_time;
+						write_settings();
+					}
+					catch(std::invalid_argument & ia) {
+						my_printf("Please enter a value for time, not something else.\n");
+						my_printf("Did you mean to enter \"clock %s\"?\n", parts[1].c_str());
+					}
+				}
+				my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
+				if (parts.size() != 2)
+					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time     / 1000.);
+			}
+			else if (parts[0] == "clock") {
+				if (parts.size() == 2) {
+					if (parts[1] == "incremental" || parts[1] == "total") {
+						clock_type = parts[1] == "incremental" ? C_INCREMENTAL : C_TOTAL;
+						my_printf("Clock type: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
+					}
+					else {
+						my_printf("Parameter for \"clock\" must be \"incremental\" or \"total\".\n");
+					}
+				}
+				else {
+					my_printf("Clock: %s\n", clock_type == C_INCREMENTAL ? "incremental" : "total");
 				}
 			}
 			else if (parts[0] == "moves")
@@ -1207,52 +1234,58 @@ void tui()
 				p_a_k      = true;
 				show_board = true;
 			}
-			else if (parts[0] == "cls") {
-				if (t != T_ASCII)
+			else if (parts[0] == "cls" || parts[0] == "clear") {
+				if (t == T_ASCII)
+					my_printf("\x0c");  // form feed
+				else
 					my_printf("\x1b[2J");
+				show_board = parts.size() == 2 && is_on(parts[1]);
 			}
 #if !defined(ESP32)
 			else if (parts[0] == "syzygy")
 				do_syzygy(sp.at(0)->pos);
 #endif
 			else if (parts[0] == "trace") {
-				if (parts.size() == 2)
-					trace_enabled = parts[1] == "on";
-				else
-					trace_enabled = !trace_enabled;
-				default_trace = trace_enabled;
-				write_settings();
-				my_printf("Tracing is now %senabled\n", trace_enabled ? "":"not ");
+				if (parts.size() == 2) {
+					trace_enabled = is_on(parts[1]);
+					default_trace = trace_enabled;
+					write_settings();
+				}
+				my_printf("Tracing is %senabled\n", trace_enabled ? "":"not ");
 			}
 			else if (parts[0] == "ping") {
-				if (parts.size() == 2)
-					do_ping = parts[1] == "on";
-				else
-					do_ping = !do_ping;
-				write_settings();
-				my_printf("Beeping is now %senabled\n", do_ping ? "":"not ");
-			}
-			else if (parts[0] == "terminal" && parts.size() == 2) {
-				if (parts[1] == "ansi")
-					t = T_ANSI;
-				else if (parts[1] == "vt100")
-					t = T_VT100;
-				else {
-					t = T_ASCII;
-					parts[1] = "text";
+				if (parts.size() == 2) {
+					do_ping = is_on(parts[1]);
+					write_settings();
 				}
-				write_settings();
-				my_printf("Terminal type is now: %s\n", parts[1].c_str());
+				my_printf("Beeping is %senabled\n", do_ping ? "":"not ");
+			}
+			else if (parts[0] == "terminal") {
+				if (parts.size() == 2) {
+					if (parts[1] == "ansi")
+						t = T_ANSI;
+					else if (parts[1] == "vt100")
+						t = T_VT100;
+					else {
+						t = T_ASCII;
+						parts[1] = "text";
+					}
+					write_settings();
+				}
+				my_printf("Terminal type is: ");
+				if (t == T_ANSI)
+					my_printf("ANSI\n");
+				else if (t == T_VT100)
+					my_printf("VT100\n");
+				else
+					my_printf("text\n");
 			}
 			else if (parts[0] == "ponder") {
-				if (parts.size() == 2)
-					do_ponder = parts[1] == "on";
-				else
-					do_ponder = !do_ponder;
-				write_settings();
-				my_printf("Pondering is now %senabled\n", do_ponder ? "":"not ");
-				p_a_k      = true;
-				show_board = true;
+				if (parts.size() == 2) {
+					do_ponder = is_on(parts[1]);
+					write_settings();
+				}
+				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
 			}
 			else if (parts[0] == "undo") {
 				sp.at(0)->pos.unmake_move();  /// TODO
@@ -1289,7 +1322,6 @@ void tui()
 				}
 				else {
 					my_printf("No fen remembered\n");
-					p_a_k = true;
 				}
 			}
 			else if (parts[0] == "hint")
@@ -1310,7 +1342,13 @@ void tui()
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
+					auto cm_rc = compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
+					if (cm_rc.has_value()) {
+						match_percentage   += cm_rc.value();
+						n_match_percentage++;
+						if (n_match_percentage > 1)
+							my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
+					}
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);

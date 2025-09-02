@@ -8,8 +8,7 @@ Clone the git repo with the "--recursive" flag!
 To build the program and upload it to a wemos32 mini:
 
 	cd app
-	pio run -t upload
-	pio run -t uploadfs
+	idf.py build && idf.py flash
 
 The ESP32 version can be used with xboard as well.
 Adapt app/wrapper.sh to let it use the correct port in case the ESP32 is not connected to /dev/ttyUSB0.
