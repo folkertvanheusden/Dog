@@ -1,3 +1,4 @@
+#if !defined(_WIN32)
 #include <fcntl.h>
 #include <pthread.h>
 #include <string>
@@ -68,3 +69,14 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#else
+#include <cstdio>
+
+
+int main(int argc, char *argv[])
+{
+	fprintf(stderr, "Not supported on windows\n");
+	return 0;
+}
+
+#endif

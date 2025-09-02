@@ -231,7 +231,7 @@ esp_timer_handle_t led_red_timer;
 
 void set_thread_name(std::string name)
 {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(__ANDROID__)
         if (name.length() > 15)
                 name = name.substr(0, 15);
 
@@ -395,7 +395,7 @@ void stop_ponder()
 
 void delete_threads()
 {
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(_WIN32)
 	if (se)
 		se->clear();
 #endif
@@ -437,7 +437,7 @@ void allocate_threads(const int n)
 		sp.at(i)->md_limit      = 65535;
 #endif
 	}
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(_WIN32)
 	if (se)
 		se->set(sp.at(0));
 #endif

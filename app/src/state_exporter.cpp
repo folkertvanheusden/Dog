@@ -1,3 +1,4 @@
+#if defined(linux)
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
@@ -118,3 +119,4 @@ void state_exporter::handler()
 		}
 	}
 }
+#endif

@@ -1,5 +1,5 @@
 project(Dog)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 add_definitions("-Wall")
 
@@ -92,6 +92,7 @@ set(APP_SOURCES
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
+  ../win32.cpp
   ../fathom/src/tbprobe.c
 )
 

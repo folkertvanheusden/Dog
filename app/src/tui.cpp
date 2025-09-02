@@ -26,6 +26,7 @@
 #include "str.h"
 #include "syzygy.h"
 #include "tui.h"
+#include "win32.h"
 
 
 #if defined(ESP32)
