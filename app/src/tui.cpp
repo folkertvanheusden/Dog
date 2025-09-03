@@ -519,6 +519,7 @@ void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, c
 		for(auto & move: pv)
 			my_printf(" %s", move.to_str().c_str());
 	}
+	my_printf("\n");
 }
 
 std::string perc(const unsigned total, const unsigned part)
@@ -1440,8 +1441,6 @@ void tui()
 			int16_t score_after = get_score(sp.at(0)->pos, now_playing);
 			dog_score_sum += score_after - score_before;
 			dog_score_n++;
-
-			my_printf("\n");
 
 			if (do_ping)
 				my_printf("\07");  // bell
