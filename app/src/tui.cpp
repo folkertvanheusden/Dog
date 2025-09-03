@@ -288,9 +288,9 @@ void perft(libchess::Position &pos, int depth)
 	}
 }
 
-std::string format_move_and_score(const libchess::Move & m, int16_t score)
+std::string format_move_and_score(const std::string & move, int16_t score)
 {
-	return m.to_str() + myformat(" [%5.2f]", score / 100.);
+	return move + myformat(" [%5.2f]", score / 100.);
 }
 
 void store_cursor_position()
@@ -315,7 +315,7 @@ void restore_cursor_position()
 	}
 }
 
-void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<libchess::Move, std::string> > > & moves, const std::vector<int16_t> & scores)
+void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<std::string, std::string> > > & moves, const std::vector<int16_t> & scores)
 {
 	std::vector<std::string> lines;
 
@@ -556,6 +556,46 @@ std::string get_soc_name()
 	return "";
 }
 #endif
+
+std::string move_to_san(const libchess::Position & pos_before, const libchess::Move & m)
+{
+	auto move_type = m.type();
+	if (move_type == libchess::Move::Type::CASTLING)
+		return m.to_square().file() == 6 ? "O-O" : "O-O-O";
+
+	std::string san;
+
+        auto piece_from = pos_before.piece_on(m.from_square());
+        auto from_type  = piece_from->type();
+	if (from_type == libchess::constants::PAWN) {
+		if (move_type == libchess::Move::Type::CAPTURE || move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
+			san += char('a' + m.from_square().file());
+			san += "x";
+		}
+		san += char('a' + m.to_square().file());
+		san += char('1' + m.to_square().rank());
+		if (move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
+			san += "=";
+			san += toupper(m.promotion_piece_type().value().to_char());
+		}
+	}
+	else {
+		san += toupper(piece_from.value().to_char());
+		san += char('a' + m.from_square().file());
+		san += char('1' + m.from_square().rank());
+		if (move_type == libchess::Move::Type::CAPTURE)
+			san += "x";
+		san += char('a' + m.to_square().file());
+		san += char('1' + m.to_square().rank());
+
+		auto pos_after(pos_before);
+		pos_after.make_move(m);
+		if (pos_after.in_check())
+			san += "+";
+	}
+
+	return san;
+}
 
 void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
@@ -912,7 +952,7 @@ void tui()
 	
 	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
 	std::vector<int16_t>           scores;
-	std::vector<std::pair<libchess::Move, std::string> > moves_played;
+	std::vector<std::pair<std::string, std::string> > moves_played;
 
 #if defined(ESP32)
 	auto *pb = new polyglot_book("/spiffs/dog-book.bin");
@@ -1172,13 +1212,13 @@ void tui()
 					for(auto & move: moves_played) {
 						if (current_color == libchess::constants::WHITE) {
 							move_nr++;
-							pgn += myformat("%d. %s ", move_nr, move.first.to_str().c_str());
+							pgn += myformat("%d. %s ", move_nr, move.first.c_str());
 							current_color = libchess::constants::BLACK;
 							if (move.second.empty() == false)
 								pgn += "{" + move.second + "} ";
 						}
 						else {
-							pgn += move.first.to_str();
+							pgn += move.first;
 							if (move.second.empty() == false)
 								pgn += " {" + move.second + "}";
 							if ((move_nr % 10) == 0)
@@ -1423,8 +1463,9 @@ void tui()
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
+					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "" });
+
 					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-					moves_played.push_back({ move.value(), "" });
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
@@ -1459,8 +1500,8 @@ void tui()
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
+				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-				moves_played.push_back({ move.value(), "(book)" });
 				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 				if (clock_type == C_TOTAL)
@@ -1502,6 +1543,7 @@ void tui()
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
 				emit_pv(sp.at(0)->pos, best_move, t);
+				std::string move_str     = move_to_san(sp.at(0)->pos, best_move);
 				auto        undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				double      took         = (end_search - start_search) / 1000000.;
 				std::string meta         = myformat("%s%.2f/%d %.1fs", best_score > 0 ? "+":"", best_score / 100., max_depth, took);
@@ -1510,7 +1552,7 @@ void tui()
 					meta += myformat(" %ukN", unsigned(done_n_nodes / 1000));
 				else
 					meta += myformat(" %uk",  unsigned(done_n_nodes));
-				moves_played.push_back({ best_move, meta });
+				moves_played.push_back({ move_str, meta });
 
 				scores.push_back(best_score);
 			}
