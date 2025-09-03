@@ -62,27 +62,9 @@ extern tt                 tti;
 extern bool               with_syzygy;
 
 #if defined(ESP32)
-#include <driver/gpio.h>
 #include <esp_timer.h>
 
-typedef struct {
-	gpio_num_t pin_nr;
-	bool       state;
-	int        screen_x;
-} led_t;
-
-extern led_t led_green;
-extern led_t led_blue;
-extern led_t led_red;
-
-extern esp_timer_handle_t led_green_timer;
-extern esp_timer_handle_t led_blue_timer;
-extern esp_timer_handle_t led_red_timer;
-
 extern esp_timer_handle_t think_timeout_timer;
-
-void start_blink(esp_timer_handle_t handle);
-void stop_blink(esp_timer_handle_t handle, led_t *l);
 
 int check_min_stack_size(const search_pars_t & sp);
 void vTaskGetRunTimeStats();
@@ -90,6 +72,7 @@ void vTaskGetRunTimeStats();
 #define IRAM_ATTR
 #endif
 
+void set_led(const uint8_t r, const uint8_t g, const uint8_t b);
 void my_trace(const char *const fmt, ...);
 void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);

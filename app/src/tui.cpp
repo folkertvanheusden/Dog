@@ -207,7 +207,7 @@ bool store_position(const std::string & fen, const int total_dog_time)
 
 void to_uart(const char *const buffer, int buffer_len)
 {
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
         ESP_ERROR_CHECK(uart_wait_tx_done(uart_num, 100));
         uart_write_bytes(uart_num, buffer, buffer_len);
 	if (buffer[buffer_len - 1] == '\n') {
@@ -219,7 +219,7 @@ void to_uart(const char *const buffer, int buffer_len)
 
 bool peek_for_ctrl_c()
 {
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
 	char   buffer = 0;
 	size_t length = 0;
 	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
@@ -837,6 +837,8 @@ static void help()
 
 std::string my_getline(std::istream & is)
 {
+	set_led(127, 127, 127);
+
 	my_printf("> ");
 
 	std::string out;
@@ -1216,7 +1218,7 @@ void tui()
 				uint16_t md_limit = 65535;
 #if defined(ESP32)
 				for(auto & t: sp)
-					md_limit = std::min(md_limit, sp.at(0)->md_limit);
+					md_limit = std::min(md_limit, t->md_limit);
 #endif
 				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
 			}
@@ -1374,16 +1376,16 @@ void tui()
 					p_a_k      = true;
 				}
 				else {
+					set_led(255, 0, 0);
 					my_printf("Not a valid move (or ambiguous) nor command.\n");
 					my_printf("Enter \"help\" for the list of commands.\n");
+					set_led(255, 80, 80);
 				}
 			}
 		}
 		else {
-#if !defined(linux) && !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
-			stop_blink(led_red_timer, &led_red);
-			start_blink(led_green_timer);
-#endif
+			set_led(0, 255, 0);
+
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
@@ -1440,15 +1442,13 @@ void tui()
 
 			my_printf("\n");
 
-#if !defined(linux) && !defined(_WIN32) && !defined(__APPLE__)
-			stop_blink(led_green_timer, &led_green);
-#endif
-
 			if (do_ping)
 				my_printf("\07");  // bell
 
 			p_a_k      = true;
 			show_board = true;
+
+			set_led(0, 0, 255);
 		}
 	}
 
