@@ -11,6 +11,7 @@
 #include <soc/rtc.h>
 #else
 #include <fstream>
+#include <unistd.h>
 #endif
 #include <thread>
 #include <sys/stat.h>
@@ -531,6 +532,31 @@ std::string perc(const unsigned total, const unsigned part)
 	return myformat("%.2f%%", part * 100. / total);
 }
 
+#if defined(ESP32)
+std::string get_soc_name()
+{
+	esp_chip_info_t chip_info;
+	esp_chip_info(&chip_info);
+	switch (chip_info.model) {
+		case CHIP_ESP32:    return "ESP32";
+		case CHIP_ESP32S2:  return "ESP32-S2";
+		case CHIP_ESP32S3:  return "ESP32-S3";
+		case CHIP_ESP32C3:  return "ESP32-C3";
+		case CHIP_ESP32C2:  return "ESP32-C2";
+		case CHIP_ESP32C6:  return "ESP32-C6";
+		case CHIP_ESP32H2:  return "ESP32-H2";
+		case CHIP_ESP32P4:  return "ESP32-P4";
+		case CHIP_ESP32C5:  return "ESP32-C5";
+		case CHIP_ESP32C61: return "ESP32-C61";
+				    //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
+		default:
+				    break;
+	}
+
+	return "";
+}
+#endif
+
 void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
@@ -563,21 +589,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
 				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
 		my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
-		my_printf("SOC           : ");
-		esp_chip_info_t chip_info;
-		esp_chip_info(&chip_info);
-		switch (chip_info.model) {
-			case CHIP_ESP32S3:  my_printf("ESP32-S3"); break;
-			case CHIP_ESP32C3:  my_printf("ESP32-C3"); break;
-			case CHIP_ESP32C2:  my_printf("ESP32-C2"); break;
-			case CHIP_ESP32C6:  my_printf("ESP32-C6"); break;
-			case CHIP_ESP32H2:  my_printf("ESP32-H2"); break;
-			case CHIP_ESP32P4:  my_printf("ESP32-P4"); break;
-			case CHIP_ESP32C5:  my_printf("ESP32-C5"); break;
-			case CHIP_ESP32C61: my_printf("ESP32-C61"); break;
-		      //case CHIP_ESP32H21: my_printf("ESP32-H21"); break;
-			default: my_printf("UNKNOWN"); break;
-		}
+		my_printf("SOC           : %s", get_soc_name().c_str());
 		rtc_cpu_freq_config_t conf;
 		rtc_clk_cpu_freq_get_config(&conf);
 		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
@@ -873,6 +885,21 @@ std::string my_getline(std::istream & is)
 	return out;
 }
 
+std::string get_local_system_name()
+{
+#if defined(ESP32)
+	std::string name = get_soc_name();
+	uint8_t     mac[6] { };
+	if (esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK)
+		name += myformat(" %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	return name;
+#else
+	char hostname[256] { };
+	gethostname(hostname, sizeof hostname);
+	return hostname;
+#endif
+}
+
 void tui()
 {
 	set_thread_name("TUI");
@@ -897,17 +924,18 @@ void tui()
 	bool p_a_k      = false;
 	bool first      = true;
 
-	uint64_t human_think_start   = 0;
-	uint64_t total_human_think   = 0;
-	int      n_human_think       = 0;
-	int32_t  initial_think_time  = 0;
-	int32_t  human_score_sum     = 0;
-	int      human_score_n       = 0;
-	int32_t  dog_score_sum       = 0;
-	int      dog_score_n         = 0;
-	int      expected_move_count = 0;
-	double   match_percentage    = 0.;
-	int      n_match_percentage  = 0;
+	std::string start_fen           = sp.at(0)->pos.fen();
+	uint64_t    human_think_start   = 0;
+	uint64_t    total_human_think   = 0;
+	int         n_human_think       = 0;
+	int32_t     initial_think_time  = 0;
+	int32_t     human_score_sum     = 0;
+	int         human_score_n       = 0;
+	int32_t     dog_score_sum       = 0;
+	int         dog_score_n         = 0;
+	int         expected_move_count = 0;
+	double      match_percentage    = 0.;
+	int         n_match_percentage  = 0;
 
 	auto reset_state = [&]()
 	{
@@ -915,7 +943,8 @@ void tui()
 		tti.reset();
 		moves_played.clear();
 		scores.clear();
-		sp.at(0)->pos       = libchess::Position(libchess::constants::STARTPOS_FEN);
+		start_fen           = libchess::constants::STARTPOS_FEN;
+		sp.at(0)->pos       = libchess::Position(start_fen);
 		total_dog_time      = initial_think_time;
 		human_think_start   = 0;
 		total_human_think   = 0;
@@ -1093,10 +1122,23 @@ void tui()
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
 #endif
 				else {
+#if !defined(ESP32)
+					time_t  t  = time(nullptr);
+					tm     *tm = localtime(&t);
+#endif
 					std::string pgn = "[Event \"Computer chess event\"]\n"
-							  "[Site \"-\"]\n"
+							  "[Site \"" + get_local_system_name() + "\"]\n"
+#if defined(ESP32)
 							  "[Date \"-\"]\n"
+#else
+							  "[Date \"" + myformat("%04d-%02d-%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday) + "\"]\n"
+							  "[Time \"" + myformat("%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec) + "\"]\n"
+#endif
 							  "[Round \"-\"]\n";
+					if (start_fen != libchess::constants::STARTPOS_FEN) {
+						  pgn += "[Setup \"1\"]\n";
+						  pgn += "[FEN \"" + start_fen + "\"]\n";
+					}
 
 					if (player.has_value()) {
 						if (player.value() == libchess::constants::WHITE) {
@@ -1257,7 +1299,8 @@ void tui()
 					fen += parts.at(i);
 				}
 				sp.at(0)->pos = libchess::Position(fen);
-				my_printf("FEN set, hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
+				start_fen     = fen;
+				my_printf("FEN set, polyglot zobrist hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
 				p_a_k      = true;
 				show_board = true;
 			}
