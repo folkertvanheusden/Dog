@@ -215,8 +215,6 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 
 			if (work.empty() == false) {
 				std::sort(work.begin(), work.end(), [](const auto & lhs, const auto & rhs) { return lhs.first < rhs.first; });
-				printf("%f %f\n", work.at(0).first, work.at(work.size() - 1).first);
-
 				return work.at(0).second;
 			}
 		}
