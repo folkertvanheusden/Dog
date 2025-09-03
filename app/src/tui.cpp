@@ -9,6 +9,8 @@
 #include <esp_http_client.h>
 #include <esp_wifi.h>
 #include <soc/rtc.h>
+#else
+#include <fstream>
 #endif
 #include <thread>
 #include <sys/stat.h>
@@ -312,7 +314,7 @@ void restore_cursor_position()
 	}
 }
 
-void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<libchess::Move> > & moves, const std::vector<int16_t> & scores)
+void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<libchess::Move, std::string> > > & moves, const std::vector<int16_t> & scores)
 {
 	std::vector<std::string> lines;
 
@@ -411,9 +413,9 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 			skip = (half - lines.size()) * 2;
 		size_t line_nr = 0;
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
-			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0), scores.at(i + 0));
+			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
 			if (nrefm - i >= 2)
-				add += "  " + format_move_and_score(refm.at(i + 1), scores.at(i + 1));
+				add += "  " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
 			lines.at(line_nr) += add;
 		}
 	}
@@ -813,10 +815,10 @@ static void help()
 	my_printf("moves    show valid moves\n");
 #if defined(ESP32)
 	my_printf("cfgwifi  ssid|password\n");
-	my_printf("submit   send current PGN to server, result is shown\n");
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
+	my_printf("submit   send current PGN to server, result is shown\n");
 	my_printf("book     check for a move in the book\n");
 	my_printf("hint     show a hint\n");
 	my_printf("undo     take back last move\n");
@@ -883,7 +885,7 @@ void tui()
 	
 	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
 	std::vector<int16_t>           scores;
-	std::vector<libchess::Move>    moves_played;
+	std::vector<std::pair<libchess::Move, std::string> > moves_played;
 
 #if defined(ESP32)
 	auto *pb = new polyglot_book("/spiffs/dog-book.bin");
@@ -1082,11 +1084,14 @@ void tui()
 					write_settings();
 				}
 			}
+#endif
 			else if (parts[0] == "submit" || parts[0] == "publish") {
 				if (moves_played.empty())
 					my_printf("No moves played yet\n");
+#if defined(ESP32)
 				else if (wifi_ssid.empty())
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
+#endif
 				else {
 					std::string pgn = "[Event \"Computer chess event\"]\n"
 							  "[Site \"-\"]\n"
@@ -1125,11 +1130,15 @@ void tui()
 					for(auto & move: moves_played) {
 						if (current_color == libchess::constants::WHITE) {
 							move_nr++;
-							pgn += myformat("%d. %s ", move_nr, move.to_str().c_str());
+							pgn += myformat("%d. %s ", move_nr, move.first.to_str().c_str());
 							current_color = libchess::constants::BLACK;
+							if (move.second.empty() == false)
+								pgn += "{" + move.second + "} ";
 						}
 						else {
-							pgn += move.to_str();
+							pgn += move.first.to_str();
+							if (move.second.empty() == false)
+								pgn += " {" + move.second + "}";
 							if ((move_nr % 10) == 0)
 								pgn += "\n";
 							else
@@ -1142,15 +1151,26 @@ void tui()
 
 					my_printf("\n");
 					my_printf("\n");
+#if defined(ESP32)
 					const std::string result_url = push_pgn(pgn);
 					if (result_url.empty())
 						my_printf(" > Submit failed!\n");
 					else
 						my_printf("PGN can be found at: %s\n", result_url.c_str());
+#else
+					std::string filename = myformat("%" PRIx64 ".pgn", esp_timer_get_time());
+					std::ofstream fh(filename);
+					if (fh) {
+						fh << pgn;
+						my_printf("Created file: \"%s\"\n", filename.c_str());
+					}
+					else {
+						my_printf("Cannot create file \"%s\"\n", filename.c_str());
+					}
+#endif
 					my_printf("\n");
 				}
 			}
-#endif
 			else if (parts[0] == "bench") {
 				run_bench(parts.size() == 2 && parts[1] == "long");
 			}
@@ -1361,7 +1381,7 @@ void tui()
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
 					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-					moves_played.push_back(move.value());
+					moves_played.push_back({ move.value(), "" });
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
@@ -1397,7 +1417,7 @@ void tui()
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-				moves_played.push_back(move.value());
+				moves_played.push_back({ move.value(), "(book)" });
 				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 				if (clock_type == C_TOTAL)
@@ -1424,15 +1444,31 @@ void tui()
 				}
 
 				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
+
+				uint64_t       start_search = esp_timer_get_time();
+				chess_stats    cs_before    = calculate_search_statistics();
+				uint64_t       nodes_searched_start_aprox = cs_before.data.nodes + cs_before.data.qnodes;
 				libchess::Move best_move;
 				int            best_score { 0 };
+				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
+				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
+				chess_stats    cs_after     = calculate_search_statistics();
+				uint64_t       nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
+				uint64_t       end_search   = esp_timer_get_time();
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
-				emit_pv(sp.at(0)->pos, best_move, t);
 
-				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
-				moves_played.push_back(best_move);
+				emit_pv(sp.at(0)->pos, best_move, t);
+				auto        undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
+				double      took         = (end_search - start_search) / 1000000.;
+				std::string meta         = myformat("%s%.2f/%d %.1fs", best_score > 0 ? "+":"", best_score / 100., max_depth, took);
+				uint64_t    done_n_nodes = nodes_searched_end_aprox - nodes_searched_start_aprox;
+				if (done_n_nodes > 1000)
+					meta += myformat(" %ukN", unsigned(done_n_nodes / 1000));
+				else
+					meta += myformat(" %uk",  unsigned(done_n_nodes));
+				moves_played.push_back({ best_move, meta });
+
 				scores.push_back(best_score);
 			}
 

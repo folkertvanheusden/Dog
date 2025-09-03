@@ -229,8 +229,9 @@ void tests()
 		clear_flag(sp.at(0)->stop);
 		memset(sp.at(0)->history, 0x00, history_malloc_size);
 		Move best_move  { 0 };
-		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(100, false, sp.at(0), -1, { }, false);
+		int  best_score { 0 };
+		int  max_depth  { 0 };
+		std::tie(best_move, best_score, max_depth) = search_it(100, false, sp.at(0), -1, { }, false);
 		
 		my_assert(best_move == *Move::from(entry.second));
 
@@ -484,7 +485,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 		sp.at(0)->pos = positions.at(i).first;
 		auto rc  = search_it(search_time, false, sp.at(0), -1, { }, false);
 
-		bool hit = abs(rc.second) >= max_non_mate;
+		bool hit = abs(std::get<1>(rc)) >= max_non_mate;
 		mates_found += hit;
 	}
 

@@ -304,7 +304,8 @@ void searcher(const int i)
 		// search!
 		libchess::Move best_move;
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
+		int            max_depth  { 0 };
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		// notify finished
 		search_lck.lock();
