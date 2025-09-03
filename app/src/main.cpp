@@ -922,7 +922,9 @@ void main_task()
 		else {
 //			my_printf("? %s\n", line.c_str());
 			set_led(0, 255, 255);
+#if defined(ESP32)
 			vTaskDelay(5);
+#endif
 			set_led(127, 127, 127);
 		}
 	}
