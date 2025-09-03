@@ -473,35 +473,36 @@ int get_score(const libchess::Position & pos, const libchess::Color & c)
 	return -nnue_evaluate(&e, c);
 }
 
-void emit_pv(const Eval *const nnue_eval, const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
+void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
-	std::vector<libchess::Move> pv = get_pv_from_tt(pos, best_move);
-	auto start_color = pos.side_to_move();
-	auto start_score = nnue_evaluate(nnue_eval, pos);
+	std::vector<libchess::Move> pv          = get_pv_from_tt(pos, best_move);
+	auto                        start_color = pos.side_to_move();
 
 	if (t == T_ANSI || t == T_VT100) {
+		int                nr          = 0;
+		libchess::Position work(sp.at(0)->pos);
+		Eval               e   (work);
+		auto               start_score = nnue_evaluate(&e, work);
+
 		if (t == T_ANSI)
 			my_printf("\x1b[43;30mPV[%.2f]:\x1b[m\n", start_score / 100.);
 		else
 			my_printf("PV[%.2f (%c)]:\n", start_score / 100., start_color == libchess::constants::WHITE ? 'W' : 'B');
 
-		int nr = 0;
-		libchess::Position work(sp.at(0)->pos);
 		for(auto & move: pv) {
 			if (++nr == 5)
 				my_printf("\n"), nr = 0;
 			my_printf(" ");
 
-			work.make_move(move);
+			make_move(&e, work, move);
 			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(nnue_eval, start_color);
+			int  cur_score = nnue_evaluate(&e, start_color);
 
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
 			else if (start_score == cur_score)
 				my_printf("%s", move.to_str().c_str());
-			else
-			{
+			else {
 				if (t == T_ANSI)
 					my_printf("\x1b[40;32m%s\x1b[m", move.to_str().c_str());
 				else
@@ -1427,7 +1428,7 @@ void tui()
 				clear_flag(sp.at(0)->stop);
 				std::tie(best_move, best_score) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
-				emit_pv(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move, t);
+				emit_pv(sp.at(0)->pos, best_move, t);
 
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				moves_played.push_back(best_move);
