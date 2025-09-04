@@ -12,7 +12,11 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#if defined(ESP32_S3_WAVESHARE)
+const uart_port_t uart_num = UART_NUM_0;
+#else
 const uart_port_t uart_num = UART_NUM_1;
+#endif
 #endif
 
 
@@ -66,7 +70,7 @@ protected:
 			if (c >= 0)
 				break;
 
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO)
+#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
 			size_t length = 0;
 			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
 			if (length) {

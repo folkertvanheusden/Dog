@@ -1,7 +1,7 @@
 #include "nnue.h"
 
-int nnue_evaluate(Eval *const e, const libchess::Position & pos);
-int nnue_evaluate(Eval *const e, const libchess::Color & c);
+int nnue_evaluate(const Eval *const e, const libchess::Position & pos);
+int nnue_evaluate(const Eval *const e, const libchess::Color & c);
 
 struct undo_t
 {

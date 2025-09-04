@@ -19,7 +19,7 @@ jobs:
     - name: cmake
       run: cmake -B app/src/linux-windows/build -S app/src/linux-windows
     - name: make
-      run: make -C app/src/linux-windows/build
+      run: make -C app/src/linux-windows/build Dog
     - name: store artifact in GitHub
       uses: actions/upload-artifact@v4
       with:

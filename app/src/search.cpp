@@ -671,7 +671,7 @@ void emit_result(const libchess::Position & pos, const libchess::Move & best_mov
 #endif
 }
 
-std::pair<libchess::Move, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
+std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -693,7 +693,7 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 	}
 
 	int16_t best_score = 0;
-
+	int     max_depth  = 1;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
@@ -703,8 +703,6 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 
 		int16_t add_alpha = 75;
 		int16_t add_beta  = 75;
-
-		int     max_depth = 1;
 
 		libchess::Move cur_move;
 
@@ -844,5 +842,5 @@ std::pair<libchess::Move, int> search_it(const int search_time, const bool is_ab
 #endif
 	}
 
-	return { best_move, best_score };
+	return { best_move, best_score, max_depth };
 }

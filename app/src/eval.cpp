@@ -6,12 +6,12 @@
 
 using namespace libchess;
 
-int nnue_evaluate(Eval *const e, const Position & pos)
+int nnue_evaluate(const Eval *const e, const Position & pos)
 {
         return e->evaluate(pos.side_to_move() == constants::WHITE);
 }
 
-int nnue_evaluate(Eval *const e, const Color & c)
+int nnue_evaluate(const Eval *const e, const Color & c)
 {
         return e->evaluate(c == constants::WHITE);
 }

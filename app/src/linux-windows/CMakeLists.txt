@@ -1,5 +1,5 @@
 project(Dog)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 add_definitions("-Wall")
 
@@ -55,7 +55,7 @@ else()
 endif()
 
 set(PROJECT_VERSION_MAJOR 3)
-set(PROJECT_VERSION_MINOR 3)
+set(PROJECT_VERSION_MINOR 4)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic")
 
@@ -92,6 +92,7 @@ set(APP_SOURCES
   ../test.cpp
   ../tt.cpp
   ../tui.cpp
+  ../win32.cpp
   ../fathom/src/tbprobe.c
 )
 
@@ -167,7 +168,7 @@ include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION /usr/games)
 
 SET(CPACK_GENERATOR "DEB")
-set(CPACK_PACKAGE_CONTACT "mail@vanheusden.comm")
+set(CPACK_PACKAGE_CONTACT "folkert@vanheusden.comm")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Folkert van Heusden")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 set(CPACK_DEBIAN_PACKAGE_VERSION ${DOG_VERSION})

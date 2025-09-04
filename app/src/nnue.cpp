@@ -92,7 +92,7 @@ void Eval::set(const libchess::Position & pos)
         }
 }
 
-int IRAM_ATTR Eval::evaluate(bool white_to_move) const
+int IRAM_ATTR Eval::evaluate(const bool white_to_move) const
 {
 	if (white_to_move)
 		return NNUE->evaluate(this->white, this->black);

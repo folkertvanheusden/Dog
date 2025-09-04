@@ -1,3 +1,4 @@
+#if defined(linux) || defined(__APPLE__)
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
@@ -113,8 +114,11 @@ void state_exporter::handler()
 			pdata->revision++;
 			pthread_mutex_unlock(&pdata->mutex);
 		}
+#if defined(linux)
 		else if (rc == EOWNERDEAD) {
 			pthread_mutex_consistent(&pdata->mutex);
 		}
+#endif
 	}
 }
+#endif

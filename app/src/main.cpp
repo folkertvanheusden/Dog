@@ -39,8 +39,9 @@
 #include "state_exporter.h"
 #else
 #include <fcntl.h>
-#include <driver/uart.h>
 #include <driver/gpio.h>
+#include <driver/rmt_tx.h>
+#include <driver/uart.h>
 #include <esp_chip_info.h>
 #include <esp_err.h>
 #include <esp_spiffs.h>
@@ -51,6 +52,10 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+
+#if defined(ESP32_S3_XIAO)
+#include "led_strip_encoder.h"
+#endif
 #endif
 
 #include <libchess/Position.h>
@@ -121,6 +126,58 @@ void my_trace(const char *const fmt, ...)
 #endif
 }
 
+#if defined(ESP32_S3_XIAO)
+// https://github.com/espressif/esp-idf/blob/2044fba6e71422446986f9ae0909b1ab67e57815/examples/peripherals/rmt/led_strip/main/led_strip_example_main.c
+#define RMT_LED_STRIP_RESOLUTION_HZ 10000000 // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
+#define RMT_LED_STRIP_GPIO_NUM      gpio_num_t(44)
+rmt_channel_handle_t led_chan          = nullptr;
+uint8_t              led_strip_pixel[3] { };
+rmt_encoder_handle_t led_encoder       = nullptr;
+
+void init_ws2812()
+{
+    rmt_tx_channel_config_t tx_chan_config = {
+        .gpio_num = RMT_LED_STRIP_GPIO_NUM,
+        .clk_src  = RMT_CLK_SRC_DEFAULT, // select source clock
+        .resolution_hz = RMT_LED_STRIP_RESOLUTION_HZ,
+        .mem_block_symbols = 64, // increase the block size can make the LED less flickering
+        .trans_queue_depth = 4, // set the number of transactions that can be pending in the background
+    };
+    ESP_ERROR_CHECK(rmt_new_tx_channel(&tx_chan_config, &led_chan));
+
+    led_strip_encoder_config_t encoder_config = {
+        .resolution = RMT_LED_STRIP_RESOLUTION_HZ,
+    };
+    ESP_ERROR_CHECK(rmt_new_led_strip_encoder(&encoder_config, &led_encoder));
+
+    ESP_ERROR_CHECK(rmt_enable(led_chan));
+
+}
+
+void set_ws2812(const uint8_t r, const uint8_t g, const uint8_t b)
+{
+	rmt_transmit_config_t tx_config = {
+		.loop_count = 0, // no transfer loop
+	};
+
+	led_strip_pixel[0] = g;
+	led_strip_pixel[1] = r;
+	led_strip_pixel[2] = b;
+	// Flush RGB values to LEDs
+	ESP_ERROR_CHECK(rmt_transmit(led_chan, led_encoder, led_strip_pixel, sizeof(led_strip_pixel), &tx_config));
+	ESP_ERROR_CHECK(rmt_tx_wait_all_done(led_chan, portMAX_DELAY));
+}
+
+void set_led(const uint8_t r, const uint8_t g, const uint8_t b)
+{
+	set_ws2812(r, g, b);
+}
+#else
+void set_led(const uint8_t r, const uint8_t g, const uint8_t b)
+{
+}
+#endif
+
 void set_flag(end_t *const stop)
 {
 	std::unique_lock<std::mutex> lck(stop->cv_lock);
@@ -159,17 +216,7 @@ void think_timeout(void *arg)
 		set_flag(stop);
 }
 
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-#define LED_INTERNAL 0
-#define LED_GREEN    0
-#define LED_BLUE     0
-#define LED_RED      0
-#else
-#define LED_INTERNAL gpio_num_t(2 )
-#define LED_GREEN    gpio_num_t(27)
-#define LED_BLUE     gpio_num_t(25)
-#define LED_RED      gpio_num_t(22)
-
+#if defined(ESP32)
 QueueHandle_t uart_queue;
 
 esp_timer_create_args_t think_timeout_pars = {
@@ -178,60 +225,12 @@ esp_timer_create_args_t think_timeout_pars = {
             .name     = "searchto"
 };
 
-void blink_led(void *arg)
-{
-	led_t *l = reinterpret_cast<led_t *>(arg);
-	if (l->pin_nr) {
-		gpio_set_level(l->pin_nr, l->state);
-		l->state = !l->state;
-	}
-}
-
-void start_blink(esp_timer_handle_t handle)
-{
-	esp_timer_start_periodic(handle, 100000);  // 10 times per second
-}
-
-void stop_blink(esp_timer_handle_t handle, led_t *l)
-{
-	esp_timer_stop(handle);
-
-	gpio_set_level(l->pin_nr, false);
-}
-
-led_t led_green { LED_GREEN, false, 79};
-
-const esp_timer_create_args_t led_green_timer_pars = {
-            .callback = &blink_led,
-            .arg = &led_green,
-            .name = "greenled"
-};
-
-led_t led_blue { LED_BLUE, false, 78 };
-
-const esp_timer_create_args_t led_blue_timer_pars = {
-            .callback = &blink_led,
-            .arg = &led_blue,
-            .name = "blueled"
-};
-
-led_t led_red { LED_RED, false, 77 };
-
-const esp_timer_create_args_t led_red_timer_pars = {
-            .callback = &blink_led,
-            .arg = &led_red,
-            .name = "redled"
-};
-
 esp_timer_handle_t think_timeout_timer;
-esp_timer_handle_t led_green_timer;
-esp_timer_handle_t led_blue_timer;
-esp_timer_handle_t led_red_timer;
 #endif
 
 void set_thread_name(std::string name)
 {
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(linux) || defined(__ANDROID__)
         if (name.length() > 15)
                 name = name.substr(0, 15);
 
@@ -305,7 +304,8 @@ void searcher(const int i)
 		// search!
 		libchess::Move best_move;
 		int            best_score { 0 };
-		std::tie(best_move, best_score) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
+		int            max_depth  { 0 };
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		// notify finished
 		search_lck.lock();
@@ -395,7 +395,7 @@ void stop_ponder()
 
 void delete_threads()
 {
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(_WIN32)
 	if (se)
 		se->clear();
 #endif
@@ -437,7 +437,7 @@ void allocate_threads(const int n)
 		sp.at(i)->md_limit      = 65535;
 #endif
 	}
-#if !defined(ESP32)
+#if !defined(ESP32) && !defined(_WIN32)
 	if (se)
 		se->set(sp.at(0));
 #endif
@@ -480,7 +480,7 @@ void vApplicationMallocFailedHook()
 {
 	printf("# *** OUT OF MEMORY (heap) ***\n");
 	heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
-	start_blink(led_red_timer);
+	set_led(255, 0, 0);
 }
 }
 
@@ -533,12 +533,13 @@ int check_min_stack_size(const search_pars_t & sp)
 
 	if (level < 768) {
 		set_flag(sp.stop);
-		start_blink(led_red_timer);
+		set_led(255, 0, 0);
 		printf("# stack protector engaged (%d), full stop\n", level);
 		return 2;
 	}
 
 	if (level < 1280) {
+		set_led(255, 255, 0);
 		printf("# stack protector engaged (%d), stop QS\n", level);
 		printf("# task name: %s\n", pcTaskGetName(xTaskGetCurrentTaskHandle()));
 		return 1;
@@ -688,9 +689,7 @@ void main_task()
 
 				prepare_threads_state();
 
-#if defined(ESP32)
-				start_blink(led_green_timer);
-#endif
+				set_led(0, 255, 0);
 
 				// put
 				{
@@ -711,9 +710,9 @@ void main_task()
 					while(work.search_best_move.has_value() == false || work.search_count_running != 0)
 						work.search_cv_finished.wait(lck);
 				}
-#if defined(ESP32)
-				stop_blink(led_green_timer, &led_green);
-#endif
+
+				set_led(0, 0, 255);
+
 				cs_sum.add(calculate_search_statistics());
 
 				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.value().to_str().c_str(), work.search_best_score);
@@ -744,9 +743,8 @@ void main_task()
 
 #if defined(ESP32)
 			esp_start_ts = start_ts;
-			stop_blink(led_red_timer, &led_red);
-			start_blink(led_green_timer);
 #endif
+			set_led(0, 255, 0);
 
 			int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
 
@@ -850,9 +848,7 @@ void main_task()
 			my_trace("info string had %d ms, used %.3f ms (including overhead)\n", think_time, (esp_timer_get_time() - start_ts) / 1000.);
 
 			// no longer thinking
-#if defined(ESP32)
-			stop_blink(led_green_timer, &led_green);
-#endif
+			set_led(0, 0, 255);
 #if defined(__ANDROID__)
 			__android_log_print(ANDROID_LOG_INFO, APPNAME, "Performed move %s for position %s", best_move.to_str().c_str(), sp.at(0)->pos.fen().c_str());
 #endif
@@ -926,6 +922,11 @@ void main_task()
 		}
 		else {
 //			my_printf("? %s\n", line.c_str());
+			set_led(0, 255, 255);
+#if defined(ESP32)
+			vTaskDelay(5);
+#endif
+			set_led(127, 127, 127);
 		}
 	}
 
@@ -1240,31 +1241,9 @@ extern "C" void app_main()
 	}
 	ESP_ERROR_CHECK(ret_nvs);
 
-	gpio_config_t io_conf { };
-	io_conf.intr_type    = GPIO_INTR_DISABLE;  // disable interrupt
-	io_conf.mode         = GPIO_MODE_OUTPUT;  // set as output mode
-	io_conf.pin_bit_mask = (1ULL<<LED_INTERNAL) | (1ULL << LED_GREEN) | (1ULL << LED_BLUE) | (1ULL << LED_RED);  // bit mask of the pins that you want to set,e.g.GPIO18
-	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;  // disable pull-down mode
-	io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;  // disable pull-up mode
-	esp_err_t error      = gpio_config(&io_conf);  // configure GPIO with the given settings
-	if (error != ESP_OK)
-		printf("error configuring outputs\n");
-
-#if 0
-	gpio_set_level(LED_INTERNAL, 1);
-	gpio_set_level(LED_GREEN,    0);
-	gpio_set_level(LED_BLUE,     0);
-	gpio_set_level(LED_RED,      0);
-#endif
-
 	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
 	esp_task_wdt_init(&wdtcfg);
 
-#if 0
-	esp_timer_create(&led_green_timer_pars, &led_green_timer);
-	esp_timer_create(&led_blue_timer_pars,  &led_blue_timer );
-	esp_timer_create(&led_red_timer_pars,   &led_red_timer  );
-#endif
 #if 1
 	// configure UART1 (2nd uart)
 	uart_config_t uart_config = {
@@ -1276,9 +1255,11 @@ extern "C" void app_main()
 		.rx_flow_ctrl_thresh = 122,
 	};
 	ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
-#if defined(ESP32_S3_XIAO)  // assuming seed xiao
+#if defined(ESP32_S3_XIAO)
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 1,  2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));  // 43,44 is UART0(?), 1/2 = A0,A1
-#elif defined(ESP32_S3_QTPY)  // assuming adafruit qtpy
+#elif defined(ESP32_S3_WAVESHARE)
+	ESP_ERROR_CHECK(uart_set_pin(uart_num, 6,  7, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+#elif defined(ESP32_S3_QTPY)  // adafruit qtpy
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 5, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 #else  // assuming wemos32
 	ESP_ERROR_CHECK(uart_set_pin(uart_num, 16, 17, 32, 25));
@@ -1322,13 +1303,13 @@ extern "C" void app_main()
 
 	allow_ponder = true;
 
-#if 0
-	gpio_set_level(LED_INTERNAL, 0);
+#if defined(ESP32_S3_XIAO)
+	init_ws2812();
+	set_led(127, 127, 127);
 #endif
 
 	main_task();
 
-	start_blink(led_red_timer);
 	esp_restart();
 }
 #endif
