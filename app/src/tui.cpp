@@ -960,6 +960,11 @@ void tui()
 	auto *pb = new polyglot_book("dog-book.bin");
 #endif
 
+#if !defined(ESP32)
+	time_t time_ = time(nullptr);
+	tm    *tm    = localtime(&time_);
+#endif
+
 	bool show_board = true;
 	bool p_a_k      = false;
 	bool first      = true;
@@ -1002,6 +1007,9 @@ void tui()
 			e->nnue_eval->reset();
 			e->cs.reset();
 		}
+
+		time_ = time(nullptr);
+		tm    = localtime(&time_);
 	};
 
 	for(;;) {
@@ -1162,10 +1170,6 @@ void tui()
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
 #endif
 				else {
-#if !defined(ESP32)
-					time_t  t  = time(nullptr);
-					tm     *tm = localtime(&t);
-#endif
 					std::string pgn = "[Event \"Computer chess event\"]\n"
 							  "[Site \"" + get_local_system_name() + "\"]\n"
 #if defined(ESP32)
@@ -1207,26 +1211,35 @@ void tui()
 					pgn += "[Result \"" + result + "\"]\n";
 					pgn += "\n";
 
-					auto current_color = libchess::constants::WHITE;
-					int  move_nr       = 0;
+					auto   current_color = libchess::constants::WHITE;
+					size_t line_len      = 0;
+					int    move_nr       = 0;
 					for(auto & move: moves_played) {
+						std::string add;
 						if (current_color == libchess::constants::WHITE) {
 							move_nr++;
-							pgn += myformat("%d. %s ", move_nr, move.first.c_str());
+							add += myformat("%d. %s ", move_nr, move.first.c_str());
 							current_color = libchess::constants::BLACK;
 							if (move.second.empty() == false)
-								pgn += "{" + move.second + "} ";
+								add += "{" + move.second + "} ";
 						}
 						else {
-							pgn += move.first;
+							add += move.first;
 							if (move.second.empty() == false)
-								pgn += " {" + move.second + "}";
-							if ((move_nr % 10) == 0)
-								pgn += "\n";
-							else
-								pgn += " ";
+								add += " {" + move.second + "}";
+							add += " ";
 							current_color = libchess::constants::WHITE;
 						}
+
+						// not a hard pgn requirement
+						if (line_len + add.size() > 79) {
+							if (line_len) {
+								pgn     += "\n";
+								line_len = 0;
+							}
+						}
+						pgn      += add;
+						line_len += add.size();
 					}
 
 					pgn += result + "\n\n";
