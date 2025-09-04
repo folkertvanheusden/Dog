@@ -1,5 +1,0 @@
-#!/bin/bash
-
-echo PLEASE SWITCH TO TRAINER BRANCH FIRST:
-
-echo git checkout TRAINER

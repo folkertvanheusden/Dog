@@ -1,2 +1,0 @@
-RUN echo PLEASE CHECKOUT TRAINER BRANCH FIRST
-RUN echo e.g.: git checkout TRAINER
