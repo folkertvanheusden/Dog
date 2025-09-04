@@ -1178,7 +1178,8 @@ void tui()
 							  "[Date \"" + myformat("%04d-%02d-%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday) + "\"]\n"
 							  "[Time \"" + myformat("%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec) + "\"]\n"
 #endif
-							  "[Round \"-\"]\n";
+							  "[Round \"-\"]\n" +
+							  myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
 					if (start_fen != libchess::constants::STARTPOS_FEN) {
 						  pgn += "[Setup \"1\"]\n";
 						  pgn += "[FEN \"" + start_fen + "\"]\n";
