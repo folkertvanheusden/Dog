@@ -5,7 +5,7 @@ set -e
 docker build . --tag dog
 
 docker rm -f dog || true
-docker run --name dog -d -it --restart=unless-stopped dog
+docker run --ulimit nofile=32768:32768 --name dog -d -it --restart=unless-stopped dog
 
 echo "###################################################"
 echo "ctrl-c to stop, docker container will keep running:"
