@@ -4,6 +4,8 @@ Licensed under the MIT license.
 
 Clone the git repo with the "--recursive" flag!
 
+When you want to help training Dog, see [helping-me-out.md](helping-me-out.md).
+
 
 To build the program and upload it to a wemos32 mini:
 
