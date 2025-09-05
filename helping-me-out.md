@@ -19,16 +19,29 @@ That's it! Interrupt the program whenever you like.
 
 * WITHOUT DOCKER
 
-This is the recipe for any Debian/Ubuntu based system:
+This is the recipe for Linux systems. It has 2 steps that depend on the distribution you use.
 
+** step 1
+
+Debian/Ubuntu (DEB based systems):
 ```
     sudo apt update
     sudo apt install clang cmake git build-essential libstdc++-12-dev screen python3-pip python3-venv
+```
+
+Fedora (RPM based systems):
+```
+    sudo dnf install cmake git g++ python3-pip
+```
+
+** step 2
+
+```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog/app/src/linux-windows/build/
     git checkout TRAINER
     CXX=clang++-14 cmake ..
-    make -j4
+    make -j4 Dog
     cd ../..
     python3 -m venv venv
     . venv/bin/activate
