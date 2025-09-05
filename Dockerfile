@@ -8,8 +8,8 @@ RUN pip3 install python-chess
 
 RUN cd /app/src/linux-windows/build &&  \
     cmake .. && \
-    make -j4 Dog-native
+    make -j4 Dog
 
 WORKDIR /app/src
 
-CMD ./gen-train-data.py -e ./linux-windows/build/Dog-native
+CMD ./gen-train-data.py -e ./linux-windows/build/Dog
