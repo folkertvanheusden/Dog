@@ -3,6 +3,10 @@ You can help generating that!
 Feel free to run it whenever you like and how long you like.
 
 
+Please always make a clean clone of the github-repository: delete a previous clone.
+That way we're certain that e.g. libchess is always the latest version!
+
+
 There are 2 ways:
 
 * DOCKER
@@ -40,7 +44,6 @@ This is the recipe for any Debian/Ubuntu based system:
     pip install python-chess
     ./gen-train-data.py -e linux-windows/build/Dog
 ```
-
 *NOTE: for systems with large amounts of threads, do not forget to run ulimit -n 8192 ! (or bigger)
 
 Interrupt the program whenever you want.
