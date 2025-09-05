@@ -35,7 +35,7 @@ This is the recipe for Linux systems. It has 2 steps that depend on the distribu
 Debian/Ubuntu (DEB based systems):
 ```
     sudo apt update
-    sudo apt install clang cmake git build-essential libstdc++-12-dev screen python3-pip python3-venv
+    sudo apt install clang cmake git build-essential screen python3-pip python3-venv
 ```
 
 Fedora (RPM based systems):
@@ -49,7 +49,7 @@ Fedora (RPM based systems):
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
     cd Dog/app/src/linux-windows/build/
     git checkout TRAINER
-    CXX=clang++-14 cmake ..
+    cmake ..
     make -j4 Dog
     cd ../..
     python3 -m venv venv
