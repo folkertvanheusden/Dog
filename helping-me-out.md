@@ -36,4 +36,6 @@ This is the recipe for any Debian/Ubuntu based system:
     ./gen-train-data.py -e linux-windows/build/Dog
 ```
 
+*NOTE: for systems with large amounts of threads, do not forget to run ulimit -n 8192 ! (or bigger)
+
 Interrupt the program whenever you want.
