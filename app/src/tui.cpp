@@ -960,17 +960,13 @@ void tui()
 	auto *pb = new polyglot_book("dog-book.bin");
 #endif
 
-#if !defined(ESP32)
-	time_t time_ = time(nullptr);
-	tm    *tm    = localtime(&time_);
-#endif
-
 	bool show_board = true;
 	bool p_a_k      = false;
 	bool first      = true;
 
 	std::string start_fen           = sp.at(0)->pos.fen();
 	uint64_t    human_think_start   = 0;
+	uint64_t    human_think_end     = 0;
 	uint64_t    total_human_think   = 0;
 	int         n_human_think       = 0;
 	int32_t     initial_think_time  = 0;
@@ -981,6 +977,15 @@ void tui()
 	int         expected_move_count = 0;
 	double      match_percentage    = 0.;
 	int         n_match_percentage  = 0;
+	int         game_took           = 0;
+
+#if defined(ESP32)
+	uint64_t time_start = esp_timer_get_time();
+	uint64_t time_end   = 0;
+#else
+	time_t time_start = time(nullptr);
+	time_t time_end   = 0;
+#endif
 
 	auto reset_state = [&]()
 	{
@@ -992,6 +997,7 @@ void tui()
 		sp.at(0)->pos       = libchess::Position(start_fen);
 		total_dog_time      = initial_think_time;
 		human_think_start   = 0;
+		human_think_end     = 0;
 		total_human_think   = 0;
 		n_human_think       = 0;
 		human_score_sum     = 0;
@@ -1002,18 +1008,34 @@ void tui()
 		player              = libchess::constants::WHITE;
 		match_percentage    = 0.;
 		n_match_percentage  = 0;
+		game_took           = 0;
 
 		for(auto & e: sp) {
 			e->nnue_eval->reset();
 			e->cs.reset();
 		}
 
-		time_ = time(nullptr);
-		tm    = localtime(&time_);
+#if defined(ESP32)
+		time_start = esp_timer_get_time();
+#else
+		time_start = time(nullptr);
+		time_end   = 0;
+#endif
 	};
 
 	for(;;) {
 		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
+
+		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
+		if (finished && game_took == 0) {
+#if defined(ESP32)
+			time_end  = esp_timer_get_time();
+			game_took = std::max(uint64_t(1), (time_end - time_start) / 1000000);
+#else
+			time_end  = time(nullptr);
+			game_took = std::max(time_t(1), time_end - time_start);
+#endif
+		}
 
 		if (p_a_k && player.has_value()) {
 			p_a_k = false;
@@ -1116,7 +1138,6 @@ void tui()
 		if (peek_for_ctrl_c())
 			player = sp.at(0)->pos.side_to_move();
 
-		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
 			if (do_ponder && !finished) {
@@ -1125,8 +1146,8 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-
 			std::string line = my_getline(is);
+			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
 				stop_ponder();
@@ -1170,19 +1191,40 @@ void tui()
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
 #endif
 				else {
+#if !defined(ESP32)
+					tm  tm_start_buf { };
+					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
+					tm  tm_end_buf   { };
+					tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
+#endif
+
 					std::string pgn = "[Event \"Computer chess event\"]\n"
 							  "[Site \"" + get_local_system_name() + "\"]\n"
 #if defined(ESP32)
 							  "[Date \"-\"]\n"
 #else
-							  "[Date \"" + myformat("%04d-%02d-%02d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday) + "\"]\n"
-							  "[Time \"" + myformat("%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec) + "\"]\n"
+							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday) + "\"]\n"
 #endif
 							  "[Round \"-\"]\n" +
 							  myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
 					if (start_fen != libchess::constants::STARTPOS_FEN) {
 						  pgn += "[Setup \"1\"]\n";
 						  pgn += "[FEN \"" + start_fen + "\"]\n";
+					}
+#if !defined(ESP32)
+					pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+							tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday,
+							tm_start->tm_hour,      tm_start->tm_min,   tm_start->tm_sec,
+							tm_start->tm_zone);
+#endif
+					if (game_took) {
+#if !defined(ESP32)
+						pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+								tm_end->tm_year+1900, tm_end->tm_mon+1, tm_end->tm_mday,
+								tm_end->tm_hour,      tm_end->tm_min,   tm_end->tm_sec,
+								tm_end->tm_zone);
+#endif
+						pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
 					}
 
 					if (player.has_value()) {
@@ -1477,18 +1519,18 @@ void tui()
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
-					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "" });
+					uint64_t human_think_took = human_think_end - human_think_start;
+					total_human_think += human_think_took;
+					n_human_think++;
 
-					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
+					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), myformat("[%%emt %.2f]", human_think_took / 1000000.) });
+
+					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
-					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
+					int16_t score_after  = get_score(sp.at(0)->pos, now_playing);
 					human_score_sum += score_after - score_before;
 					human_score_n++;
-
-					uint64_t human_think_end = esp_timer_get_time();
-					total_human_think += human_think_end - human_think_start;
-					n_human_think++;
 
 					store_position(sp.at(0)->pos.fen(), total_dog_time);
 
