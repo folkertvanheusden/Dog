@@ -966,6 +966,7 @@ void tui()
 
 	std::string start_fen           = sp.at(0)->pos.fen();
 	uint64_t    human_think_start   = 0;
+	uint64_t    human_think_end     = 0;
 	uint64_t    total_human_think   = 0;
 	int         n_human_think       = 0;
 	int32_t     initial_think_time  = 0;
@@ -996,6 +997,7 @@ void tui()
 		sp.at(0)->pos       = libchess::Position(start_fen);
 		total_dog_time      = initial_think_time;
 		human_think_start   = 0;
+		human_think_end     = 0;
 		total_human_think   = 0;
 		n_human_think       = 0;
 		human_score_sum     = 0;
@@ -1144,8 +1146,8 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-
 			std::string line = my_getline(is);
+			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
 				stop_ponder();
@@ -1517,18 +1519,18 @@ void tui()
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
-					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "" });
+					uint64_t human_think_took = human_think_end - human_think_start;
+					total_human_think += human_think_took;
+					n_human_think++;
 
-					auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
+					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), myformat("[%%emt %.2f]", human_think_took / 1000000.) });
+
+					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
-					int16_t score_after = get_score(sp.at(0)->pos, now_playing);
+					int16_t score_after  = get_score(sp.at(0)->pos, now_playing);
 					human_score_sum += score_after - score_before;
 					human_score_n++;
-
-					uint64_t human_think_end = esp_timer_get_time();
-					total_human_think += human_think_end - human_think_start;
-					n_human_think++;
 
 					store_position(sp.at(0)->pos.fen(), total_dog_time);
 
