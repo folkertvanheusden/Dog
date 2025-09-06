@@ -290,7 +290,15 @@ void perft(libchess::Position &pos, int depth)
 
 std::string format_move_and_score(const std::string & move, int16_t score)
 {
-	return move + myformat(" [%5.2f]", score / 100.);
+	if (move.size() > 4) {
+		int space_to_add = (4 /* move width */ + 9 /* score width */) - move.size();
+		if (space_to_add > 0)
+			return move + std::string(space_to_add, ' ');
+		return move;
+	}
+
+	int space_to_add = 4 - move.size();
+	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
 }
 
 void store_cursor_position()
@@ -416,7 +424,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
 			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
 			if (nrefm - i >= 2)
-				add += "  " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
+				add += " " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
 			lines.at(line_nr) += add;
 		}
 	}
@@ -462,18 +470,28 @@ int get_complexity(const libchess::Position & pos, const libchess::Color & c)
 
 int get_score(const libchess::Position & pos, const libchess::Move & m)
 {
-	Eval e(pos);
+	libchess::Position work(pos );
+	Eval               e   (work);
 
-	libchess::Position work(pos);
 	make_move(&e, work, m);
 
 	return -nnue_evaluate(&e, work);
 }
 
+int get_score(const libchess::Position & pos, const libchess::Move & m, const libchess::Color & c)
+{
+	libchess::Position work(pos );
+	Eval               e   (work);
+
+	make_move(&e, work, m);
+
+	return nnue_evaluate(&e, c);
+}
+
 int get_score(const libchess::Position & pos, const libchess::Color & c)
 {
 	Eval e(pos);
-	return -nnue_evaluate(&e, c);
+	return nnue_evaluate(&e, c);
 }
 
 void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
@@ -1090,8 +1108,11 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (expected_move_count > 1)
+			if (expected_move_count > 1) {
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
+				if (n_match_percentage > 1)
+					my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
+			}
 			if (sp.at(0)->pos.in_check()) {
 				std::string result = "CHECK";
 				switch(sp.at(0)->pos.game_state()) {
@@ -1512,23 +1533,28 @@ void tui()
 					if (cm_rc.has_value()) {
 						match_percentage   += cm_rc.value();
 						n_match_percentage++;
-						if (n_match_percentage > 1)
-							my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
 					}
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
-					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
+					int16_t score_Dog    = get_score(sp.at(0)->pos, !now_playing);
+					int16_t score_before = get_score(sp.at(0)->pos,  now_playing);
+					int16_t score_after  = get_score(sp.at(0)->pos, move.value(), now_playing);
+
+					std::string score_eval;
+					if (score_after > score_Dog && score_before < score_Dog)
+						score_eval += "!";
+					else if (score_after < score_Dog && score_before > score_Dog)
+						score_eval += "?";
 
 					uint64_t human_think_took = human_think_end - human_think_start;
 					total_human_think += human_think_took;
 					n_human_think++;
 
-					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), myformat("[%%emt %.2f]", human_think_took / 1000000.) });
+					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()) + score_eval, myformat("[%%emt %.2f]", human_think_took / 1000000.) });
 
 					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
-					int16_t score_after  = get_score(sp.at(0)->pos, now_playing);
 					human_score_sum += score_after - score_before;
 					human_score_n++;
 

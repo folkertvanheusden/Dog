@@ -50,6 +50,7 @@ public:
 };
 
 std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move);
+bool does_game_end_soon(const libchess::Position & pos_in);
 int eval_to_tt  (const int eval, const int ply);
 int eval_from_tt(const int eval, const int ply);
 uint32_t       libchessmove_to_uint(const libchess::Move & m);
