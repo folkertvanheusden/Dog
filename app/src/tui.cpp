@@ -290,7 +290,15 @@ void perft(libchess::Position &pos, int depth)
 
 std::string format_move_and_score(const std::string & move, int16_t score)
 {
-	return move + myformat(" [%5.2f]", score / 100.);
+	if (move.size() > 4) {
+		int space_to_add = (4 /* move width */ + 9 /* score width */) - move.size();
+		if (space_to_add > 0)
+			return move + std::string(space_to_add, ' ');
+		return move;
+	}
+
+	int space_to_add = 4 - move.size();
+	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
 }
 
 void store_cursor_position()
@@ -416,7 +424,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
 			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
 			if (nrefm - i >= 2)
-				add += "  " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
+				add += " " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
 			lines.at(line_nr) += add;
 		}
 	}
