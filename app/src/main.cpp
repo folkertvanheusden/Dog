@@ -780,7 +780,10 @@ void main_task()
 				int ms           = is_white ? w_time : b_time;
 				int ms_opponent  = is_white ? b_time : w_time;
 
-				think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
+				if (does_game_end_soon(sp.at(0)->pos))
+					think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves);
+				else
+					think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
 
 				int limit_duration_min = ms / 15;
 				if (think_time > limit_duration_min)
