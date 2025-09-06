@@ -1100,8 +1100,11 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (expected_move_count > 1)
+			if (expected_move_count > 1) {
 				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
+				if (n_match_percentage > 1)
+					my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
+			}
 			if (sp.at(0)->pos.in_check()) {
 				std::string result = "CHECK";
 				switch(sp.at(0)->pos.game_state()) {
@@ -1522,8 +1525,6 @@ void tui()
 					if (cm_rc.has_value()) {
 						match_percentage   += cm_rc.value();
 						n_match_percentage++;
-						if (n_match_percentage > 1)
-							my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
 					}
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
