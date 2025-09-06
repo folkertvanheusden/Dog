@@ -462,18 +462,28 @@ int get_complexity(const libchess::Position & pos, const libchess::Color & c)
 
 int get_score(const libchess::Position & pos, const libchess::Move & m)
 {
-	Eval e(pos);
+	libchess::Position work(pos );
+	Eval               e   (work);
 
-	libchess::Position work(pos);
 	make_move(&e, work, m);
 
 	return -nnue_evaluate(&e, work);
 }
 
+int get_score(const libchess::Position & pos, const libchess::Move & m, const libchess::Color & c)
+{
+	libchess::Position work(pos );
+	Eval               e   (work);
+
+	make_move(&e, work, m);
+
+	return nnue_evaluate(&e, c);
+}
+
 int get_score(const libchess::Position & pos, const libchess::Color & c)
 {
 	Eval e(pos);
-	return -nnue_evaluate(&e, c);
+	return nnue_evaluate(&e, c);
 }
 
 void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
@@ -1517,18 +1527,25 @@ void tui()
 					}
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
-					int16_t score_before = get_score(sp.at(0)->pos, now_playing);
+					int16_t score_Dog    = get_score(sp.at(0)->pos, !now_playing);
+					int16_t score_before = get_score(sp.at(0)->pos,  now_playing);
+					int16_t score_after  = get_score(sp.at(0)->pos, move.value(), now_playing);
+
+					std::string score_eval;
+					if (score_after > score_Dog && score_before < score_Dog)
+						score_eval += "!";
+					else if (score_after < score_Dog && score_before > score_Dog)
+						score_eval += "?";
 
 					uint64_t human_think_took = human_think_end - human_think_start;
 					total_human_think += human_think_took;
 					n_human_think++;
 
-					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), myformat("[%%emt %.2f]", human_think_took / 1000000.) });
+					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()) + score_eval, myformat("[%%emt %.2f]", human_think_took / 1000000.) });
 
 					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
-					int16_t score_after  = get_score(sp.at(0)->pos, now_playing);
 					human_score_sum += score_after - score_before;
 					human_score_n++;
 
