@@ -474,6 +474,18 @@ auto opponent_option_handler = [](const std::string & value) {
 	my_trace("# Playing against %s\n", value.c_str());
 };
 
+#if !defined(ESP32)
+auto syzygy_option_handler = [](const std::string & value) {
+	my_trace("# Syzygy path: %s\n", value.c_str());
+
+	if (with_syzygy)
+		fathom_deinit();
+	fathom_init(value.c_str());
+
+	with_syzygy = true;
+};
+#endif
+
 #if defined(ESP32)
 extern "C" {
 void vApplicationMallocFailedHook()
@@ -875,6 +887,8 @@ void main_task()
 	uci_service->register_option(thread_count_option);
 	libchess::UCISpinOption hash_size_option("Hash", (tti.get_size() + 1023) / (1024 * 1024), 1, 1024, hash_size_handler);
 	uci_service->register_option(hash_size_option);
+	libchess::UCIStringOption syzygy_path_option("SyzygyPath", "", syzygy_option_handler);
+	uci_service->register_option(syzygy_path_option);
 #endif
 	libchess::UCICheckOption allow_ponder_option("Ponder", allow_ponder, allow_ponder_handler);
 	uci_service->register_option(allow_ponder_option);
