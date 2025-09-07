@@ -61,11 +61,8 @@ inline int history_index(const libchess::Color & side, const libchess::PieceType
 	return side * 6 * 64 + from_type * 64 + sq;
 }
 
-sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) :
-	sp(sp)
+sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) : sp(sp)
 {
-	if (sp.pos.previous_move())
-		previous_move_target = sp.pos.previous_move()->to_square();
 }
 
 void sort_movelist_compare::add_first_move(const libchess::Move move)
