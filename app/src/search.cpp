@@ -61,11 +61,8 @@ inline int history_index(const libchess::Color & side, const libchess::PieceType
 	return side * 6 * 64 + from_type * 64 + sq;
 }
 
-sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) :
-	sp(sp)
+sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) : sp(sp)
 {
-	if (sp.pos.previous_move())
-		previous_move_target = sp.pos.previous_move()->to_square();
 }
 
 void sort_movelist_compare::add_first_move(const libchess::Move move)
@@ -191,8 +188,6 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 
 int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 {
-	if (sp.stop->flag)
-		return 0;
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
 		sp.md = qsdepth;
@@ -226,17 +221,15 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
 
-		{
-			int score      = te.value().score;
-			int work_score = eval_from_tt(score, qsdepth);
-			auto flag      = te.value().flags;
-                        bool use       = flag == EXACT ||
-                                        (flag == LOWERBOUND && work_score >= beta) ||
-                                        (flag == UPPERBOUND && work_score <= alpha);
-			if (use) {
-				sp.cs.data.qtt_cutoff++;
-				return work_score;
-			}
+		int score      = te.value().score;
+		int work_score = eval_from_tt(score, qsdepth);
+		auto flag      = te.value().flags;
+		bool use       = flag == EXACT ||
+				(flag == LOWERBOUND && work_score >= beta) ||
+				(flag == UPPERBOUND && work_score <= alpha);
+		if (use) {
+			sp.cs.data.qtt_cutoff++;
+			return work_score;
 		}
 
 		if (te.value().M)  // move stored in TT?

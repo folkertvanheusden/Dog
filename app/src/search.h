@@ -8,12 +8,12 @@
 class sort_movelist_compare
 {
 private:
-	const search_pars_t & sp;
-        std::vector<libchess::Move> first_moves;
-        std::optional<libchess::Square> previous_move_target;
+	const search_pars_t       & sp;
+	std::vector<libchess::Move> first_moves;
 
 public:
         sort_movelist_compare(const search_pars_t & sp);
+
         void add_first_move(const libchess::Move move);
         int  move_evaluater(const libchess::Move move) const;
 };
