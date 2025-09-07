@@ -224,13 +224,13 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
 
+		int score      = te.value().score;
+		int work_score = eval_from_tt(score, qsdepth);
 		auto flag      = te.value().flags;
 		bool use       = flag == EXACT ||
 				(flag == LOWERBOUND && work_score >= beta) ||
 				(flag == UPPERBOUND && work_score <= alpha);
 		if (use) {
-			int score      = te.value().score;
-			int work_score = eval_from_tt(score, qsdepth);
 			sp.cs.data.qtt_cutoff++;
 			return work_score;
 		}
