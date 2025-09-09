@@ -658,8 +658,14 @@ void main_task()
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
 		init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 		if (position_parameters.move_list()) {
-			for (auto & move_str : position_parameters.move_list()->move_list())
-				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, *str_to_move(sp.at(0)->pos, move_str));
+			for (auto & move_str : position_parameters.move_list()->move_list()) {
+				auto m = str_to_move(sp.at(0)->pos, move_str);
+				if (m.has_value() == false) {
+					printf("# %s is invalid in the context of %s\n", move_str.c_str(), sp.at(0)->pos.fen().c_str());
+					break;
+				}
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, *m);
+			}
 		}
 	};
 
