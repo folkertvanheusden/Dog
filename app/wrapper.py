@@ -17,6 +17,7 @@ while True:
 #        time.sleep(0.5)
 #        ser.dtr = True
 #        time.sleep(2.0)
+        ser.write('\n'.encode('ascii'))
 
         fd_ser = ser.fileno()
         data = ''
