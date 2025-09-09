@@ -599,9 +599,6 @@ void main_task()
 {
 	libchess::UCIService *uci_service = new libchess::UCIService("Dog v" DOG_VERSION, "Folkert van Heusden", std::cout, is);
 
-	std::ios_base::sync_with_stdio(true);
-	std::cout.setf(std::ios::unitbuf);
-
 	init_lmr();
 
 	chess_stats global_cs;
@@ -609,11 +606,6 @@ void main_task()
 	auto eval_handler = [](std::istringstream&) {
 		int score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
 		printf("# eval: %d\n", score);
-	};
-
-	auto tui_handler = [](std::istringstream&) {
-		printf("Invoking TUI...\n");
-		run_tui();
 	};
 
 	auto fen_handler = [](std::istringstream&) {
@@ -643,7 +635,6 @@ void main_task()
 		printf("fen          show fen of current position\n");
 		printf("d / display  show current board layout\n");
 		printf("perft        perft, parameter is depth\n");
-		printf("tui          switch to text interface\n");
 		printf("quit         exit to main menu\n");
 	};
 
@@ -912,13 +903,11 @@ void main_task()
 	uci_service->register_handler("max",        dog_handler, false);
 	uci_service->register_handler("perft",      perft_handler, true);
 	uci_service->register_handler("ucinewgame", ucinewgame_handler, true);
-	uci_service->register_handler("tui",        tui_handler, true);
 	uci_service->register_handler("status",     status_handler, false);
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		my_printf("# ENTER \"uci\" FOR uci-MODE, OR \"tui\" FOR A TEXT INTERFACE\n");
-		my_printf("# \"test\" will run the unit tests, \"quit\" terminate the application\n");
+		my_printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS, \"quit\" TO QUIT\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -926,11 +915,6 @@ void main_task()
 		if (line == "uci") {
 			uci_service->run();
 			break;  // else lichess-bot will break
-		}
-		else if (line == "tui") {
-			printf("Invoking TUI...\n");
-			run_tui();
-			printf("Waiting for \"tui\" or \"uci\"...\n");
 		}
 		else if (line == "test")
 			run_tests();
@@ -1140,6 +1124,7 @@ void help()
 	print_max();
 
 	printf("-t x  thread count\n");
+	printf("-T    run the TUI\n");
 	printf("-p    allow pondering\n");
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
@@ -1158,9 +1143,10 @@ int main(int argc, char *argv[])
 	hello();
 
 #if !defined(__ANDROID__)
-	int thread_count =  1;
-	int c            = -1;
-	while((c = getopt(argc, argv, "t:ps:UR:rH:Q:h")) != -1) {
+	bool tui          = false;
+	int  thread_count =  1;
+	int  c            = -1;
+	while((c = getopt(argc, argv, "Tt:ps:UR:rH:Q:h")) != -1) {
 		if (c == 'U') {
 			run_tests();
 			return 1;
@@ -1179,6 +1165,8 @@ int main(int argc, char *argv[])
 
 		if (c == 't')
 			thread_count = atoi(optarg);
+		else if (c == 'T')
+			tui = true;
 		else if (c == 'p')
 			allow_ponder = true;
 		else if (c == 's') {
@@ -1219,7 +1207,10 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	main_task();
+	if (tui)
+		run_tui(true);
+	else
+		main_task();
 
 	delete se;
 
@@ -1235,34 +1226,7 @@ int main(int argc, char *argv[])
 
 static void init_uart()
 {
-    esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
-    esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
-
-    usb_serial_jtag_driver_config_t usb_serial_jtag_config;
-    usb_serial_jtag_config.rx_buffer_size = 1024;
-    usb_serial_jtag_config.tx_buffer_size = 1024;
-
-    esp_err_t ret = usb_serial_jtag_driver_install(&usb_serial_jtag_config);
-    if (ret != ESP_OK)
-            printf("usb_serial_jtag_driver_install failed\n");
-
-    esp_vfs_usb_serial_jtag_use_driver();
-}
-
-extern "C" void app_main()
-{
-	esp_err_t ret_nvs = nvs_flash_init();
-	if (ret_nvs == ESP_ERR_NVS_NO_FREE_PAGES || ret_nvs == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-		ESP_ERROR_CHECK(nvs_flash_erase());
-		ret_nvs = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(ret_nvs);
-
-	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
-	esp_task_wdt_init(&wdtcfg);
-
-#if 1
-	// configure UART1 (2nd uart)
+	// configure UART1 (2nd uart) for TUI
 	uart_config_t uart_config = {
 		.baud_rate  = 38400,
 		.data_bits  = UART_DATA_8_BITS,
@@ -1285,9 +1249,24 @@ extern "C" void app_main()
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
-#endif
-	init_uart();
 
+	// USB/JTAG for UCI
+	esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
+	esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
+
+	usb_serial_jtag_driver_config_t usb_serial_jtag_config;
+	usb_serial_jtag_config.rx_buffer_size = 1024;
+	usb_serial_jtag_config.tx_buffer_size = 1024;
+
+	esp_err_t ret = usb_serial_jtag_driver_install(&usb_serial_jtag_config);
+	if (ret != ESP_OK)
+		printf("usb_serial_jtag_driver_install failed\n");
+
+	esp_vfs_usb_serial_jtag_use_driver();
+}
+
+void init_flash_filesystem()
+{
 	// flash filesystem
 	esp_vfs_spiffs_conf_t conf = {
 		.base_path       = "/spiffs",
@@ -1305,6 +1284,23 @@ extern "C" void app_main()
 			my_printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
 		my_printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
+}
+
+extern "C" void app_main()
+{
+	esp_err_t ret_nvs = nvs_flash_init();
+	if (ret_nvs == ESP_ERR_NVS_NO_FREE_PAGES || ret_nvs == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		ret_nvs = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(ret_nvs);
+
+	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
+	esp_task_wdt_init(&wdtcfg);
+
+	init_uart();
+
+	init_flash_filesystem();
 
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
@@ -1324,6 +1320,10 @@ extern "C" void app_main()
 	init_ws2812();
 	set_led(127, 127, 127);
 #endif
+
+	std::ios_base::sync_with_stdio(true);
+	std::cout.setf(std::ios::unitbuf);
+	run_tui(false);
 
 	main_task();
 

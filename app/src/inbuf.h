@@ -4,19 +4,8 @@
 #include <streambuf>
 
 #if defined(ESP32)
-#include <driver/gpio.h>
-#include <driver/uart.h>
-#include <esp_task_wdt.h>
-#include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 #include <freertos/task.h>
-
-#if defined(ESP32_S3_WAVESHARE)
-const uart_port_t uart_num = UART_NUM_0;
-#else
-const uart_port_t uart_num = UART_NUM_1;
-#endif
 #endif
 
 
@@ -67,22 +56,13 @@ protected:
 
 		for(;;) {
 			c = fgetc(stdin);
-			if (c >= 0)
+			if (c >= 0) {
+				if (c == 13)
+					c = 10;
 				break;
-
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
-			size_t length = 0;
-			ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
-			if (length) {
-				char buffer = 0;
-				if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
-					if (buffer == 13)
-						c = 10;
-					else
-						c = buffer;
-					break;
-				}
 			}
+#if defined(ESP32)
+			// fgetc is non-blocking on ESP32
 			vTaskDelay(1);
 #endif
 		}

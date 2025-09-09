@@ -5,10 +5,18 @@
 #include <cstring>
 #include <ctype.h>
 #if defined(ESP32)
+#include <driver/gpio.h>
+#include <driver/uart.h>
 #include <esp_chip_info.h>
 #include <esp_http_client.h>
+#include <esp_task_wdt.h>
+#include <esp_timer.h>
 #include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
 #include <soc/rtc.h>
+
 #else
 #include <fstream>
 #include <unistd.h>
@@ -242,7 +250,6 @@ void my_printf(const char *const fmt, ...)
         auto buffer_len = vasprintf(&buffer, fmt, ap);
         va_end(ap);
 
-        printf("%s", buffer);
 	to_uart(buffer, buffer_len);
 
         free(buffer);
@@ -743,12 +750,33 @@ void do_syzygy(const libchess::Position & pos)
 	}
 }
 
+int wait_for_key()
+{
+#if defined(ESP32)
+	for(;;) {
+		size_t length = 0;
+		ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
+		if (length) {
+			char buffer = 0;
+			if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
+				if (buffer == 13)
+					return 10;
+				return buffer;
+			}
+		}
+
+		vTaskDelay(1);
+	}
+#else
+	return getchar();
+#endif
+}
+
 void press_any_key()
 {
 	my_printf("Press any key... ");
 
-	char c = 0;
-	if (is.get(c))
+	if (wait_for_key())
 		my_printf("\n");
 }
 
@@ -909,7 +937,7 @@ static void help()
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
 
-std::string my_getline(std::istream & is)
+std::string my_getline()
 {
 	set_led(127, 127, 127);
 
@@ -918,9 +946,7 @@ std::string my_getline(std::istream & is)
 	std::string out;
 
 	for(;;) {
-		char c = 0;
-		if (!is.get(c))
-			break;
+		char c = wait_for_key();
 
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
@@ -1167,7 +1193,7 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-			std::string line = my_getline(is);
+			std::string line = my_getline();
 			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
@@ -1494,7 +1520,7 @@ void tui()
 						*lf = 0x00;
 					my_printf("Use \"%s\"?\n", buffer);
 
-					if (is.get() == 'y') {
+					if (wait_for_key() == 'y') {
 						reset_state();
 
 						sp.at(0)->pos = libchess::Position(buffer);
@@ -1660,10 +1686,12 @@ void tui()
 	trace_enabled = true;
 }
 
-void run_tui()
+void run_tui(const bool wait)
 {
 	// because of ESP32 stack
 	auto th = new std::thread{tui};
-	th->join();
-	delete th;
+	if (wait) {
+		th->join();
+		delete th;
+	}
 }
