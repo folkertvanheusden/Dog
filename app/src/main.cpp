@@ -1286,6 +1286,11 @@ void init_flash_filesystem()
 	}
 }
 
+void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)
+{
+	printf("%s was called but failed to allocate %d bytes with 0x%lx capabilities\r\n", function_name, requested_size, caps);
+}
+
 extern "C" void app_main()
 {
 	esp_err_t ret_nvs = nvs_flash_init();
@@ -1301,14 +1306,13 @@ extern "C" void app_main()
 
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
-	// Enable non-blocking mode on stdin and stdout
-	fcntl(fileno(stdout), F_SETFL, 0);
-	fcntl(fileno(stdin),  F_SETFL, 0);
 
-	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = 0, .trigger_panic = false };
+	esp_task_wdt_config_t wdtcfg { .timeout_ms = 3000, .idle_core_mask = 0, .trigger_panic = false };
 	esp_task_wdt_init(&wdtcfg);
 
 	hello();
+
+	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
 
 	esp_chip_info_t chip_info { };
 	esp_chip_info(&chip_info);

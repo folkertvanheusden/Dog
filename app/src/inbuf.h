@@ -34,6 +34,9 @@ public:
 protected:
 	// insert new characters into the buffer
 	virtual int_type underflow () {
+#if defined(ESP32)
+		vTaskPrioritySet(nullptr, configMAX_PRIORITIES - 1);
+#endif
 		// is read position before end of buffer?
 		if (gptr() < egptr())
 			return traits_type::to_int_type(*gptr());
@@ -63,7 +66,7 @@ protected:
 			}
 #if defined(ESP32)
 			// fgetc is non-blocking on ESP32
-			vTaskDelay(1);
+			vTaskDelay(10);
 #endif
 		}
 
