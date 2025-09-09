@@ -1307,9 +1307,6 @@ extern "C" void app_main()
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	esp_task_wdt_config_t wdtcfg { .timeout_ms = 3000, .idle_core_mask = 0, .trigger_panic = false };
-	esp_task_wdt_init(&wdtcfg);
-
 	hello();
 
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
