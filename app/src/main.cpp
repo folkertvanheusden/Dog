@@ -262,7 +262,7 @@ struct {
 
 void searcher(const int i)
 {
-	printf("Thread %d started\n", i);
+	printf("# Thread %d started\n", i);
 
 #if defined(ESP32)
 	sp.at(i)->th = xTaskGetCurrentTaskHandle();
@@ -907,7 +907,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		my_printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS, \"quit\" TO QUIT\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS, \"quit\" TO QUIT\n");
 
 		std::string line;
 		std::getline(is, line);
