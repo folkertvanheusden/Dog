@@ -1295,9 +1295,6 @@ extern "C" void app_main()
 	}
 	ESP_ERROR_CHECK(ret_nvs);
 
-	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = uint32_t(~0), .trigger_panic = false };
-	esp_task_wdt_init(&wdtcfg);
-
 	init_uart();
 
 	init_flash_filesystem();
@@ -1307,6 +1304,9 @@ extern "C" void app_main()
 	// Enable non-blocking mode on stdin and stdout
 	fcntl(fileno(stdout), F_SETFL, 0);
 	fcntl(fileno(stdin),  F_SETFL, 0);
+
+	esp_task_wdt_config_t wdtcfg { .timeout_ms = 30000, .idle_core_mask = 0, .trigger_panic = false };
+	esp_task_wdt_init(&wdtcfg);
 
 	hello();
 
