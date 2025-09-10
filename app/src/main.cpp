@@ -599,8 +599,6 @@ void main_task()
 {
 	libchess::UCIService *uci_service = new libchess::UCIService("Dog v" DOG_VERSION, "Folkert van Heusden", std::cout, is);
 
-	init_lmr();
-
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
@@ -1197,7 +1195,6 @@ int main(int argc, char *argv[])
 #endif
 	// for openbench
 	if (optind < argc && strcmp(argv[optind], "bench") == 0) {
-		init_lmr();
 		allocate_threads(1);
 		run_bench(true);
 		delete_threads();

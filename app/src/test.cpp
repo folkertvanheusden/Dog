@@ -473,8 +473,6 @@ std::vector<std::pair<libchess::Position, const std::string> > load_epd(const st
 
 void test_mate_finder(const std::string & filename, const int search_time)
 {
-	init_lmr();
-
 	int         mates_found = 0;
 	auto        positions   = load_epd(filename);
 	size_t      n           = positions.size();
