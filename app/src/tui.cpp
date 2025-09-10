@@ -1557,10 +1557,14 @@ void tui()
 				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
 			}
 			else if (parts[0] == "undo") {
-				sp.at(0)->pos.unmake_move();  /// TODO
-				player = sp.at(0)->pos.side_to_move();
-				moves_played.pop_back();
-				scores.pop_back();
+				if (moves_played.empty())
+					my_printf("Cannot undo: list is empty\n");
+				else {
+					sp.at(0)->pos.unmake_move();  /// TODO
+					player = sp.at(0)->pos.side_to_move();
+					moves_played.pop_back();
+					scores.pop_back();
+				}
 			}
 			else if (parts[0] == "eval") {
 				int nnue_score = nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos);
