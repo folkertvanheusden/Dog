@@ -228,19 +228,6 @@ void to_uart(const char *const buffer, int buffer_len)
 #endif
 }
 
-bool peek_for_ctrl_c()
-{
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
-	char   buffer = 0;
-	size_t length = 0;
-	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
-	if (length && uart_read_bytes(uart_num, &buffer, 1, 100))
-		return buffer == 3;
-#endif
-
-	return false;
-}
-
 void my_printf(const char *const fmt, ...)
 {
 #if defined(ESP32)
@@ -1181,9 +1168,6 @@ void tui()
 			first = false;
 			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
-
-		if (peek_for_ctrl_c())
-			player = sp.at(0)->pos.side_to_move();
 
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
