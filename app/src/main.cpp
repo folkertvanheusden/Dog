@@ -1222,6 +1222,8 @@ int main(int argc, char *argv[])
 	else
 		main_task();
 
+	delete_threads();
+
 	delete se;
 
 	if (with_syzygy)
