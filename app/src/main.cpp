@@ -105,8 +105,8 @@ void my_trace(const char *const fmt, ...)
 		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
 			uint64_t now = esp_timer_get_time();  // is gettimeofday
-			time_t t = now / 1000000;
-			tm *tm = localtime(&t);
+			time_t   t   = now / 1000000;
+			tm      *tm  = localtime(&t);
 			fprintf(fh, "[%d] %04d-%02d-%02d %02d:%02d:%02d.%06d ", getpid(),
 					tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
 					tm->tm_hour, tm->tm_min, tm->tm_sec,
@@ -599,8 +599,6 @@ void main_task()
 {
 	libchess::UCIService *uci_service = new libchess::UCIService("Dog v" DOG_VERSION, "Folkert van Heusden", std::cout, is);
 
-	init_lmr();
-
 	chess_stats global_cs;
 
 	auto eval_handler = [](std::istringstream&) {
@@ -913,7 +911,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS, \"quit\" TO QUIT\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n\"quit\" TO QUIT, \"bench\" for the benchmark\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -924,6 +922,8 @@ void main_task()
 		}
 		else if (line == "test")
 			run_tests();
+		else if (line == "bench")
+			run_bench(false);
 		else if (line == "quit") {
 			break;
 		}
@@ -1113,7 +1113,7 @@ void run_bench(const bool long_bench)
 		}
 	}
 
-	uint64_t end_ts   = esp_timer_get_time();
+	uint64_t end_ts     = esp_timer_get_time();
 
 	uint64_t node_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 	uint64_t t_diff     = end_ts - start_ts;
@@ -1144,6 +1144,11 @@ int main(int argc, char *argv[])
 {
 #if !defined(_WIN32)
 	signal(SIGPIPE, SIG_IGN);
+
+        sigset_t sig_set { };
+        sigemptyset(&sig_set);
+        sigaddset(&sig_set, SIGINT);
+        pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
 #endif
 
 	hello();
@@ -1195,7 +1200,6 @@ int main(int argc, char *argv[])
 #endif
 	// for openbench
 	if (optind < argc && strcmp(argv[optind], "bench") == 0) {
-		init_lmr();
 		allocate_threads(1);
 		run_bench(true);
 		delete_threads();

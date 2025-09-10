@@ -9,6 +9,7 @@
 
 #include "eval.h"
 #include "inbuf.h"
+#include "lmr-red.h"
 #include "main.h"
 #include "max-ascii.h"
 #include "search.h"
@@ -20,24 +21,6 @@
 #include "tt.h"
 #include "tui.h"
 
-
-#if !defined(ESP32)
-#define N_LMR_DEPTH 64
-#define N_LMR_MOVES 64
-static uint8_t lmr_reductions[N_LMR_DEPTH][N_LMR_MOVES];
-#endif
-void init_lmr()
-{
-#if !defined(ESP32)
-for(int depth=1; depth<N_LMR_DEPTH; depth++) {
-	for(int n_played=0; n_played<N_LMR_MOVES; n_played++) {
-		constexpr double lmr_mul  = 0.5;
-		constexpr double lmr_base = 1.0;
-		lmr_reductions[depth][n_played] = log(depth) * log(n_played + 1) * lmr_mul + lmr_base;
-	}
-}
-#endif
-}
 
 std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m)
 {
@@ -497,13 +480,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 				sp.cs.data.n_lmr++;
 
 				if (alpha == beta -1) {
-#if defined(ESP32)
-					constexpr double lmr_mul  = 0.5;
-					constexpr double lmr_base = 1.0;
-					int reduction = log(depth) * log(n_played + 1) * lmr_mul + lmr_base;
-#else
 					int reduction = lmr_reductions[std::min(N_LMR_DEPTH - 1, int(depth))][std::min(N_LMR_MOVES - 1, n_played)];
-#endif
 					new_depth = std::max(depth - reduction, 0);
 				}
 				else if (n_played >= lmr_start + 2)

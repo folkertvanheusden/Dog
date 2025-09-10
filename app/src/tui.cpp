@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctype.h>
+#include <signal.h>
 #if defined(ESP32)
 #include <driver/gpio.h>
 #include <driver/uart.h>
@@ -48,10 +49,11 @@
 
 typedef enum { C_INCREMENTAL, C_TOTAL } dog_clock_t;
 
-bool        do_ping    = false;
-dog_clock_t clock_type = C_TOTAL;
-std::string wifi_ssid;
-std::string wifi_psk;
+bool             do_ping    = false;
+dog_clock_t      clock_type = C_TOTAL;
+std::string      wifi_ssid;
+std::string      wifi_psk;
+std::atomic_bool search_aborted { false };
 
 #if defined(ESP32)
 #define WIFI_CONNECTED_BIT BIT0
@@ -226,19 +228,6 @@ void to_uart(const char *const buffer, int buffer_len)
 		uart_write_bytes(uart_num, &cr, 1);
 	}
 #endif
-}
-
-bool peek_for_ctrl_c()
-{
-#if defined(WEMOS32) || defined(ESP32_S3_QTPY) || defined(ESP32_S3_XIAO) || defined(ESP32_S3_WAVESHARE)
-	char   buffer = 0;
-	size_t length = 0;
-	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
-	if (length && uart_read_bytes(uart_num, &buffer, 1, 100))
-		return buffer == 3;
-#endif
-
-	return false;
 }
 
 void my_printf(const char *const fmt, ...)
@@ -750,6 +739,61 @@ void do_syzygy(const libchess::Position & pos)
 	}
 }
 
+#if defined(ESP32)
+esp_timer_handle_t ctrl_c_timer_handle { };
+
+void ctrl_c_check(void *arg)
+{
+	size_t length = 0;
+	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
+	if (length) {
+		char buffer = 0;
+		if (uart_read_bytes(uart_num, &buffer, 1, 1)) {
+			if (buffer == 3) {
+			        for(auto & i: sp)
+					set_flag(i->stop);
+				search_aborted = true;
+			}
+		}
+	}
+}
+
+void init_ctrl_c_check()
+{
+	const esp_timer_create_args_t ctrl_c_check_pars = {
+		.callback = &ctrl_c_check,
+		.arg = nullptr,
+		.name = "ctrlc"
+	};
+
+	esp_timer_create(&ctrl_c_check_pars, &ctrl_c_timer_handle);
+}
+
+void start_ctrl_c_check()
+{
+	search_aborted = false;
+	esp_timer_start_periodic(ctrl_c_timer_handle, 250000);  // 4 times per second
+}
+
+void stop_ctrl_c_check()
+{
+	esp_timer_stop(ctrl_c_timer_handle);
+}
+
+void deinit_ctrl_c_check()
+{
+	esp_timer_delete(ctrl_c_timer_handle);
+	ctrl_c_timer_handle = { };
+}
+#else
+void abort_search_signal(int sig)
+{
+	for(auto & i: sp)
+		set_flag(i->stop);
+	search_aborted = true;
+}
+#endif
+
 int wait_for_key()
 {
 #if defined(ESP32)
@@ -992,6 +1036,16 @@ void tui()
 
 	stop_ponder();
 
+#if defined(ESP32)
+	init_ctrl_c_check();
+#else
+	sigset_t sig_set { };
+	sigemptyset(&sig_set);
+	sigaddset(&sig_set, SIGINT);
+	pthread_sigmask(SIG_UNBLOCK, &sig_set, nullptr);
+	signal(SIGINT, abort_search_signal);
+#endif
+
 	trace_enabled = default_trace;
 	
 	std::optional<libchess::Color> player = sp.at(0)->pos.side_to_move();
@@ -1068,6 +1122,11 @@ void tui()
 	};
 
 	for(;;) {
+		if (search_aborted) {
+			search_aborted = false;
+			player = sp.at(0)->pos.side_to_move();
+		}
+
 		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
@@ -1181,9 +1240,6 @@ void tui()
 			first = false;
 			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
-
-		if (peek_for_ctrl_c())
-			player = sp.at(0)->pos.side_to_move();
 
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
@@ -1644,7 +1700,13 @@ void tui()
 				int            best_score { 0 };
 				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
+#if defined(ESP32)
+				start_ctrl_c_check();
+#endif
 				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
+#if defined(ESP32)
+				stop_ctrl_c_check();
+#endif
 				chess_stats    cs_after     = calculate_search_statistics();
 				uint64_t       nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
 				uint64_t       end_search   = esp_timer_get_time();
@@ -1682,6 +1744,10 @@ void tui()
 	}
 
 	delete pb;
+
+#if defined(ESP32)
+	deinit_ctrl_c_check();
+#endif
 
 	trace_enabled = true;
 }
