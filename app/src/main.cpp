@@ -105,8 +105,8 @@ void my_trace(const char *const fmt, ...)
 		FILE *fh = fopen(my_trace_file.c_str(), "a+");
 		if (fh) {
 			uint64_t now = esp_timer_get_time();  // is gettimeofday
-			time_t t = now / 1000000;
-			tm *tm = localtime(&t);
+			time_t   t   = now / 1000000;
+			tm      *tm  = localtime(&t);
 			fprintf(fh, "[%d] %04d-%02d-%02d %02d:%02d:%02d.%06d ", getpid(),
 					tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
 					tm->tm_hour, tm->tm_min, tm->tm_sec,
@@ -1113,7 +1113,7 @@ void run_bench(const bool long_bench)
 		}
 	}
 
-	uint64_t end_ts   = esp_timer_get_time();
+	uint64_t end_ts     = esp_timer_get_time();
 
 	uint64_t node_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 	uint64_t t_diff     = end_ts - start_ts;
