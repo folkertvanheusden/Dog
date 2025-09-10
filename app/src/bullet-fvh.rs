@@ -28,6 +28,12 @@ const QA: i16 = 255;
 const QB: i16 = 64;
 
 fn main() {
+    // hyperparams to fiddle with
+    let initial_lr = 0.001;
+    let final_lr = 0.001 * 0.3f32.powi(5);
+    let superbatches = 62;
+    let wdl_proportion = 0.75;
+
     let mut trainer = ValueTrainerBuilder::default()
         // makes `ntm_inputs` available below
         .dual_perspective()
@@ -68,10 +74,13 @@ fn main() {
             batch_size: 16_384,
             batches_per_superbatch: 6104,
             start_superbatch: 1,
-            end_superbatch: 62,
+            end_superbatch: superbatches,
         },
-        wdl_scheduler: wdl::ConstantWDL { value: 0.75 },
-        lr_scheduler: lr::StepLR { start: 0.001, gamma: 0.1, step: 18 },
+//        wdl_scheduler: wdl::ConstantWDL { value: 0.75 },
+//        lr_scheduler: lr::StepLR { start: 0.001, gamma: 0.1, step: 18 },
+        wdl_scheduler: wdl::ConstantWDL { value: wdl_proportion },
+        lr_scheduler: lr::CosineDecayLR { initial_lr, final_lr, final_superbatch: superbatches },
+
         save_rate: 10,
     };
 
