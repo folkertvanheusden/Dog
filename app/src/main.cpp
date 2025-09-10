@@ -1144,6 +1144,11 @@ int main(int argc, char *argv[])
 {
 #if !defined(_WIN32)
 	signal(SIGPIPE, SIG_IGN);
+
+        sigset_t sig_set { };
+        sigemptyset(&sig_set);
+        sigaddset(&sig_set, SIGINT);
+        pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
 #endif
 
 	hello();
