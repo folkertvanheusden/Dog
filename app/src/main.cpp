@@ -937,8 +937,6 @@ void main_task()
 		}
 	}
 
-	delete_threads();
-
 	delete uci_service;
 
 	printf("TASK TERMINATED\n");
@@ -1221,6 +1219,8 @@ int main(int argc, char *argv[])
 		run_tui(true);
 	else
 		main_task();
+
+	delete_threads();
 
 	delete se;
 
