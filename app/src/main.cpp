@@ -937,8 +937,6 @@ void main_task()
 		}
 	}
 
-	delete_threads();
-
 	delete uci_service;
 
 	printf("TASK TERMINATED\n");
