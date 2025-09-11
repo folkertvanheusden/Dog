@@ -600,13 +600,14 @@ void uci_hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
-#if defined(GIT_REV_DOG)
+	printf("# Version              : " DOG_VERSION "\n");
+	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
+	printf("# Build type           : " BUILD_TYPE     "\n");
+	printf("# Build target         : " BUILD_TARGET   "\n");
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
 	printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
-#endif
 	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
 }

@@ -89,7 +89,7 @@ MESSAGE("Book GIT revision: ${GIT_REV_BOOK}")
 set(PROJECT_VERSION_MAJOR 3)
 set(PROJECT_VERSION_MINOR 5)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic -DBUILD_TYPE=\"\\\"${CMAKE_BUILD_TYPE}\\\"\"")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGIT_REV_DOG=\"\\\"${GIT_REV_DOG}\\\"\" -DGIT_REV_LC=\"\\\"${GIT_REV_LC}\\\"\" -DGIT_REV_FATHOM=\"\\\"${GIT_REV_FATHOM}\\\"\" -DGIT_REV_BOOK=\"\\\"${GIT_REV_BOOK}\\\"\"")
 
 set_source_files_properties(../fathom/src/tbprobe.c PROPERTIES LANGUAGE CXX)
@@ -133,20 +133,21 @@ add_executable(
   Dog
   ${APP_SOURCES}
 )
+target_compile_options(Dog PRIVATE -DBUILD_TARGET=\"regular\")
 
 add_executable(
   Dog-avx
   ${APP_SOURCES}
 )
 
-target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3)
+target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3 -DBUILD_TARGET=\"\\\"AVX\\\"\")
 
 add_executable(
   Dog-native
   ${APP_SOURCES}
 )
 
-target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3)
+target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3 -DBUILD_TARGET=\"\\\"native\\\"\")
 
 add_executable(
     Dog-stats-prober
