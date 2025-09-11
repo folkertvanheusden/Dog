@@ -600,10 +600,10 @@ void uci_hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-#if defined(GIT_REVISION)
-	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_REVISION "\n\n");
-#else
 	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+#if defined(GIT_REV_DOG)
+	printf("# GIT revision Dog     : " GIT_REV_DOG "\n");
+	printf("# GIT revision libchess: " GIT_REV_LC  "\n\n");
 #endif
 	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
