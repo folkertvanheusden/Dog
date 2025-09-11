@@ -603,7 +603,11 @@ void uci_hello() {
 	printf("# Version              : " DOG_VERSION "\n");
 	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
 	printf("# Build type           : " BUILD_TYPE     "\n");
+#if defined(INSTRUMENTED)
+	printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
+#else
 	printf("# Build target         : " BUILD_TARGET   "\n");
+#endif
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");

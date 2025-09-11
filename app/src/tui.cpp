@@ -1035,7 +1035,11 @@ void tui_hello()
 	my_printf("# Version              : " DOG_VERSION "\n");
 	my_printf("# Build on             : " __DATE__ " " __TIME__ "\n");
 	my_printf("# Build type           : " BUILD_TYPE     "\n");
+#if defined(INSTRUMENTED)
+	my_printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
+#else
 	my_printf("# Build target         : " BUILD_TARGET   "\n");
+#endif
 	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
