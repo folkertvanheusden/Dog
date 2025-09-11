@@ -1022,6 +1022,8 @@ std::string get_local_system_name()
 	if (esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK)
 		name += myformat(" %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return name;
+#elif defined(WIN32)
+	return "127.0.0.1";
 #else
 	char hostname[256] { };
 	gethostname(hostname, sizeof hostname);
@@ -1065,7 +1067,7 @@ void tui()
 
 #if defined(ESP32)
 	init_ctrl_c_check();
-#else
+#elif !defined(WIN32)
 	sigset_t sig_set { };
 	sigemptyset(&sig_set);
 	sigaddset(&sig_set, SIGINT);
@@ -1323,9 +1325,14 @@ void tui()
 				else {
 #if !defined(ESP32)
 					tm  tm_start_buf { };
-					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 					tm  tm_end_buf   { };
+#if defined(WIN32)
+					memcpy(&tm_start_buf, localtime(&time_start), sizeof(tm));
+					memcpy(&tm_end_buf,   localtime(&time_end  ), sizeof(tm));
+#else
+					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 					tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
+#endif
 #endif
 
 					std::string pgn = "[Event \"Computer chess event\"]\n"
@@ -1333,7 +1340,7 @@ void tui()
 #if defined(ESP32)
 							  "[Date \"-\"]\n"
 #else
-							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday) + "\"]\n"
+							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
 #endif
 							  "[Round \"-\"]\n" +
 							  myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
@@ -1343,16 +1350,26 @@ void tui()
 					}
 #if !defined(ESP32)
 					pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-							tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday,
-							tm_start->tm_hour,      tm_start->tm_min,   tm_start->tm_sec,
-							tm_start->tm_zone);
+							tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
+							tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
+#if defined(WIN32)
+								0
+#else
+								tm_end_buf.tm_zone
+#endif
+							);
 #endif
 					if (game_took) {
 #if !defined(ESP32)
 						pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-								tm_end->tm_year+1900, tm_end->tm_mon+1, tm_end->tm_mday,
-								tm_end->tm_hour,      tm_end->tm_min,   tm_end->tm_sec,
-								tm_end->tm_zone);
+								tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
+								tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
+#if defined(WIN32)
+								0
+#else
+								tm_end_buf.tm_zone
+#endif
+							       );
 #endif
 						pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
 					}
