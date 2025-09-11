@@ -1022,6 +1022,8 @@ std::string get_local_system_name()
 	if (esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK)
 		name += myformat(" %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return name;
+#elif defined(WIN32)
+	return "127.0.0.1";
 #else
 	char hostname[256] { };
 	gethostname(hostname, sizeof hostname);
@@ -1032,13 +1034,26 @@ std::string get_local_system_name()
 void tui_hello()
 {
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
-#if defined(GIT_REV_DOG)
+	my_printf("# Version              : " DOG_VERSION "\n");
+	my_printf("# Build on             : " __DATE__ " " __TIME__ "\n");
+	my_printf("# Build type           : " BUILD_TYPE     "\n");
+	my_printf("# Build with           : ");
+#if __GNUC__
+	my_printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif __clang__
+	my_printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#else
+	my_printf("???\n");
+#endif
+#if defined(INSTRUMENTED)
+	my_printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
+#else
+	my_printf("# Build target         : " BUILD_TARGET   "\n");
+#endif
 	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
 	my_printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
-#endif
 	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 }
 
@@ -1052,7 +1067,7 @@ void tui()
 
 #if defined(ESP32)
 	init_ctrl_c_check();
-#else
+#elif !defined(WIN32)
 	sigset_t sig_set { };
 	sigemptyset(&sig_set);
 	sigaddset(&sig_set, SIGINT);
@@ -1310,9 +1325,14 @@ void tui()
 				else {
 #if !defined(ESP32)
 					tm  tm_start_buf { };
-					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 					tm  tm_end_buf   { };
+#if defined(WIN32)
+					memcpy(&tm_start_buf, localtime(&time_start), sizeof(tm));
+					memcpy(&tm_end_buf,   localtime(&time_end  ), sizeof(tm));
+#else
+					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 					tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
+#endif
 #endif
 
 					std::string pgn = "[Event \"Computer chess event\"]\n"
@@ -1320,7 +1340,7 @@ void tui()
 #if defined(ESP32)
 							  "[Date \"-\"]\n"
 #else
-							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday) + "\"]\n"
+							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
 #endif
 							  "[Round \"-\"]\n" +
 							  myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
@@ -1330,16 +1350,26 @@ void tui()
 					}
 #if !defined(ESP32)
 					pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-							tm_start->tm_year+1900, tm_start->tm_mon+1, tm_start->tm_mday,
-							tm_start->tm_hour,      tm_start->tm_min,   tm_start->tm_sec,
-							tm_start->tm_zone);
+							tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
+							tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
+#if defined(WIN32)
+								0
+#else
+								tm_end_buf.tm_zone
+#endif
+							);
 #endif
 					if (game_took) {
 #if !defined(ESP32)
 						pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-								tm_end->tm_year+1900, tm_end->tm_mon+1, tm_end->tm_mday,
-								tm_end->tm_hour,      tm_end->tm_min,   tm_end->tm_sec,
-								tm_end->tm_zone);
+								tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
+								tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
+#if defined(WIN32)
+								0
+#else
+								tm_end_buf.tm_zone
+#endif
+							       );
 #endif
 						pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
 					}

@@ -1,5 +1,8 @@
-app/.pio
-app/sdkconfig.esp32
 app/src/linux-windows/build
 app/src/linux-windows/buildMingw64
 app/src/linux-windows/historic-versions
+app/src/build
+app/src/CMakeFiles/
+app/src/CMakeCache.txt
+app/build
+.dog-recall.txt

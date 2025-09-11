@@ -600,13 +600,26 @@ void uci_hello() {
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
 #else
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
-#if defined(GIT_REV_DOG)
+	printf("# Version              : " DOG_VERSION "\n");
+	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
+	printf("# Build with           : ");
+#if __GNUC__
+	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif __clang__
+	printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#else
+	printf("???\n");
+#endif
+	printf("# Build type           : " BUILD_TYPE     "\n");
+#if defined(INSTRUMENTED)
+	printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
+#else
+	printf("# Build target         : " BUILD_TARGET   "\n");
+#endif
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
 	printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
-#endif
 	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
 }
