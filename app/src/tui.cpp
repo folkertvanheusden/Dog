@@ -950,6 +950,7 @@ static void help()
 {
 	my_printf("quit     stop the tui\n");
 	my_printf("new      restart game\n");
+	my_printf("version  program info\n");
 	my_printf("player   select player (\"white\" or \"black\")\n");
 	my_printf("time     set think time, in seconds\n");
 	my_printf("clock    set clock type: \"incremental\" or \"total\"\n");
@@ -1026,6 +1027,17 @@ std::string get_local_system_name()
 	gethostname(hostname, sizeof hostname);
 	return hostname;
 #endif
+}
+
+void tui_hello()
+{
+	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+#if defined(GIT_REVISION)
+	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_REVISION "\n\n");
+#else
+	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+#endif
+	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 }
 
 void tui()
@@ -1268,8 +1280,8 @@ void tui()
 				help();
 			else if (parts[0] == "quit")
 				break;
-			else if (parts[0] == "version")
-				hello();
+			else if (parts[0] == "version" || parts[0] == "info")
+				tui_hello();
 			else if (parts[0] == "auto")
 				player.reset();
 #if defined(ESP32)
@@ -1413,7 +1425,7 @@ void tui()
 				}
 			}
 			else if (parts[0] == "bench") {
-				run_bench(parts.size() == 2 && parts[1] == "long");
+				run_bench(parts.size() == 2 && parts[1] == "long", false);
 			}
 			else if (parts[0] == "perft") {
 				perft(sp.at(0)->pos, parts.size() == 2 ? std::stoi(parts[1]) : 3);

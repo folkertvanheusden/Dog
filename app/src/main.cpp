@@ -595,6 +595,20 @@ std::pair<uint64_t, uint64_t> simple_search_statistics()
 	return { nodes_visited, syzygy_query_hits };
 }
 
+void uci_hello() {
+#if defined(__ANDROID__)
+	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
+#else
+	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
+#if defined(GIT_REVISION)
+	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_REVISION "\n\n");
+#else
+	printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+#endif
+	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
+#endif
+}
+
 void main_task()
 {
 	libchess::UCIService *uci_service = new libchess::UCIService("Dog v" DOG_VERSION, "Folkert van Heusden", std::cout, is);
@@ -911,7 +925,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n\"quit\" TO QUIT, \"bench\" for the benchmark\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench\" for the benchmark, \"info\" for build info\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -920,10 +934,12 @@ void main_task()
 			uci_service->run();
 			break;  // else lichess-bot will break
 		}
+		else if (line == "info")
+			uci_hello();
 		else if (line == "test")
 			run_tests();
 		else if (line == "bench")
-			run_bench(false);
+			run_bench(false, true);
 		else if (line == "quit") {
 			break;
 		}
@@ -942,21 +958,7 @@ void main_task()
 	printf("TASK TERMINATED\n");
 }
 
-void hello() {
-#if defined(__ANDROID__)
-	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
-#else
-	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-#if defined(GIT_VERSION)
-	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_VERSION "\n\n");
-#else
-	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
-#endif
-	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
-#endif
-}
-
-void run_bench(const bool long_bench)
+void run_bench(const bool long_bench, const bool via_usb)
 {
 	reset_search_statistics();
 	tti.reset();
@@ -1116,10 +1118,18 @@ void run_bench(const bool long_bench)
 	uint64_t node_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 	uint64_t t_diff     = end_ts - start_ts;
 
-	my_printf("===========================\n");
-	my_printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
-	my_printf("Nodes searched  : %" PRIu64 "\n", node_count);
-	my_printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+	if (via_usb) {
+		printf("===========================\n");
+		printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+		printf("Nodes searched  : %" PRIu64 "\n", node_count);
+		printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+	}
+	else {
+		my_printf("===========================\n");
+		my_printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
+		my_printf("Nodes searched  : %" PRIu64 "\n", node_count);
+		my_printf("Nodes/second    : %" PRIu64 "\n", node_count * 1000000 / t_diff);
+	}
 }
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
@@ -1149,7 +1159,7 @@ int main(int argc, char *argv[])
         pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
 #endif
 
-	hello();
+	uci_hello();
 
 #if !defined(__ANDROID__)
 	bool tui          = false;
@@ -1199,7 +1209,7 @@ int main(int argc, char *argv[])
 	// for openbench
 	if (optind < argc && strcmp(argv[optind], "bench") == 0) {
 		allocate_threads(1);
-		run_bench(true);
+		run_bench(true, false);
 		delete_threads();
 		return 0;
 	}
@@ -1317,7 +1327,7 @@ extern "C" void app_main()
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
-	hello();
+	uci_hello();
 
 	heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
 
