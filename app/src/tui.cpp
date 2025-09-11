@@ -1032,10 +1032,12 @@ std::string get_local_system_name()
 void tui_hello()
 {
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
-#if defined(GIT_REVISION)
-	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ ", GIT version: " GIT_REVISION "\n\n");
-#else
 	my_printf("# Version " DOG_VERSION ", compiled on " __DATE__ " " __TIME__ "\n\n");
+#if defined(GIT_REV_DOG)
+	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
+	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
+	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
+	my_printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
 #endif
 	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 }

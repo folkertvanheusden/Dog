@@ -10,14 +10,35 @@ set(PROJECT_VERSION_MINOR 5)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 
 execute_process(
-    COMMAND git describe --always --dirty
+    COMMAND git describe --always --dirty --broken
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_REV
+    OUTPUT_VARIABLE GIT_REV_DOG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/include/libchess/
+    OUTPUT_VARIABLE GIT_REV_LC
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/fathom
+    OUTPUT_VARIABLE GIT_REV_FATHOM
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/book/chess-openings
+    OUTPUT_VARIABLE GIT_REV_BOOK
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
 # ESP32 with one of: WEMOS32, ESP32_S3_QTPY, ESP32_S3_XIAO, ESP32_S3_WAVESHARE
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DESP32 -DESP32_S3_XIAO -fexceptions -DGIT_REVISION=\"\\\"${GIT_REV}\\\"\"")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DESP32 -DESP32_S3_XIAO -DGIT_REV_DOG=\"\\\"${GIT_REV_DOG}\\\"\" -DGIT_REV_LC=\"\\\"${GIT_REV_LC}\\\"\" -DGIT_REV_FATHOM=\"\\\"${GIT_REV_FATHOM}\\\"\" -DGIT_REV_BOOK=\"\\\"${GIT_REV_BOOK}\\\"\"")
 
 project(esp32chesstest)
 
