@@ -602,6 +602,14 @@ void uci_hello() {
 	printf("\n\n\n# HELLO, THIS IS DOG\n\n");
 	printf("# Version              : " DOG_VERSION "\n");
 	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
+	printf("# Build with           : ");
+#if __GNUC__
+	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif __clang__
+	printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#else
+	printf("???\n");
+#endif
 	printf("# Build type           : " BUILD_TYPE     "\n");
 #if defined(INSTRUMENTED)
 	printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");

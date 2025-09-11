@@ -1035,6 +1035,14 @@ void tui_hello()
 	my_printf("# Version              : " DOG_VERSION "\n");
 	my_printf("# Build on             : " __DATE__ " " __TIME__ "\n");
 	my_printf("# Build type           : " BUILD_TYPE     "\n");
+	my_printf("# Build with           : ");
+#if __GNUC__
+	my_printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif __clang__
+	my_printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#else
+	my_printf("???\n");
+#endif
 #if defined(INSTRUMENTED)
 	my_printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
 #else
