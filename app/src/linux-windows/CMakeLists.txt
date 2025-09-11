@@ -54,10 +54,43 @@ else()
 	MESSAGE("without TSAN")
 endif()
 
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_REV_DOG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+MESSAGE("DOG GIT revision: ${GIT_REV_DOG}")
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../../include/libchess/
+    OUTPUT_VARIABLE GIT_REV_LC
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+MESSAGE("libchess GIT revision: ${GIT_REV_LC}")
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../../src/fathom
+    OUTPUT_VARIABLE GIT_REV_FATHOM
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+MESSAGE("Fathom GIT revision: ${GIT_REV_FATHOM}")
+
+execute_process(
+    COMMAND git describe --always --dirty --broken
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../../book/chess-openings
+    OUTPUT_VARIABLE GIT_REV_BOOK
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+MESSAGE("Book GIT revision: ${GIT_REV_BOOK}")
+
 set(PROJECT_VERSION_MAJOR 3)
 set(PROJECT_VERSION_MINOR 5)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGIT_REV_DOG=\"\\\"${GIT_REV_DOG}\\\"\" -DGIT_REV_LC=\"\\\"${GIT_REV_LC}\\\"\" -DGIT_REV_FATHOM=\"\\\"${GIT_REV_FATHOM}\\\"\" -DGIT_REV_BOOK=\"\\\"${GIT_REV_BOOK}\\\"\"")
 
 set_source_files_properties(../fathom/src/tbprobe.c PROPERTIES LANGUAGE CXX)
 
