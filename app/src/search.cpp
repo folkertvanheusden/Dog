@@ -51,14 +51,14 @@ sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) : sp(sp)
 void sort_movelist_compare::add_first_move(const libchess::Move move)
 {
 	assert(move.value());
-	first_moves.push_back(move);
+	first_moves[n_first_moves++] = move;
 }
 
 // MVV-LVA
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
-	for(size_t i=0; i<first_moves.size(); i++) {
-		if (move == first_moves.at(i))
+	for(size_t i=0; i<n_first_moves; i++) {
+		if (move == first_moves[i])
 			return INT_MAX - i;
 	}
 

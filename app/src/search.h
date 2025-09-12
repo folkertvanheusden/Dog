@@ -8,8 +8,9 @@
 class sort_movelist_compare
 {
 private:
-	const search_pars_t       & sp;
-	std::vector<libchess::Move> first_moves;
+	const search_pars_t         & sp;
+	int                           n_first_moves { 0 };
+	std::array<libchess::Move, 2> first_moves;
 
 public:
         sort_movelist_compare(const search_pars_t & sp);
