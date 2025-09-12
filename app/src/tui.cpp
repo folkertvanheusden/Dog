@@ -366,7 +366,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 					line += "\x1b[m";
 			}
 			else {
-				line += "   ";
+				line += " . ";
 			}
 		}
 		line += " \x1b[m";
@@ -857,10 +857,10 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2;1H");
 }
 
-terminal_t t              = T_ASCII;
-bool       default_trace  = false;
-int32_t    total_dog_time = 1000;  // milliseconds
-bool       do_ponder      = false;
+terminal_t t                  = T_ASCII;
+bool       default_trace      = false;
+int32_t    initial_think_time = 1000;
+bool       do_ponder          = false;
 
 std::optional<std::string> get_cfg_dir()
 {
@@ -894,14 +894,14 @@ void write_settings()
 		return;
 	}
 
-	fprintf(fh, "%d\n", t);
-	fprintf(fh, "%d\n", default_trace);
-	fprintf(fh, "%lu\n", total_dog_time);
-	fprintf(fh, "%d\n", do_ponder);
-	fprintf(fh, "%d\n", clock_type);
-	fprintf(fh, "%d\n", do_ping);
-	fprintf(fh, "%s\n", wifi_ssid.c_str());
-	fprintf(fh, "%s\n", wifi_psk .c_str());
+	fprintf(fh, "%d\n",  t);
+	fprintf(fh, "%d\n",  default_trace);
+	fprintf(fh, "%lu\n", initial_think_time);
+	fprintf(fh, "%d\n",  do_ponder);
+	fprintf(fh, "%d\n",  clock_type);
+	fprintf(fh, "%d\n",  do_ping);
+	fprintf(fh, "%s\n",  wifi_ssid.c_str());
+	fprintf(fh, "%s\n",  wifi_psk .c_str());
 
 	fclose(fh);
 }
@@ -925,7 +925,7 @@ void load_settings()
 	fgets(buffer, sizeof buffer, fh);
 	default_trace  = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
-	total_dog_time = atoi(buffer);
+	initial_think_time = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
 	do_ponder      = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
@@ -1096,7 +1096,7 @@ void tui()
 	uint64_t    human_think_end     = 0;
 	uint64_t    total_human_think   = 0;
 	int         n_human_think       = 0;
-	int32_t     initial_think_time  = 0;
+	int32_t     total_dog_time      = initial_think_time;
 	int32_t     human_score_sum     = 0;
 	int         human_score_n       = 0;
 	int32_t     dog_score_sum       = 0;
