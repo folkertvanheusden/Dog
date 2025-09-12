@@ -5,12 +5,12 @@ int nnue_evaluate(const Eval *const e, const libchess::Color & c);
 
 struct undo_t
 {
-	bool                is_put;  // else remove
 	libchess::Square    location;
 	libchess::PieceType type;
 	bool                is_white;
+	bool                is_put;  // else remove
 };
 
-void                init_move  (Eval *const e, const libchess::Position & pos);
-void                unmake_move(Eval *const e, libchess::Position & pos, const std::vector<undo_t> & actions);
-std::vector<undo_t> make_move  (Eval *const e, libchess::Position & pos, const libchess::Move & move);
+void init_move  (Eval *const e, const libchess::Position & pos);
+void unmake_move(Eval *const e, libchess::Position & pos, const std::pair<int, std::array<undo_t, 4> > & actions);
+std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, libchess::Position & pos, const libchess::Move & move);
