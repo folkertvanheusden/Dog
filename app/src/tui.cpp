@@ -286,14 +286,16 @@ void perft(libchess::Position &pos, int depth)
 
 std::string format_move_and_score(const std::string & move, int16_t score)
 {
-	if (move.size() > 4) {
-		int space_to_add = (4 /* move width */ + 9 /* score width */) - move.size();
+	constexpr const int max_move_len = 7;
+
+	if (move.size() > max_move_len) {
+		int space_to_add = (max_move_len /* move width */ + 9 /* score width */) - move.size();
 		if (space_to_add > 0)
 			return move + std::string(space_to_add, ' ');
 		return move;
 	}
 
-	int space_to_add = 4 - move.size();
+	int space_to_add = max_move_len - move.size();
 	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
 }
 
@@ -1196,24 +1198,24 @@ void tui()
 						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
 				}
 				else {
-					my_printf("\x1b[2;63HHuman think time:");
+					my_printf("\x1b[2;69HHuman:");
 					constexpr const uint32_t ms = 1000;
 					constexpr const uint32_t us = ms * ms;
-					my_printf("\x1b[3;65H%02d:%02d.%03d",
+					my_printf("\x1b[3;70H%02d:%02d.%03d",
 							total_human_think / (60 * us),
 							(total_human_think / us) % 60,
 							(total_human_think / ms) % ms);
-					my_printf("\x1b[4;63HDog time left:");
-					my_printf("\x1b[5;65H%02d:%02d.%03d",
+					my_printf("\x1b[4;69HDog:");
+					my_printf("\x1b[5;70H%02d:%02d.%03d",
 							total_dog_time / (60 * ms),
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
-						my_printf("\x1b[7;63HAvg.score gain:");
+						my_printf("\x1b[7;69HAvg.gain:");
 						if (human_score_n)
-							my_printf("\x1b[8;65Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+							my_printf("\x1b[8;69Hhuman: %.2f", human_score_sum / 100. / human_score_n);
 						if (dog_score_n)
-							my_printf("\x1b[9;65Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+							my_printf("\x1b[9;69Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
 					}
 					my_printf("\x1b[2;1H");
 				}
