@@ -452,14 +452,31 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (m->value() && sp.pos.is_capture_move(*m))
 		smc.add_first_move(*m);
 
-	sort_movelist(move_list, smc);
-
 	int     n_played   = 0;
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
+	// generate list of scores
+	size_t           n_moves = move_list.size();
+	std::vector<int> move_scores(n_moves);
+	for(size_t i=0; i<n_moves; i++)
+		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
+
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move;
-	for(auto move : move_list) {
+
+	size_t m_idx = 0;
+	while(m_idx++ < n_moves) {
+		size_t selected_idx = 0;
+		int    s_best_score = -INT_MAX;
+		for(size_t i=0; i<n_moves; i++) {
+			if (move_scores[i] > s_best_score) {
+				s_best_score = move_scores[i];
+				selected_idx = i;
+			}
+		}
+		move_scores[selected_idx] = -INT_MAX;
+		auto & move = *(move_list.begin() + selected_idx);
+
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
 
