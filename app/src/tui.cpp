@@ -571,46 +571,6 @@ std::string get_soc_name()
 }
 #endif
 
-std::string move_to_san(const libchess::Position & pos_before, const libchess::Move & m)
-{
-	auto move_type = m.type();
-	if (move_type == libchess::Move::Type::CASTLING)
-		return m.to_square().file() == 6 ? "O-O" : "O-O-O";
-
-	std::string san;
-
-        auto piece_from = pos_before.piece_on(m.from_square());
-        auto from_type  = piece_from->type();
-	if (from_type == libchess::constants::PAWN) {
-		if (move_type == libchess::Move::Type::CAPTURE || move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
-			san += char('a' + m.from_square().file());
-			san += "x";
-		}
-		san += char('a' + m.to_square().file());
-		san += char('1' + m.to_square().rank());
-		if (move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
-			san += "=";
-			san += toupper(m.promotion_piece_type().value().to_char());
-		}
-	}
-	else {
-		san += toupper(piece_from.value().to_char());
-		san += char('a' + m.from_square().file());
-		san += char('1' + m.from_square().rank());
-		if (move_type == libchess::Move::Type::CAPTURE)
-			san += "x";
-		san += char('a' + m.to_square().file());
-		san += char('1' + m.to_square().rank());
-
-		auto pos_after(pos_before);
-		pos_after.make_move(m);
-		if (pos_after.in_check())
-			san += "+";
-	}
-
-	return san;
-}
-
 void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
