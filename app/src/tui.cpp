@@ -784,7 +784,7 @@ int wait_for_key()
 
 void press_any_key()
 {
-	my_printf("Press any key... ");
+	my_printf("Press return...");
 
 	if (wait_for_key())
 		my_printf("\n");
@@ -1649,7 +1649,7 @@ void tui()
 					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()) + score_eval, myformat("[%%emt %.2f]", human_think_took / 1000000.) });
 
 					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+					scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 					human_score_sum += score_after - score_before;
 					human_score_n++;
@@ -1683,7 +1683,7 @@ void tui()
 
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 				if (clock_type == C_TOTAL)
 					total_dog_time -= 1;  // 1 millisecond
@@ -1724,9 +1724,9 @@ void tui()
 #if defined(ESP32)
 				stop_ctrl_c_check();
 #endif
-				chess_stats    cs_after     = calculate_search_statistics();
-				uint64_t       nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
-				uint64_t       end_search   = esp_timer_get_time();
+				chess_stats cs_after     = calculate_search_statistics();
+				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
+				uint64_t     end_search  = esp_timer_get_time();
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
 				emit_pv(sp.at(0)->pos, best_move, t);
