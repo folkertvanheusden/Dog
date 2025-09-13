@@ -557,7 +557,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 		if (best_score > start_alpha && m->value())
 			tti.store(hash, flag, depth, work_score, *m);
-		else if (tt_move.has_value() && sp.pos.is_legal_move(tt_move.value()))
+		else if (tt_move.has_value())
 			tti.store(hash, flag, depth, work_score, tt_move.value());
 		else
 			tti.store(hash, flag, depth, work_score);
