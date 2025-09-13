@@ -304,7 +304,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 		if (best_score > start_alpha && m.has_value())
 			tti.store(hash, flag, 0, work_score, m.value());
-		else if (tt_move.has_value() && sp.pos.is_legal_move(tt_move.value()))
+		else if (tt_move.has_value())
 			tti.store(hash, flag, 0, work_score, tt_move.value());
 		else
 			tti.store(hash, flag, 0, work_score);
