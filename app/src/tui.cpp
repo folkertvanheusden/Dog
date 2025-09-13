@@ -1152,7 +1152,6 @@ void tui()
 		if (show_board) {
 			if (player.has_value()) {
 				show_header(t);
-
 				if (t == T_ASCII) {
 					my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
 					my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
@@ -1183,6 +1182,16 @@ void tui()
 					}
 					my_printf("\x1b[2;1H");
 				}
+			}
+
+			if (t != T_ASCII) {
+				store_cursor_position();
+				my_printf("\x1b[15;69H / \\__");
+				my_printf("\x1b[16;69H(    @\\____");
+				my_printf("\x1b[17;69H /         O");
+				my_printf("\x1b[18;69H/   (_____/");
+				my_printf("\x1b[19;69H/_____/   U");
+				restore_cursor_position();
 			}
 
 			show_board = false;
@@ -1218,16 +1227,6 @@ void tui()
 					my_printf("\x1b[4m%s\x1b[m!\n", result.c_str());
 				else
 					my_printf("%s!\n", result.c_str());
-			}
-
-			if (t != T_ASCII) {
-				store_cursor_position();
-				my_printf("\x1b[15;69H / \\__");
-				my_printf("\x1b[16;69H(    @\\____");
-				my_printf("\x1b[17;69H /         O");
-				my_printf("\x1b[18;69H/   (_____/");
-				my_printf("\x1b[19;69H/_____/   U");
-				restore_cursor_position();
 			}
 		}
 
@@ -1517,7 +1516,7 @@ void tui()
 				if (t == T_ASCII)
 					my_printf("\x0c");  // form feed
 				else
-					my_printf("\x1b[2J");
+					my_printf("\x1b[2J\x1b[1;1H");
 				show_board = parts.size() == 2 && is_on(parts[1]);
 			}
 #if !defined(ESP32)
@@ -1670,7 +1669,7 @@ void tui()
 		else {
 			set_led(0, 255, 0);
 
-			if (t == T_VT100 || t == T_ANSI)
+			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[15;24r\x1b[15;1H");
 
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
@@ -1758,8 +1757,8 @@ void tui()
 
 			set_led(0, 0, 255);
 
-			if (t == T_VT100 || t == T_ANSI)
-				my_printf("\x1b[r\n\x1b[24;1H");
+			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
+				my_printf("\x1b[1;24r\n\x1b[24;1H");
 		}
 	}
 
