@@ -241,9 +241,27 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	sort_movelist_compare smc(sp);
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
-	sort_movelist(move_list, smc);
 
-	for(auto move : move_list) {
+	// generate list of scores
+	size_t           n_moves = move_list.size();
+	std::vector<int> move_scores(n_moves);
+	for(size_t i=0; i<n_moves; i++)
+		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
+
+	size_t m_idx = 0;
+	while(m_idx < n_moves) {
+		size_t selected_idx = m_idx;
+		for(size_t i=m_idx; i<n_moves; i++) {
+			if (move_scores[i] > move_scores[selected_idx])
+				selected_idx = i;
+		}
+
+		std::swap(move_scores[selected_idx], move_scores[m_idx]);
+		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
+
+		auto & move = *(move_list.begin() + m_idx);
+		m_idx++;
+
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
 
