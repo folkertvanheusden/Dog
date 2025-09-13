@@ -51,14 +51,14 @@ sort_movelist_compare::sort_movelist_compare(const search_pars_t & sp) : sp(sp)
 void sort_movelist_compare::add_first_move(const libchess::Move move)
 {
 	assert(move.value());
-	first_moves.push_back(move);
+	first_moves[n_first_moves++] = move;
 }
 
 // MVV-LVA
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
-	for(size_t i=0; i<first_moves.size(); i++) {
-		if (move == first_moves.at(i))
+	for(size_t i=0; i<n_first_moves; i++) {
+		if (move == first_moves[i])
 			return INT_MAX - i;
 	}
 
@@ -89,7 +89,7 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		}
 
 		if (from_type != libchess::constants::KING) {
-			int add = (libchess::constants::QUEEN - from_type) * 256;
+			int add = (libchess::constants::QUEEN - from_type) << 8;
 			assert(abs(add) < (1 << 19));
 			score += add;
 		}
@@ -102,9 +102,9 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	return score;
 }
 
-void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
+void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare & smc)
 {
-	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+	move_list.sort([smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
 
 bool is_check(libchess::Position & pos)
@@ -204,10 +204,10 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
 
-		int score      = te.value().score;
-		int work_score = eval_from_tt(score, qsdepth);
-		auto flag      = te.value().flags;
-		bool use       = flag == EXACT ||
+		int  score      = te.value().score;
+		int  work_score = eval_from_tt(score, qsdepth);
+		auto flag       = te.value().flags;
+		bool use        = flag == EXACT ||
 				(flag == LOWERBOUND && work_score >= beta) ||
 				(flag == UPPERBOUND && work_score <= alpha);
 		if (use) {
@@ -231,8 +231,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 			return best_score;
 		}
 
-		if (alpha < best_score)
-			alpha = best_score;
+		alpha = std::max(alpha, best_score);
 	}
 
 	int  n_played  = 0;
@@ -242,9 +241,27 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	sort_movelist_compare smc(sp);
 	if (tt_move.has_value())
 		smc.add_first_move(tt_move.value());
-	sort_movelist(move_list, smc);
 
-	for(auto move : move_list) {
+	// generate list of scores
+	size_t           n_moves = move_list.size();
+	std::vector<int> move_scores(n_moves);
+	for(size_t i=0; i<n_moves; i++)
+		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
+
+	size_t m_idx = 0;
+	while(m_idx < n_moves) {
+		size_t selected_idx = m_idx;
+		for(size_t i=m_idx; i<n_moves; i++) {
+			if (move_scores[i] > move_scores[selected_idx])
+				selected_idx = i;
+		}
+
+		std::swap(move_scores[selected_idx], move_scores[m_idx]);
+		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
+
+		auto & move = *(move_list.begin() + m_idx);
+		m_idx++;
+
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
 
@@ -453,14 +470,32 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (m->value() && sp.pos.is_capture_move(*m))
 		smc.add_first_move(*m);
 
-	sort_movelist(move_list, smc);
-
 	int     n_played   = 0;
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
+	// generate list of scores
+	size_t           n_moves = move_list.size();
+	std::vector<int> move_scores(n_moves);
+	for(size_t i=0; i<n_moves; i++)
+		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
+
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move;
-	for(auto move : move_list) {
+
+	size_t m_idx = 0;
+	while(m_idx < n_moves) {
+		size_t selected_idx = m_idx;
+		for(size_t i=m_idx; i<n_moves; i++) {
+			if (move_scores[i] > move_scores[selected_idx])
+				selected_idx = i;
+		}
+
+		std::swap(move_scores[selected_idx], move_scores[m_idx]);
+		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
+
+		auto & move = *(move_list.begin() + m_idx);
+		m_idx++;
+
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
 

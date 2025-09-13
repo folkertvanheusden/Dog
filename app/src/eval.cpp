@@ -21,29 +21,33 @@ void init_move(Eval *const e, const libchess::Position & pos)
 	e->set(pos);
 }
 
-void remove_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::vector<undo_t> *const undos)
+void remove_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
 {
 	e->remove_piece(pt, loc, is_white);
-	undos->push_back({ true, loc, pt, is_white });
+	undos->at((*n_undos)++) = { loc, pt, is_white, true };
 }
 
-void add_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::vector<undo_t> *const undos)
+void add_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
 {
 	e->add_piece(pt, loc, is_white);
-	undos->push_back({ false, loc, pt, is_white });
+	undos->at((*n_undos)++) = { loc, pt, is_white, false };
 }
 
-void move_piece(Eval *const e, const Square & from, const Square & to, const PieceType & pt, const bool is_white, std::vector<undo_t> *const undos)
+void move_piece(Eval *const e, const Square & from, const Square & to, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
 {
-	remove_piece(e, from, pt, is_white, undos);
-	add_piece   (e, to,   pt, is_white, undos);
+	remove_piece(e, from, pt, is_white, undos, n_undos);
+	add_piece   (e, to,   pt, is_white, undos, n_undos);
 }
 
-std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
+std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, Position & pos, const Move & move)
 {
-	std::vector<undo_t> actions;
-
-//	fprintf(stderr, "%s | %s\n", pos.fen().c_str(), move.to_str().c_str());
+	int                   n_actions = 0;
+	std::array<undo_t, 4> actions { {
+		{ libchess::constants::A1, libchess::constants::PAWN, false, false },
+		{ libchess::constants::A1, libchess::constants::PAWN, false, false },
+		{ libchess::constants::A1, libchess::constants::PAWN, false, false },
+		{ libchess::constants::A1, libchess::constants::PAWN, false, false }
+	} };
 
 	Square from_square = move.from_square();
 	Square to_square   = move.to_square  ();
@@ -61,50 +65,50 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 		case Move::Type::NORMAL:
 		case Move::Type::DOUBLE_PUSH:
 			assert(moving_pt.has_value());
-			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
+			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions, &n_actions);
 			assert(*moving_pt == constants::PAWN || move.type() != Move::Type::DOUBLE_PUSH);
 			break;
 		case Move::Type::CAPTURE:
 			assert(captured_pt.has_value());
 			assert(pos.color_of(from_square) != pos.color_of(to_square));
-			remove_piece(e, to_square, *captured_pt, !is_white, &actions);
-			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions);
+			remove_piece(e, to_square, *captured_pt, !is_white, &actions, &n_actions);
+			move_piece(e, from_square, to_square, *moving_pt, is_white, &actions, &n_actions);
 			break;
 		case Move::Type::ENPASSANT:
 			assert(*moving_pt == constants::PAWN);
 			assert(pos.color_of(from_square) != pos.color_of(is_white ? Square(to_square - 8) : Square(to_square + 8)));
-			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions);
+			move_piece(e, from_square, to_square, constants::PAWN, is_white, &actions, &n_actions);
 			assert(pos.piece_type_on(is_white ? Square(to_square - 8) : Square(to_square + 8)) == constants::PAWN);
-			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, !is_white, &actions);
+			remove_piece(e, is_white ? Square(to_square - 8) : Square(to_square + 8), constants::PAWN, !is_white, &actions, &n_actions);
 			break;
 		case Move::Type::CASTLING:
 			assert(*moving_pt == constants::KING);
 			assert(pos.color_of(from_square) == (is_white ? constants::WHITE : constants::BLACK));
-			move_piece(e, from_square, to_square, constants::KING, is_white, &actions);
+			move_piece(e, from_square, to_square, constants::KING, is_white, &actions, &n_actions);
 			switch (to_square) {
 				case constants::C1:
 					assert(is_white);
 					assert(pos.color_of(constants::A1) == constants::WHITE);
 					assert(pos.piece_type_on(constants::D1).has_value() == false);
-					move_piece(e, constants::A1, constants::D1, constants::ROOK, true, &actions);
+					move_piece(e, constants::A1, constants::D1, constants::ROOK, true, &actions, &n_actions);
 					break;
 				case constants::G1:
 					assert(is_white);
 					assert(pos.color_of(constants::H1) == constants::WHITE);
 					assert(pos.piece_type_on(constants::F1).has_value() == false);
-					move_piece(e, constants::H1, constants::F1, constants::ROOK, true, &actions);
+					move_piece(e, constants::H1, constants::F1, constants::ROOK, true, &actions, &n_actions);
 					break;
 				case constants::C8:
 					assert(!is_white);
 					assert(pos.color_of(constants::A8) == constants::BLACK);
 					assert(pos.piece_type_on(constants::D8).has_value() == false);
-					move_piece(e, constants::A8, constants::D8, constants::ROOK, false, &actions);
+					move_piece(e, constants::A8, constants::D8, constants::ROOK, false, &actions, &n_actions);
 					break;
 				case constants::G8:
 					assert(!is_white);
 					assert(pos.color_of(constants::H8) == constants::BLACK);
 					assert(pos.piece_type_on(constants::F8).has_value() == false);
-					move_piece(e, constants::H8, constants::F8, constants::ROOK, false, &actions);
+					move_piece(e, constants::H8, constants::F8, constants::ROOK, false, &actions, &n_actions);
 					break;
 				default:
 					assert(false);
@@ -116,17 +120,17 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 			assert(*promotion_pt != constants::PAWN);
 			assert((pos.color_of(from_square) == constants::WHITE && to_square.rank() == 7) ||
 			       (pos.color_of(from_square) == constants::BLACK && to_square.rank() == 0));
-			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
-			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
+			remove_piece(e, from_square, constants::PAWN, is_white, &actions, &n_actions);
+			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions, &n_actions);
 			break;
 		case Move::Type::CAPTURE_PROMOTION:
 			assert(*moving_pt == constants::PAWN);
 			assert(*promotion_pt != constants::PAWN);
 			assert((pos.color_of(from_square) == constants::WHITE && to_square.rank() == 7) ||
 			       (pos.color_of(from_square) == constants::BLACK && to_square.rank() == 0));
-			remove_piece(e, to_square,  *captured_pt,    !is_white, &actions);
-			remove_piece(e, from_square, constants::PAWN, is_white, &actions);
-			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions);
+			remove_piece(e, to_square,  *captured_pt,    !is_white, &actions, &n_actions);
+			remove_piece(e, from_square, constants::PAWN, is_white, &actions, &n_actions);
+			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions, &n_actions);
 			break;
 		default:
 			printf("type is %d\n", int(move.type()));
@@ -150,12 +154,13 @@ std::vector<undo_t> make_move(Eval *const e, Position & pos, const Move & move)
 	}
 #endif
 
-	return actions;
+	return { n_actions, actions };
 }
 
-void unmake_move(Eval *const e, Position & pos, const std::vector<undo_t> & actions)
+void unmake_move(Eval *const e, Position & pos, const std::pair<int, std::array<undo_t, 4> > & actions)
 {
-	for(auto & action: actions) {
+	for(int i=0; i<actions.first; i++) {
+		auto & action = actions.second[i];
 		if (action.is_put)
 			e->add_piece(action.type, action.location, action.is_white);
 		else

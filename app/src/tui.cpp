@@ -286,14 +286,16 @@ void perft(libchess::Position &pos, int depth)
 
 std::string format_move_and_score(const std::string & move, int16_t score)
 {
-	if (move.size() > 4) {
-		int space_to_add = (4 /* move width */ + 9 /* score width */) - move.size();
+	constexpr const int max_move_len = 7;
+
+	if (move.size() > max_move_len) {
+		int space_to_add = (max_move_len /* move width */ + 9 /* score width */) - move.size();
 		if (space_to_add > 0)
 			return move + std::string(space_to_add, ' ');
 		return move;
 	}
 
-	int space_to_add = 4 - move.size();
+	int space_to_add = max_move_len - move.size();
 	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
 }
 
@@ -324,17 +326,24 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	std::vector<std::string> lines;
 
 	if (t == T_ANSI) {
-		std::string line = "\x1b[m\x1b[43;30m    ";
+		std::string line = "\x1b[m\x1b[43;30m   ";
 		for(int x=0; x<8; x++)
 			line += "   ";
 		line += " \x1b[m";
+		lines.push_back(line);
+	}
+	else if (t == T_VT100) {
+		std::string line = "   \x1b(0\x6c";
+		for(int x=0; x<8; x++)
+			line += "\x71\x71\x71";
+		line += "\x6b\x1b(B\x1b[m";
 		lines.push_back(line);
 	}
 
 	for(int y=7; y>=0; y--) {
 		std::string line;
 		if (t == T_ANSI)
-			line = "\x1b[43;30m " + std::to_string(y + 1) + " |";
+			line = "\x1b[43;30m " + std::to_string(y + 1) + " ";
 		else if (t == T_VT100)
 			line = " " + std::to_string(y + 1) + " \x1b(0\x78\x1b(B";
 		else
@@ -366,32 +375,28 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 					line += "\x1b[m";
 			}
 			else {
-				line += "   ";
+				line += " . ";
 			}
 		}
-		line += " \x1b[m";
+		if (t == T_ANSI)
+			line += " \x1b[m";
+		else if (t == T_VT100)
+			line += "\x1b(0\x78\x1b(B";
 		lines.push_back(line);
 	}
 
 	if (t == T_ANSI) {
-		std::string line;
-		line = "\x1b[43;30m   +";
-		for(int x=0; x<8; x++)
-			line += "---";
-		line += " \x1b[m";
-		lines.push_back(line);
-		line = "\x1b[43;30m    ";
+		std::string line = "\x1b[43;30m   ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
 		line += " \x1b[m";
 		lines.push_back(std::move(line));
 	}
 	else if (t == T_VT100) {
-		std::string line;
-		line = "   \x1b(0\x6d";
+		std::string line = "   \x1b(0\x6d";
 		for(int x=0; x<8; x++)
 			line += "\x71\x71\x71";
-		line += "\x1b(B ";
+		line += "\x6a\x1b(B ";
 		lines.push_back(line);
 		line = "    ";
 		for(int x=0; x<8; x++)
@@ -418,7 +423,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 			skip = (half - lines.size()) * 2;
 		size_t line_nr = 0;
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
-			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
+			std::string add = " " + myformat("%2d", i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
 			if (nrefm - i >= 2)
 				add += " " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
 			lines.at(line_nr) += add;
@@ -570,46 +575,6 @@ std::string get_soc_name()
 	return "";
 }
 #endif
-
-std::string move_to_san(const libchess::Position & pos_before, const libchess::Move & m)
-{
-	auto move_type = m.type();
-	if (move_type == libchess::Move::Type::CASTLING)
-		return m.to_square().file() == 6 ? "O-O" : "O-O-O";
-
-	std::string san;
-
-        auto piece_from = pos_before.piece_on(m.from_square());
-        auto from_type  = piece_from->type();
-	if (from_type == libchess::constants::PAWN) {
-		if (move_type == libchess::Move::Type::CAPTURE || move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
-			san += char('a' + m.from_square().file());
-			san += "x";
-		}
-		san += char('a' + m.to_square().file());
-		san += char('1' + m.to_square().rank());
-		if (move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
-			san += "=";
-			san += toupper(m.promotion_piece_type().value().to_char());
-		}
-	}
-	else {
-		san += toupper(piece_from.value().to_char());
-		san += char('a' + m.from_square().file());
-		san += char('1' + m.from_square().rank());
-		if (move_type == libchess::Move::Type::CAPTURE)
-			san += "x";
-		san += char('a' + m.to_square().file());
-		san += char('1' + m.to_square().rank());
-
-		auto pos_after(pos_before);
-		pos_after.make_move(m);
-		if (pos_after.in_check())
-			san += "+";
-	}
-
-	return san;
-}
 
 void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
@@ -857,10 +822,10 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2;1H");
 }
 
-terminal_t t              = T_ASCII;
-bool       default_trace  = false;
-int32_t    total_dog_time = 1000;  // milliseconds
-bool       do_ponder      = false;
+terminal_t t                  = T_ASCII;
+bool       default_trace      = false;
+int32_t    initial_think_time = 1000;
+bool       do_ponder          = false;
 
 std::optional<std::string> get_cfg_dir()
 {
@@ -894,14 +859,14 @@ void write_settings()
 		return;
 	}
 
-	fprintf(fh, "%d\n", t);
-	fprintf(fh, "%d\n", default_trace);
-	fprintf(fh, "%lu\n", total_dog_time);
-	fprintf(fh, "%d\n", do_ponder);
-	fprintf(fh, "%d\n", clock_type);
-	fprintf(fh, "%d\n", do_ping);
-	fprintf(fh, "%s\n", wifi_ssid.c_str());
-	fprintf(fh, "%s\n", wifi_psk .c_str());
+	fprintf(fh, "%d\n",  t);
+	fprintf(fh, "%d\n",  default_trace);
+	fprintf(fh, "%lu\n", initial_think_time);
+	fprintf(fh, "%d\n",  do_ponder);
+	fprintf(fh, "%d\n",  clock_type);
+	fprintf(fh, "%d\n",  do_ping);
+	fprintf(fh, "%s\n",  wifi_ssid.c_str());
+	fprintf(fh, "%s\n",  wifi_psk .c_str());
 
 	fclose(fh);
 }
@@ -925,7 +890,7 @@ void load_settings()
 	fgets(buffer, sizeof buffer, fh);
 	default_trace  = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
-	total_dog_time = atoi(buffer);
+	initial_think_time = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
 	do_ponder      = atoi(buffer);
 	fgets(buffer, sizeof buffer, fh);
@@ -1096,7 +1061,7 @@ void tui()
 	uint64_t    human_think_end     = 0;
 	uint64_t    total_human_think   = 0;
 	int         n_human_think       = 0;
-	int32_t     initial_think_time  = 0;
+	int32_t     total_dog_time      = initial_think_time;
 	int32_t     human_score_sum     = 0;
 	int         human_score_n       = 0;
 	int32_t     dog_score_sum       = 0;
@@ -1196,24 +1161,24 @@ void tui()
 						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
 				}
 				else {
-					my_printf("\x1b[2;63HHuman think time:");
+					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
 					constexpr const uint32_t ms = 1000;
 					constexpr const uint32_t us = ms * ms;
-					my_printf("\x1b[3;65H%02d:%02d.%03d",
+					my_printf("\x1b[3;69H%02d:%02d.%03d",
 							total_human_think / (60 * us),
 							(total_human_think / us) % 60,
 							(total_human_think / ms) % ms);
-					my_printf("\x1b[4;63HDog time left:");
-					my_printf("\x1b[5;65H%02d:%02d.%03d",
+					my_printf("\x1b[5;69H\x1b[4mDog\x1b[24m");
+					my_printf("\x1b[6;69H%02d:%02d.%03d",
 							total_dog_time / (60 * ms),
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
-						my_printf("\x1b[7;63HAvg.score gain:");
+						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
-							my_printf("\x1b[8;65Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / 100. / human_score_n);
 						if (dog_score_n)
-							my_printf("\x1b[9;65Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / 100. / dog_score_n);
 					}
 					my_printf("\x1b[2;1H");
 				}
@@ -1704,6 +1669,9 @@ void tui()
 		else {
 			set_led(0, 255, 0);
 
+			if (t == T_VT100 || t == T_ANSI)
+				my_printf("\x1b[15;25r\x1b[15;1H");
+
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
@@ -1788,6 +1756,9 @@ void tui()
 			show_board = true;
 
 			set_led(0, 0, 255);
+
+			if (t == T_VT100 || t == T_ANSI)
+				my_printf("\x1b[r\n\x1b[25;1H");
 		}
 	}
 

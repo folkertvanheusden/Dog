@@ -40,7 +40,8 @@ uint64_t do_nnue_verify_perft(Eval *const nnue_eval, libchess::Position &pos, in
 			int a = 0, b = 0;
 			if ((a = get_nnue_score(pos)) != (b = nnue_evaluate(nnue_eval, pos))) {
 				printf("fail @ %d: %s %s (%d != %d)\n", depth, pos.fen().c_str(), move.to_str().c_str(), a, b);
-				for(auto & action: undo_actions) {
+				for(int i=0; i<undo_actions.first; i++) {
+					auto & action = undo_actions.second[i];
 					printf("%s: %s %c %s\n", action.is_put ? "ADD":"REM", action.location.to_str().c_str(), action.type.to_char(), action.is_white ? "white":"black");
 				}
 				my_assert(false);
