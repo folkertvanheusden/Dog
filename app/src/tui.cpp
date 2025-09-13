@@ -1669,6 +1669,9 @@ void tui()
 		else {
 			set_led(0, 255, 0);
 
+			if (t == T_VT100)
+				my_printf("\x1b[15;25r\x1b[15;1H");
+
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
@@ -1753,6 +1756,9 @@ void tui()
 			show_board = true;
 
 			set_led(0, 0, 255);
+
+			if (t == T_VT100)
+				my_printf("\x1b[r\n\x1b[25;1H");
 		}
 	}
 
