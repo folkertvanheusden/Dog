@@ -102,9 +102,9 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	return score;
 }
 
-void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc)
+void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare & smc)
 {
-	move_list.sort([&smc](const libchess::Move move) { return smc.move_evaluater(move); });
+	move_list.sort([smc](const libchess::Move move) { return smc.move_evaluater(move); });
 }
 
 bool is_check(libchess::Position & pos)

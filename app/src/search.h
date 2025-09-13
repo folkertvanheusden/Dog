@@ -19,7 +19,7 @@ public:
         int  move_evaluater(const libchess::Move move) const;
 };
 
-void sort_movelist(libchess::MoveList & move_list, sort_movelist_compare & smc);
+void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare & smc);
 
 bool is_insufficient_material_draw(const libchess::Position & pos);
 int qs(int alpha, int beta, int qsdepth, search_pars_t & sp);
