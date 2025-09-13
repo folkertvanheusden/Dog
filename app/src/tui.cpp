@@ -326,7 +326,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	std::vector<std::string> lines;
 
 	if (t == T_ANSI) {
-		std::string line = "\x1b[m\x1b[43;30m    ";
+		std::string line = "\x1b[m\x1b[43;30m   ";
 		for(int x=0; x<8; x++)
 			line += "   ";
 		line += " \x1b[m";
@@ -336,7 +336,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	for(int y=7; y>=0; y--) {
 		std::string line;
 		if (t == T_ANSI)
-			line = "\x1b[43;30m " + std::to_string(y + 1) + " |";
+			line = "\x1b[43;30m " + std::to_string(y + 1) + " ";
 		else if (t == T_VT100)
 			line = " " + std::to_string(y + 1) + " \x1b(0\x78\x1b(B";
 		else
@@ -371,18 +371,13 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 				line += " . ";
 			}
 		}
-		line += " \x1b[m";
+		if (t == T_ANSI || t == T_VT100)
+			line += " \x1b[m";
 		lines.push_back(line);
 	}
 
 	if (t == T_ANSI) {
-		std::string line;
-		line = "\x1b[43;30m   +";
-		for(int x=0; x<8; x++)
-			line += "---";
-		line += " \x1b[m";
-		lines.push_back(line);
-		line = "\x1b[43;30m    ";
+		std::string line = "\x1b[43;30m   ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
 		line += " \x1b[m";
