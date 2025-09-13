@@ -1171,7 +1171,7 @@ void tui()
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
-						my_printf("\x1b[8;69H\x1b[1mAvg.gain\x1b[0m");
+						my_printf("\x1b[8;69H\x1b[1mAvg. gain\x1b[0m");
 						if (human_score_n)
 							my_printf("\x1b[9;69Hhuman: %.2f", human_score_sum / 100. / human_score_n);
 						if (dog_score_n)
