@@ -1158,24 +1158,24 @@ void tui()
 						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
 				}
 				else {
-					my_printf("\x1b[2;69H\x1b[1mHuman\x1b[0m");
+					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
 					constexpr const uint32_t ms = 1000;
 					constexpr const uint32_t us = ms * ms;
 					my_printf("\x1b[3;69H%02d:%02d.%03d",
 							total_human_think / (60 * us),
 							(total_human_think / us) % 60,
 							(total_human_think / ms) % ms);
-					my_printf("\x1b[5;69H\x1b[1mDog\x1b[0m");
+					my_printf("\x1b[5;69H\x1b[4mDog\x1b[24m");
 					my_printf("\x1b[6;69H%02d:%02d.%03d",
 							total_dog_time / (60 * ms),
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
 					if (human_score_n || dog_score_n) {
-						my_printf("\x1b[8;69H\x1b[1mAvg. gain\x1b[0m");
+						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
-							my_printf("\x1b[9;69Hhuman: %.2f", human_score_sum / 100. / human_score_n);
+							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / 100. / human_score_n);
 						if (dog_score_n)
-							my_printf("\x1b[10;69Hdog  : %.2f", dog_score_sum / 100. / dog_score_n);
+							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / 100. / dog_score_n);
 					}
 					my_printf("\x1b[2;1H");
 				}
