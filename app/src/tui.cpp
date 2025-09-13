@@ -958,10 +958,9 @@ std::string my_getline()
 
 	for(;;) {
 		char c = wait_for_key();
-
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
-				my_printf("\n\r> ");
+				my_printf("\n");
 				break;
 			}
 		}
@@ -1243,7 +1242,7 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-			std::string line = my_getline();
+			std::string line  = my_getline();
 			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
