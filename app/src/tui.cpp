@@ -418,7 +418,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 			skip = (half - lines.size()) * 2;
 		size_t line_nr = 0;
 		for(size_t i=skip; i<nrefm; i += 2, line_nr++) {
-			std::string add = "  " + std::to_string(i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
+			std::string add = " " + myformat("%2d", i / 2 + 1) + ". " + format_move_and_score(refm.at(i + 0).first, scores.at(i + 0));
 			if (nrefm - i >= 2)
 				add += " " + format_move_and_score(refm.at(i + 1).first, scores.at(i + 1));
 			lines.at(line_nr) += add;
