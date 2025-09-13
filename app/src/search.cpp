@@ -465,17 +465,18 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	libchess::Move new_move;
 
 	size_t m_idx = 0;
-	while(m_idx++ < n_moves) {
-		size_t selected_idx = 0;
-		int    s_best_score = -INT_MAX;
-		for(size_t i=0; i<n_moves; i++) {
-			if (move_scores[i] > s_best_score) {
-				s_best_score = move_scores[i];
+	while(m_idx < n_moves) {
+		size_t selected_idx = m_idx;
+		for(size_t i=m_idx; i<n_moves; i++) {
+			if (move_scores[i] > move_scores[selected_idx])
 				selected_idx = i;
-			}
 		}
-		move_scores[selected_idx] = -INT_MAX;
-		auto & move = *(move_list.begin() + selected_idx);
+
+		std::swap(move_scores[selected_idx], move_scores[m_idx]);
+		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
+
+		auto & move = *(move_list.begin() + m_idx);
+		m_idx++;
 
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
