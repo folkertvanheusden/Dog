@@ -396,11 +396,12 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		std::string line = "   \x1b(0\x6d";
 		for(int x=0; x<8; x++)
 			line += "\x71\x71\x71";
-		line += "\x6a\x1b(B ";
+		line += "\x6a\x1b(B";
 		lines.push_back(line);
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
+		line += " ";
 		lines.push_back(std::move(line));
 	}
 	else {
