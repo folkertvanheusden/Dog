@@ -176,3 +176,63 @@ std::optional<libchess::Move> validate_move(const libchess::Move & move, const l
 
 	return { };
 }
+
+bool multiple_moves_to_square(const libchess::Position & pos, const libchess::Square & sq)
+{
+	int  n     = 0;
+	auto moves = pos.legal_move_list();
+	for(auto & move : moves) {
+		if (move.to_square() == sq) {
+			n++;
+			if (n >= 2)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+std::string move_to_san(const libchess::Position & pos_before, const libchess::Move & m)
+{
+	auto move_type = m.type();
+	if (move_type == libchess::Move::Type::CASTLING)
+		return m.to_square().file() == 6 ? "O-O" : "O-O-O";
+
+	std::string san;
+
+        auto piece_from = pos_before.piece_on(m.from_square());
+        auto from_type  = piece_from->type();
+	if (from_type == libchess::constants::PAWN) {
+		if (move_type == libchess::Move::Type::CAPTURE || move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
+			san += char('a' + m.from_square().file());
+			san += "x";
+		}
+		san += char('a' + m.to_square().file());
+		san += char('1' + m.to_square().rank());
+		if (move_type == libchess::Move::Type::CAPTURE_PROMOTION) {
+			san += "=";
+			san += toupper(m.promotion_piece_type().value().to_char());
+		}
+	}
+	else {
+		san += toupper(piece_from.value().to_char());
+
+		bool is_capture = pos_before.is_capture_move(m);
+		if (multiple_moves_to_square(pos_before, m.to_square()) || is_capture) {
+			san += char('a' + m.from_square().file());
+			san += char('1' + m.from_square().rank());
+			if (is_capture)
+				san += "x";
+		}
+
+		san += char('a' + m.to_square().file());
+		san += char('1' + m.to_square().rank());
+
+		auto pos_after(pos_before);
+		pos_after.make_move(m);
+		if (pos_after.in_check())
+			san += "+";
+	}
+
+	return san;
+}
