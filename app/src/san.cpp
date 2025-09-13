@@ -177,6 +177,21 @@ std::optional<libchess::Move> validate_move(const libchess::Move & move, const l
 	return { };
 }
 
+bool multiple_moves_to_square(const libchess::Position & pos, const libchess::Square & sq)
+{
+	int  n     = 0;
+	auto moves = pos.legal_move_list();
+	for(auto & move : moves) {
+		if (move.to_square() == sq) {
+			n++;
+			if (n >= 2)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 std::string move_to_san(const libchess::Position & pos_before, const libchess::Move & m)
 {
 	auto move_type = m.type();
@@ -201,10 +216,15 @@ std::string move_to_san(const libchess::Position & pos_before, const libchess::M
 	}
 	else {
 		san += toupper(piece_from.value().to_char());
-		san += char('a' + m.from_square().file());
-		san += char('1' + m.from_square().rank());
-		if (move_type == libchess::Move::Type::CAPTURE)
-			san += "x";
+
+		bool is_capture = pos_before.is_capture_move(m);
+		if (multiple_moves_to_square(pos_before, m.to_square()) || is_capture) {
+			san += char('a' + m.from_square().file());
+			san += char('1' + m.from_square().rank());
+			if (is_capture)
+				san += "x";
+		}
+
 		san += char('a' + m.to_square().file());
 		san += char('1' + m.to_square().rank());
 
