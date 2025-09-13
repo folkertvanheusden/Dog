@@ -176,10 +176,10 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 	return score;
 }
 
-void fathom_init(const std::string & path)
+int fathom_init(const std::string & path)
 {
 	tb_init(path.c_str());
-	printf("# %d men syzygy\n", TB_LARGEST);
+	return TB_LARGEST;
 }
 
 void fathom_deinit()

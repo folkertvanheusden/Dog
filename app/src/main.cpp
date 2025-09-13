@@ -480,9 +480,14 @@ auto syzygy_option_handler = [](const std::string & value) {
 
 	if (with_syzygy)
 		fathom_deinit();
-	fathom_init(value.c_str());
 
-	with_syzygy = true;
+	int n = fathom_init(value.c_str());
+	if (n <= 0)
+		printf("info string Syzygy path \"%s\" has no valid files?\n", value.c_str());
+	else {
+		printf("info string Syzygy: %d pieces tablebase\n", n);
+		with_syzygy = true;
+	}
 };
 #endif
 
