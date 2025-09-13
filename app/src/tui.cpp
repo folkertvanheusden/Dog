@@ -332,6 +332,13 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		line += " \x1b[m";
 		lines.push_back(line);
 	}
+	else if (t == T_VT100) {
+		std::string line = "   \x1b(0\x6c";
+		for(int x=0; x<8; x++)
+			line += "\x71\x71\x71";
+		line += "\x6b\x1b(B\x1b[m";
+		lines.push_back(line);
+	}
 
 	for(int y=7; y>=0; y--) {
 		std::string line;
@@ -371,8 +378,10 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 				line += " . ";
 			}
 		}
-		if (t == T_ANSI || t == T_VT100)
+		if (t == T_ANSI)
 			line += " \x1b[m";
+		else if (t == T_VT100)
+			line += "\x1b(0\x78\x1b(B";
 		lines.push_back(line);
 	}
 
@@ -384,11 +393,10 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		lines.push_back(std::move(line));
 	}
 	else if (t == T_VT100) {
-		std::string line;
-		line = "   \x1b(0\x6d";
+		std::string line = "   \x1b(0\x6d";
 		for(int x=0; x<8; x++)
 			line += "\x71\x71\x71";
-		line += "\x1b(B ";
+		line += "\x6a\x1b(B ";
 		lines.push_back(line);
 		line = "    ";
 		for(int x=0; x<8; x++)
