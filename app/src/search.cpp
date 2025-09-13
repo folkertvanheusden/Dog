@@ -89,7 +89,7 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 		}
 
 		if (from_type != libchess::constants::KING) {
-			int add = (libchess::constants::QUEEN - from_type) * 256;
+			int add = (libchess::constants::QUEEN - from_type) << 8;
 			assert(abs(add) < (1 << 19));
 			score += add;
 		}
@@ -204,10 +204,10 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.qtt_hit++;
 
-		int score      = te.value().score;
-		int work_score = eval_from_tt(score, qsdepth);
-		auto flag      = te.value().flags;
-		bool use       = flag == EXACT ||
+		int  score      = te.value().score;
+		int  work_score = eval_from_tt(score, qsdepth);
+		auto flag       = te.value().flags;
+		bool use        = flag == EXACT ||
 				(flag == LOWERBOUND && work_score >= beta) ||
 				(flag == UPPERBOUND && work_score <= alpha);
 		if (use) {
@@ -231,8 +231,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 			return best_score;
 		}
 
-		if (alpha < best_score)
-			alpha = best_score;
+		alpha = std::max(alpha, best_score);
 	}
 
 	int  n_played  = 0;
