@@ -185,8 +185,15 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 	sp.cs.data.qnodes++;
 
-	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))
+	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))  {
+		if (sp.pos.in_check()) {
+			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.data.n_checkmate++;
+				return -max_eval + qsdepth;
+			}
+		}
 		return 0;
+	}
 
 	int            start_alpha = alpha;
 
@@ -295,10 +302,13 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	}
 
 	if (n_played == 0) {
-		if (in_check)
+		if (in_check) {
+			sp.cs.data.n_checkmate++;
 			best_score = -max_eval + qsdepth;
-		else if (best_score == -32767)
+		}
+		else if (best_score == -32767) {
 			best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
+		}
 	}
 
 	assert(best_score >= -max_eval);
@@ -349,13 +359,20 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	sp.cs.data.nodes++;
 
-	bool is_root_position = max_depth == depth;
+	const int  csd              = max_depth -  depth;
+	bool       is_root_position = max_depth == depth;
+
 	if (!is_root_position && (sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))) {
+		if (sp.pos.in_check()) {
+			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.data.n_checkmate++;
+				return -max_eval + csd;
+			}
+		}
 		sp.cs.data.n_draws++;
 		return 0;
 	}
 
-	const int  csd         = max_depth - depth;
 	const int  start_alpha = alpha;
 	const bool is_pv       = alpha != beta -1;
 
@@ -569,10 +586,14 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	}
 
 	if (n_played == 0) {
-		if (in_check)
+		if (in_check) {
+			sp.cs.data.n_checkmate++;
 			best_score = -max_eval + csd;
-		else
+		}
+		else {
+			sp.cs.data.n_stalemate++;
 			best_score = 0;
+		}
 	}
 
 	if (sp.stop->flag == false) {
