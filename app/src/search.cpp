@@ -102,11 +102,6 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	return score;
 }
 
-void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare & smc)
-{
-	move_list.sort([smc](const libchess::Move move) { return smc.move_evaluater(move); });
-}
-
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
