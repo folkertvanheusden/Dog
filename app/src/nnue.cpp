@@ -14,7 +14,7 @@ struct Network {
 	std::int16_t output_bias;
 
 	int evaluate(const Accumulator& us, const Accumulator& them) const {
-		static_assert(sizeof(Network) == 197440);
+		static_assert(sizeof(Network) == 394816);
 
 		int output = 0;
 
