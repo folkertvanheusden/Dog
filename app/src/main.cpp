@@ -1126,8 +1126,8 @@ void run_bench(const bool long_bench, const bool via_usb)
 			work.search_max_n_nodes.reset();
 			work.search_version++;
 			work.search_best_move.reset();
-			work.search_best_score = -32768;
-			work.search_output     = true;
+			work.search_best_score  = -32768;
+			work.search_output      = true;
 			work.search_cv.notify_all();
 		}
 		// get
