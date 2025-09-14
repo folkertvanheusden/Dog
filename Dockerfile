@@ -6,7 +6,8 @@ COPY app /app
 
 RUN pip3 install python-chess
 
-RUN cd /app/src/linux-windows/build &&  \
+RUN cd /app/src/linux-windows/build && \
+    rm -rf ../build/* && \
     cmake .. && \
     make -j4 Dog
 
