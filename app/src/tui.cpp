@@ -396,11 +396,12 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		std::string line = "   \x1b(0\x6d";
 		for(int x=0; x<8; x++)
 			line += "\x71\x71\x71";
-		line += "\x6a\x1b(B ";
+		line += "\x6a\x1b(B";
 		lines.push_back(line);
 		line = "    ";
 		for(int x=0; x<8; x++)
 			line += std::string(" ") + char('A' + x) + " ";
+		line += " ";
 		lines.push_back(std::move(line));
 	}
 	else {
@@ -704,53 +705,7 @@ void do_syzygy(const libchess::Position & pos)
 	}
 }
 
-#if defined(ESP32)
-esp_timer_handle_t ctrl_c_timer_handle { };
-
-void ctrl_c_check(void *arg)
-{
-	size_t length = 0;
-	ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
-	if (length) {
-		char buffer = 0;
-		if (uart_read_bytes(uart_num, &buffer, 1, 1)) {
-			if (buffer == 3) {
-			        for(auto & i: sp)
-					set_flag(i->stop);
-				search_aborted = true;
-			}
-		}
-	}
-}
-
-void init_ctrl_c_check()
-{
-	const esp_timer_create_args_t ctrl_c_check_pars = {
-		.callback = &ctrl_c_check,
-		.arg = nullptr,
-		.name = "ctrlc"
-	};
-
-	esp_timer_create(&ctrl_c_check_pars, &ctrl_c_timer_handle);
-}
-
-void start_ctrl_c_check()
-{
-	search_aborted = false;
-	esp_timer_start_periodic(ctrl_c_timer_handle, 250000);  // 4 times per second
-}
-
-void stop_ctrl_c_check()
-{
-	esp_timer_stop(ctrl_c_timer_handle);
-}
-
-void deinit_ctrl_c_check()
-{
-	esp_timer_delete(ctrl_c_timer_handle);
-	ctrl_c_timer_handle = { };
-}
-#else
+#if !defined(ESP32)
 void abort_search_signal(int sig)
 {
 	for(auto & i: sp)
@@ -783,7 +738,7 @@ int wait_for_key()
 
 void press_any_key()
 {
-	my_printf("Press any key... ");
+	my_printf("Press return...");
 
 	if (wait_for_key())
 		my_printf("\n");
@@ -957,10 +912,9 @@ std::string my_getline()
 
 	for(;;) {
 		char c = wait_for_key();
-
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
-				my_printf("\n\r> ");
+				my_printf("\n");
 				break;
 			}
 		}
@@ -1030,9 +984,7 @@ void tui()
 
 	stop_ponder();
 
-#if defined(ESP32)
-	init_ctrl_c_check();
-#elif !defined(WIN32)
+#if !defined(WIN32) && !defined(ESP32)
 	sigset_t sig_set { };
 	sigemptyset(&sig_set);
 	sigaddset(&sig_set, SIGINT);
@@ -1116,6 +1068,24 @@ void tui()
 	};
 
 	for(;;) {
+#if defined(ESP32)
+		size_t length = 0;
+		ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
+		for(size_t i=0; i<length; i++) {
+			char buffer = 0;
+			if (uart_read_bytes(uart_num, &buffer, 1, 1)) {
+				if (buffer == 3) {
+					for(auto & i: sp)
+						set_flag(i->stop);
+					if (search_aborted == false) {
+						search_aborted = true;
+						my_printf("^C");
+						break;
+					}
+				}
+			}
+		}
+#endif
 		if (search_aborted) {
 			search_aborted = false;
 			player = sp.at(0)->pos.side_to_move();
@@ -1151,7 +1121,6 @@ void tui()
 		if (show_board) {
 			if (player.has_value()) {
 				show_header(t);
-
 				if (t == T_ASCII) {
 					my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
 					my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
@@ -1182,6 +1151,16 @@ void tui()
 					}
 					my_printf("\x1b[2;1H");
 				}
+			}
+
+			if (t != T_ASCII) {
+				store_cursor_position();
+				my_printf("\x1b[15;69H / \\__");
+				my_printf("\x1b[16;69H(    @\\____");
+				my_printf("\x1b[17;69H /         O");
+				my_printf("\x1b[18;69H/   (_____/");
+				my_printf("\x1b[19;69H/_____/   U");
+				restore_cursor_position();
 			}
 
 			show_board = false;
@@ -1218,16 +1197,6 @@ void tui()
 				else
 					my_printf("%s!\n", result.c_str());
 			}
-
-			if (t != T_ASCII) {
-				store_cursor_position();
-				my_printf("\x1b[15;69H / \\__");
-				my_printf("\x1b[16;69H(    @\\____");
-				my_printf("\x1b[17;69H /         O");
-				my_printf("\x1b[18;69H/   (_____/");
-				my_printf("\x1b[19;69H/_____/   U");
-				restore_cursor_position();
-			}
 		}
 
 		if (first) {
@@ -1243,7 +1212,7 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-			std::string line = my_getline();
+			std::string line  = my_getline();
 			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
@@ -1516,7 +1485,7 @@ void tui()
 				if (t == T_ASCII)
 					my_printf("\x0c");  // form feed
 				else
-					my_printf("\x1b[2J");
+					my_printf("\x1b[2J\x1b[1;1H");
 				show_board = parts.size() == 2 && is_on(parts[1]);
 			}
 #if !defined(ESP32)
@@ -1648,7 +1617,7 @@ void tui()
 					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()) + score_eval, myformat("[%%emt %.2f]", human_think_took / 1000000.) });
 
 					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-					scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+					scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 					human_score_sum += score_after - score_before;
 					human_score_n++;
@@ -1669,8 +1638,8 @@ void tui()
 		else {
 			set_led(0, 255, 0);
 
-			if (t == T_VT100 || t == T_ANSI)
-				my_printf("\x1b[15;25r\x1b[15;1H");
+			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
+				my_printf("\x1b[15;24r\x1b[15;1H");
 
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
@@ -1682,7 +1651,7 @@ void tui()
 
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
-				scores.push_back(nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
+				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 				if (clock_type == C_TOTAL)
 					total_dog_time -= 1;  // 1 millisecond
@@ -1716,16 +1685,10 @@ void tui()
 				int            best_score { 0 };
 				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
-#if defined(ESP32)
-				start_ctrl_c_check();
-#endif
 				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
-#if defined(ESP32)
-				stop_ctrl_c_check();
-#endif
-				chess_stats    cs_after     = calculate_search_statistics();
-				uint64_t       nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
-				uint64_t       end_search   = esp_timer_get_time();
+				chess_stats cs_after     = calculate_search_statistics();
+				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
+				uint64_t     end_search  = esp_timer_get_time();
 				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
 				emit_pv(sp.at(0)->pos, best_move, t);
@@ -1757,16 +1720,12 @@ void tui()
 
 			set_led(0, 0, 255);
 
-			if (t == T_VT100 || t == T_ANSI)
-				my_printf("\x1b[r\n\x1b[25;1H");
+			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
+				my_printf("\x1b[1;24r\n\x1b[24;1H");
 		}
 	}
 
 	delete pb;
-
-#if defined(ESP32)
-	deinit_ctrl_c_check();
-#endif
 
 	trace_enabled = true;
 }
