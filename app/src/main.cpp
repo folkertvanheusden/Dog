@@ -1083,7 +1083,10 @@ void run_bench(const bool long_bench, const bool via_usb)
 
 		for(size_t i=0; i<fens.size(); i++) {
 			auto & fen = fens.at(i);
-			my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+			if (via_usb)
+				printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+			else
+				my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			fflush(stdout);
 			// put
 			{
