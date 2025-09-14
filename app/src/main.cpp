@@ -945,7 +945,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench\" for the benchmark, \"info\" for build info\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench [long]\" for the benchmark, \"info\" for build info\n");
 
 		std::string line;
 		std::getline(is, line);
