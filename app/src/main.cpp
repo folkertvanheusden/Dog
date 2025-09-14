@@ -960,6 +960,8 @@ void main_task()
 			run_tests();
 		else if (line == "bench")
 			run_bench(false, true);
+		else if (line == "bench long")
+			run_bench(true, true);
 		else if (line == "quit") {
 			break;
 		}
@@ -1268,7 +1270,7 @@ static void init_uart()
 {
 	// configure UART1 (2nd uart) for TUI
 	uart_config_t uart_config = {
-		.baud_rate  = 38400,
+		.baud_rate  = 9600,
 		.data_bits  = UART_DATA_8_BITS,
 		.parity     = UART_PARITY_DISABLE,
 		.stop_bits  = UART_STOP_BITS_1,
