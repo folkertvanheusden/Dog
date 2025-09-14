@@ -10,7 +10,7 @@ set(PROJECT_VERSION_MINOR 11)
 set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 
 execute_process(
-    COMMAND git describe --always --dirty --broken
+    COMMAND echo `git describe --always --dirty --broken`_`git branch --show-current`
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_REV_DOG
     OUTPUT_STRIP_TRAILING_WHITESPACE
