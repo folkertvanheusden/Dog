@@ -102,11 +102,6 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	return score;
 }
 
-void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare & smc)
-{
-	move_list.sort([smc](const libchess::Move move) { return smc.move_evaluater(move); });
-}
-
 bool is_check(libchess::Position & pos)
 {
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
@@ -190,8 +185,15 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 	sp.cs.data.qnodes++;
 
-	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))
+	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))  {
+		if (sp.pos.in_check()) {
+			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.data.n_checkmate++;
+				return -max_eval + qsdepth;
+			}
+		}
 		return 0;
+	}
 
 	int            start_alpha = alpha;
 
@@ -300,10 +302,13 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	}
 
 	if (n_played == 0) {
-		if (in_check)
+		if (in_check) {
+			sp.cs.data.n_checkmate++;
 			best_score = -max_eval + qsdepth;
-		else if (best_score == -32767)
+		}
+		else if (best_score == -32767) {
 			best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
+		}
 	}
 
 	assert(best_score >= -max_eval);
@@ -354,13 +359,20 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 	sp.cs.data.nodes++;
 
-	bool is_root_position = max_depth == depth;
+	const int  csd              = max_depth -  depth;
+	bool       is_root_position = max_depth == depth;
+
 	if (!is_root_position && (sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))) {
+		if (sp.pos.in_check()) {
+			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.data.n_checkmate++;
+				return -max_eval + csd;
+			}
+		}
 		sp.cs.data.n_draws++;
 		return 0;
 	}
 
-	const int  csd         = max_depth - depth;
 	const int  start_alpha = alpha;
 	const bool is_pv       = alpha != beta -1;
 
@@ -574,10 +586,14 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	}
 
 	if (n_played == 0) {
-		if (in_check)
+		if (in_check) {
+			sp.cs.data.n_checkmate++;
 			best_score = -max_eval + csd;
-		else
+		}
+		else {
+			sp.cs.data.n_stalemate++;
 			best_score = 0;
+		}
 	}
 
 	if (sp.stop->flag == false) {
@@ -627,7 +643,7 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Move & m)
+std::string gen_pv_str_from_tt(libchess::Position & p, const libchess::Move & m)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(p, m);
 	std::string pv_str;
@@ -639,7 +655,7 @@ std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Mov
 	return pv_str;
 }
 
-void emit_result(const libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
+void emit_result(libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
 {
 	std::string pv_str     = gen_pv_str_from_tt(pos, best_move);
 	double      ebf        = calculate_EBF(node_counts);

@@ -23,6 +23,8 @@ void chess_stats::add(const chess_stats & source)
 	this->data.qnodes          += source.data.qnodes;
 	this->data.n_draws         += source.data.n_draws;
 	this->data.n_standing_pat  += source.data.n_standing_pat;
+	this->data.n_checkmate     += source.data.n_checkmate;
+	this->data.n_stalemate     += source.data.n_stalemate;
 
         this->data.tt_query   += source.data.tt_query;
         this->data.tt_hit     += source.data.tt_hit;

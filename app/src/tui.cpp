@@ -496,7 +496,7 @@ int get_score(const libchess::Position & pos, const libchess::Color & c)
 	return nnue_evaluate(&e, c);
 }
 
-void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
+void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
 	std::vector<libchess::Move> pv          = get_pv_from_tt(pos, best_move);
 	auto                        start_color = pos.side_to_move();
@@ -582,6 +582,8 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
 	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
+	my_printf("Check-mates   : %u\n", cs.data.n_checkmate);
+	my_printf("Stale-mates   : %u\n", cs.data.n_stalemate);
 	my_printf("Draws         : %u\n", cs.data.n_draws);
 	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,

@@ -945,7 +945,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench\" for the benchmark, \"info\" for build info\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench [long]\" for the benchmark, \"info\" for build info\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -960,6 +960,8 @@ void main_task()
 			run_tests();
 		else if (line == "bench")
 			run_bench(false, true);
+		else if (line == "bench long")
+			run_bench(true, true);
 		else if (line == "quit") {
 			break;
 		}
@@ -1081,7 +1083,10 @@ void run_bench(const bool long_bench, const bool via_usb)
 
 		for(size_t i=0; i<fens.size(); i++) {
 			auto & fen = fens.at(i);
-			my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+			if (via_usb)
+				printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+			else
+				my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			fflush(stdout);
 			// put
 			{
@@ -1121,8 +1126,8 @@ void run_bench(const bool long_bench, const bool via_usb)
 			work.search_max_n_nodes.reset();
 			work.search_version++;
 			work.search_best_move.reset();
-			work.search_best_score = -32768;
-			work.search_output     = true;
+			work.search_best_score  = -32768;
+			work.search_output      = true;
 			work.search_cv.notify_all();
 		}
 		// get
@@ -1268,7 +1273,7 @@ static void init_uart()
 {
 	// configure UART1 (2nd uart) for TUI
 	uart_config_t uart_config = {
-		.baud_rate  = 38400,
+		.baud_rate  = 9600,
 		.data_bits  = UART_DATA_8_BITS,
 		.parity     = UART_PARITY_DISABLE,
 		.stop_bits  = UART_STOP_BITS_1,
