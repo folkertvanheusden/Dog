@@ -78,6 +78,18 @@ void state_exporter::set(search_pars_t *const sp)
 	this->sp = sp;
 	if (pdata)
 		pdata->revision = 0;
+
+#if !defined(NDEBUG)
+#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
+	if (sp) {
+		VALGRIND_HG_DISABLE_CHECKING(&sp->cs.data,  sizeof(sp->cs.data));
+		VALGRIND_HG_DISABLE_CHECKING(&sp->cur_move, sizeof(sp->cur_move));
+		DRD_IGNORE_VAR(sp->cs.data );
+		DRD_IGNORE_VAR(sp->cur_move);
+	}
+#endif
+#endif
+
 }
 
 void state_exporter::clear()
@@ -90,15 +102,6 @@ void state_exporter::clear()
 
 void state_exporter::handler()
 {
-#if !defined(NDEBUG)
-#if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
-	VALGRIND_HG_DISABLE_CHECKING(&sp->cs.data,  sizeof(sp->cs.data));
-	VALGRIND_HG_DISABLE_CHECKING(&sp->cur_move, sizeof(sp->cur_move));
-	DRD_IGNORE_VAR(sp->cs.data );
-	DRD_IGNORE_VAR(sp->cur_move);
-#endif
-#endif
-
 	while(!stop) {
 		usleep(1000000 / hz);
 
@@ -108,10 +111,12 @@ void state_exporter::handler()
 
 		int rc = pthread_mutex_trylock(&pdata->mutex);
 		if (rc == 0) {
-			static int cnt = 0;
-			pdata->counters = sp->cs.data;
-			pdata->cur_move = sp->cur_move;
-			pdata->revision++;
+			if (sp) {
+				static int cnt = 0;
+				pdata->counters = sp->cs.data;
+				pdata->cur_move = sp->cur_move;
+				pdata->revision++;
+			}
 			pthread_mutex_unlock(&pdata->mutex);
 		}
 #if defined(linux)
