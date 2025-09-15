@@ -182,15 +182,14 @@ int tt::get_per_mille_filled()
 	return count;
 }
 
-std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, const libchess::Move & start_move)
+std::vector<libchess::Move> get_pv_from_tt(libchess::Position & pos, const libchess::Move & start_move)
 {
-	auto work = pos_in;
-
 	std::vector<libchess::Move> out { start_move };
-	work.make_move(start_move);
+	pos.make_move(start_move);
+	int undo_n = 1;
 
 	for(int i=0; i<64; i++) {
-		std::optional<tt_entry> te = tti.lookup(work.hash());
+		std::optional<tt_entry> te = tti.lookup(pos.hash());
 		if (!te.has_value())
 			break;
 
@@ -198,14 +197,18 @@ std::vector<libchess::Move> get_pv_from_tt(const libchess::Position & pos_in, co
 			break;
 
 		libchess::Move cur_move { uint_to_libchessmove(te.value().M) };
-		if (!work.is_legal_move(cur_move))
+		if (!pos.is_legal_move(cur_move))
 			break;
 
 		out.push_back(cur_move);
-		work.make_move(cur_move);
-		if (work.is_repeat(1))
+		pos.make_move(cur_move);
+		undo_n++;
+		if (pos.is_repeat(1))
 			break;
 	}
+
+	for(int i=0; i<undo_n; i++)
+		pos.unmake_move();
 
 	return out;
 }

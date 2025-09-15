@@ -496,7 +496,7 @@ int get_score(const libchess::Position & pos, const libchess::Color & c)
 	return nnue_evaluate(&e, c);
 }
 
-void emit_pv(const libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
+void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
 {
 	std::vector<libchess::Move> pv          = get_pv_from_tt(pos, best_move);
 	auto                        start_color = pos.side_to_move();
