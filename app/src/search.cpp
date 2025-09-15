@@ -627,7 +627,7 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Move & m)
+std::string gen_pv_str_from_tt(libchess::Position & p, const libchess::Move & m)
 {
 	std::vector<libchess::Move> pv = get_pv_from_tt(p, m);
 	std::string pv_str;
@@ -639,7 +639,7 @@ std::string gen_pv_str_from_tt(const libchess::Position & p, const libchess::Mov
 	return pv_str;
 }
 
-void emit_result(const libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
+void emit_result(libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
 {
 	std::string pv_str     = gen_pv_str_from_tt(pos, best_move);
 	double      ebf        = calculate_EBF(node_counts);
