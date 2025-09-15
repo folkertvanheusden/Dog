@@ -9,6 +9,8 @@ public:
 		uint32_t  qnodes;
 		uint32_t  n_standing_pat;
 		uint32_t  n_draws;
+		uint32_t  n_checkmate;
+		uint32_t  n_stalemate;
 
 		uint32_t  alpha_distance;
 		uint32_t  beta_distance;
