@@ -59,7 +59,7 @@ else()
 endif()
 
 execute_process(
-    COMMAND git describe --always --dirty --broken
+    COMMAND echo `git describe --always --dirty --broken`_`git branch --show-current`
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_REV_DOG
     OUTPUT_STRIP_TRAILING_WHITESPACE
