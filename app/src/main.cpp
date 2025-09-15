@@ -1239,14 +1239,14 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-#if !defined(_WIN32) && !defined(ESP32)
-	se = new state_exporter(20);
-#endif
-
 	if (my_trace_file.empty() == false)
 		my_trace("# tracing to file enabled\n");
 
 	allocate_threads(thread_count);
+
+#if !defined(_WIN32) && !defined(ESP32)
+	se = new state_exporter(20);
+#endif
 
 	setvbuf(stdout, nullptr, _IONBF, 0);
 
