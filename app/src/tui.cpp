@@ -527,13 +527,15 @@ void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const t
 				my_printf("\n"), nr = 0;
 			my_printf(" ");
 
+			int cur_score = get_score(work, move, start_color);
 			make_move(&e, work, move);
-			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(&e, start_color);
 
-			// FIXME colors
-			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
-				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
+			if (cur_score < start_score) {
+				if (t == T_ANSI)
+					my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
+				else
+					my_printf("%s", move.to_str().c_str());
+			}
 			else if (start_score == cur_score)
 				my_printf("%s", move.to_str().c_str());
 			else {
@@ -542,10 +544,7 @@ void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const t
 				else
 					my_printf("\x1b[1m%s\x1b[m", move.to_str().c_str());
 			}
-			if (work.side_to_move() != start_color)
-				my_printf(" [%.2f] ", -cur_score / 100.);
-			else
-				my_printf(" [%.2f] ", cur_score / 100.);
+			my_printf(" [%.2f] ", cur_score / 100.);
 		}
 	}
 	else {
