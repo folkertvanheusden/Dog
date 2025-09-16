@@ -3,9 +3,12 @@
 #include <cassert>
 #include <cstdint>
 
+#include "weights.cpp"
+#include "weights.h"
+
 #include "main.h"
 #include "nnue.h"
-#include "weights.cpp"
+
 
 struct Network {
 	Accumulator feature_weights[2 * 6 * 64];
@@ -14,7 +17,7 @@ struct Network {
 	std::int16_t output_bias;
 
 	int evaluate(const Accumulator& us, const Accumulator& them) const {
-		static_assert(sizeof(Network) == 394816);
+		static_assert(sizeof(Network) == weights_size);
 
 		int output = 0;
 
