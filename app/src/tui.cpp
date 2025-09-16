@@ -443,7 +443,7 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 		my_printf("Game is finished\n");
 	else {
 		if (verbose) {
-			my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
+			my_printf("Move: %d, color: %s, half moves: %d, repetitions: %d, TT: %d (per mille)\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count(), tti.get_per_mille_filled());
 			my_printf("%s\n", p.fen().c_str());
 		}
 		else {
