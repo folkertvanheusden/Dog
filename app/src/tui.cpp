@@ -1618,7 +1618,7 @@ void tui()
 
 					moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()) + score_eval, myformat("[%%emt %.2f]", human_think_took / 1000000.) });
 
-					auto    undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
+					make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 					scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 					human_score_sum += score_after - score_before;
@@ -1652,7 +1652,7 @@ void tui()
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
 
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
-				auto undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 
 				if (clock_type == C_TOTAL)
@@ -1695,7 +1695,7 @@ void tui()
 
 				emit_pv(sp.at(0)->pos, best_move, t);
 				std::string move_str     = move_to_san(sp.at(0)->pos, best_move);
-				auto        undo_actions = make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				double      took         = (end_search - start_search) / 1000000.;
 				std::string meta         = myformat("%s%.2f/%d %.1fs", best_score > 0 ? "+":"", best_score / 100., max_depth, took);
 				uint64_t    done_n_nodes = nodes_searched_end_aprox - nodes_searched_start_aprox;
