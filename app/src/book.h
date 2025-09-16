@@ -21,5 +21,5 @@ public:
 
 	size_t size() const;
 
-	std::optional<libchess::Move> query(const libchess::Position & p);
+	std::optional<libchess::Move> query(const libchess::Position & p, const bool verbose);
 };

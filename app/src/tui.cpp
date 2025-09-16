@@ -54,6 +54,11 @@ dog_clock_t      clock_type = C_TOTAL;
 std::string      wifi_ssid;
 std::string      wifi_psk;
 std::atomic_bool search_aborted { false };
+terminal_t       t                  = T_ASCII;
+bool             default_trace      = false;
+int32_t          initial_think_time = 1000;
+bool             do_ponder          = false;
+bool             verbose            = false;
 
 #if defined(ESP32)
 #define WIFI_CONNECTED_BIT BIT0
@@ -437,8 +442,13 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
 		my_printf("Game is finished\n");
 	else {
-		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
-		my_printf("%s\n", p.fen().c_str());
+		if (verbose) {
+			my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
+			my_printf("%s\n", p.fen().c_str());
+		}
+		else {
+			my_printf("Move: %d, %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
+		}
 	}
 }
 
@@ -521,6 +531,7 @@ void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const t
 			auto cur_color = work.side_to_move();
 			int  cur_score = nnue_evaluate(&e, start_color);
 
+			// FIXME colors
 			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
 				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
 			else if (start_score == cur_score)
@@ -779,11 +790,6 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2;1H");
 }
 
-terminal_t t                  = T_ASCII;
-bool       default_trace      = false;
-int32_t    initial_think_time = 1000;
-bool       do_ponder          = false;
-
 std::optional<std::string> get_cfg_dir()
 {
 	const char *home = std::getenv("HOME");
@@ -824,6 +830,7 @@ void write_settings()
 	fprintf(fh, "%d\n",  do_ping);
 	fprintf(fh, "%s\n",  wifi_ssid.c_str());
 	fprintf(fh, "%s\n",  wifi_psk .c_str());
+	fprintf(fh, "%d\n",  verbose);
 
 	fclose(fh);
 }
@@ -864,6 +871,8 @@ void load_settings()
 	if (lf)
 		*lf = 0x00;
 	wifi_psk       = buffer;
+	fgets(buffer, sizeof buffer, fh);
+	verbose        = atoi(buffer);
 
 	fclose(fh);
 }
@@ -890,6 +899,7 @@ static void help()
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
+	my_printf("verbose  on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
 	my_printf("ping     beep on/off\n");
 	my_printf("redraw   redraw screen\n");
@@ -1502,6 +1512,13 @@ void tui()
 				}
 				my_printf("Tracing is %senabled\n", trace_enabled ? "":"not ");
 			}
+			else if (parts[0] == "verbose" || parts[0] == "debug") {
+				if (parts.size() == 2) {
+					verbose = is_on(parts[1]);
+					write_settings();
+				}
+				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
+			}
 			else if (parts[0] == "ping") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
@@ -1580,7 +1597,7 @@ void tui()
 			else if (parts[0] == "hint")
 				tt_lookup();
 			else if (parts[0] == "book") {
-				auto move = pb->query(sp.at(0)->pos);
+				auto move = pb->query(sp.at(0)->pos, verbose);
 				if (move.has_value())
 					my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
 				else
@@ -1646,7 +1663,7 @@ void tui()
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
-			auto move = pb->query(sp.at(0)->pos);
+			auto move = pb->query(sp.at(0)->pos, verbose);
 			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());

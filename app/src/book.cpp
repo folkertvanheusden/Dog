@@ -159,7 +159,7 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 	}
 }
 
-std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
+std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p, const bool verbose)
 {
 	if (!fh)
 		return { };
@@ -198,25 +198,26 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p)
 			scan(p, index, -1, -1, moves);  // backward search
 			scan(p, index,  1,  n, moves);  // forward serach
 
-			printf("Selecting from %zu move(s) (", moves.size());
-
 			// weighted random, see https://stackoverflow.com/a/56006340/216582
 			std::vector<std::pair<double, libchess::Move> > work;
-			bool first = true;
-			for(auto & m: moves) {
-				if (first)
-					first = false;
-				else
-					printf(" ");
-				printf("%s", m.first.to_str().c_str());
+			for(auto & m: moves)
 				work.push_back({ -log(dist(rng) + 1) / (m.second + 1), m.first });
-			}
-			printf(")...\n");
 
-			if (work.empty() == false) {
+			if (work.empty() == false)
 				std::sort(work.begin(), work.end(), [](const auto & lhs, const auto & rhs) { return lhs.first < rhs.first; });
-				return work.at(0).second;
+
+			if (verbose) {
+				my_printf("Selecting from %zu move(s) (", work.size());
+				for(size_t i=0; i<work.size(); i++) {
+					if (i)
+						my_printf(", ");
+					my_printf("%s", work.at(i).second.to_str().c_str());
+				}
+				my_printf(")...\n");
 			}
+
+			if (work.empty() == false)
+				return work.at(0).second;
 		}
 	}
 
