@@ -1764,7 +1764,8 @@ void tui()
 					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
 				uint32_t total = sp.at(0)->cs.win[0] + sp.at(0)->cs.win[1] + sp.at(0)->cs.draw;
-				my_printf("W/D/L: %d%%/%d%%/%d%%\n", sp.at(0)->cs.win[color] * 100 / total, sp.at(0)->cs.draw * 100 / total, sp.at(0)->cs.win[!color] * 100 / total);
+				if (total)
+					my_printf("W/D/L: %d%%/%d%%/%d%%\n", sp.at(0)->cs.win[color] * 100 / total, sp.at(0)->cs.draw * 100 / total, sp.at(0)->cs.win[!color] * 100 / total);
 
 				std::string move_str     = move_to_san(sp.at(0)->pos, best_move);
 				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
