@@ -670,11 +670,11 @@ void emit_result(libchess::Position & pos, const libchess::Move & best_move, con
 		int mate_moves = (max_eval - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
 		auto mate_str = std::to_string(mate_moves);
 		score_str = "score mate " + mate_str;
-		score_str_human = "Mate in " + mate_str;
+		score_str_human = "mate in " + mate_str;
 	}
 	else {
 		score_str = "score cp " + std::to_string(best_score);
-		score_str_human = myformat("Score: %.2f", best_score / 100.);
+		score_str_human = myformat("score: %.2f", best_score / 100.);
 	}
 
 	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
@@ -684,11 +684,17 @@ void emit_result(libchess::Position & pos, const libchess::Move & best_move, con
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
 
 #if defined(ESP32)
-	std::string msg1 = myformat("Search depth: %d, duration: %.3f, nodes per second: %" PRIu64 "\n", max_depth, thought_ms / 1000., nps);
-	to_uart(msg1.c_str(), msg1.size());
-	std::string msg2 = score_str_human + ", pv: " + pv_str.c_str() + "\n";
+	extern bool verbose;
+	if (verbose) {
+		std::string msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
+		to_uart(msg1.c_str(), msg1.size());
+	}
+	else {
+		std::string msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
+		to_uart(msg1.c_str(), msg1.size());
+	}
+	std::string msg2 = "pv: " + pv_str + "\n";
 	to_uart(msg2.c_str(), msg2.size());
-
 #endif
 }
 
