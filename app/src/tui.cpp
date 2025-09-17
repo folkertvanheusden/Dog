@@ -863,7 +863,9 @@ void load_settings()
 
 static void help()
 {
+#if !defined(ESP32)
 	my_printf("quit     stop the tui\n");
+#endif
 	my_printf("new      restart game\n");
 	my_printf("version  program info\n");
 	my_printf("player   select player (\"white\" or \"black\")\n");
@@ -1288,8 +1290,10 @@ void tui()
 			auto parts = split(line, " ");
 			if (parts[0] == "help")
 				help();
+#if !defined(ESP32)
 			else if (parts[0] == "quit")
 				break;
+#endif
 			else if (parts[0] == "version" || parts[0] == "info")
 				tui_hello();
 			else if (parts[0] == "auto")
