@@ -17,6 +17,11 @@ void chess_stats::reset()
 	memset(&data, 0x00, sizeof data);
 }
 
+void chess_stats::reset_wdl()
+{
+	win[0] = win[1] = draw = 0;
+}
+
 void chess_stats::add(const chess_stats & source)
 {
 	this->data.nodes           += source.data.nodes;

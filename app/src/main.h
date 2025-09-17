@@ -30,9 +30,9 @@ typedef struct
 	const int        thread_nr { 0       };
 	chess_stats      cs        {         };
 	uint32_t         cur_move  { 0       };
+	uint16_t         md        { 0       };
 #if defined(ESP32)
 	TaskHandle_t     th        { nullptr };
-	uint16_t         md        { 0       };
 	uint16_t         md_limit  { 65535   };
 #endif
 

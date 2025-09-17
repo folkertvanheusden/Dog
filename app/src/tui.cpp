@@ -512,55 +512,6 @@ int get_score(const libchess::Position & pos, const libchess::Color & c)
 	return nnue_evaluate(&e, c);
 }
 
-void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const terminal_t t)
-{
-	std::vector<libchess::Move> pv          = get_pv_from_tt(pos, best_move);
-	auto                        start_color = pos.side_to_move();
-
-	if (t == T_ANSI || t == T_VT100) {
-		int                nr          = 0;
-		libchess::Position work(sp.at(0)->pos);
-		Eval               e   (work);
-		auto               start_score = nnue_evaluate(&e, work);
-
-		if (t == T_ANSI)
-			my_printf("\x1b[43;30mPV[%.2f]:\x1b[m\n", start_score / 100.);
-		else
-			my_printf("PV[%.2f (%c)]:\n", start_score / 100., start_color == libchess::constants::WHITE ? 'W' : 'B');
-
-		for(auto & move: pv) {
-			if (++nr == 5)
-				my_printf("\n"), nr = 0;
-			my_printf(" ");
-
-			int cur_score = get_score(work, move, start_color);
-			make_move(&e, work, move);
-
-			if (cur_score < start_score) {
-				if (t == T_ANSI)
-					my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
-				else
-					my_printf("%s", move.to_str().c_str());
-			}
-			else if (start_score == cur_score)
-				my_printf("%s", move.to_str().c_str());
-			else {
-				if (t == T_ANSI)
-					my_printf("\x1b[40;32m%s\x1b[m", move.to_str().c_str());
-				else
-					my_printf("\x1b[1m%s\x1b[m", move.to_str().c_str());
-			}
-			my_printf(" [%.2f] ", cur_score / 100.);
-		}
-	}
-	else {
-		my_printf("PV:");
-		for(auto & move: pv)
-			my_printf(" %s", move.to_str().c_str());
-	}
-	my_printf("\n");
-}
-
 std::string perc(const unsigned total, const unsigned part)
 {
 	if (total == 0)
@@ -912,7 +863,9 @@ void load_settings()
 
 static void help()
 {
+#if !defined(ESP32)
 	my_printf("quit     stop the tui\n");
+#endif
 	my_printf("new      restart game\n");
 	my_printf("version  program info\n");
 	my_printf("player   select player (\"white\" or \"black\")\n");
@@ -1230,12 +1183,12 @@ void tui()
 			if (player.has_value()) {
 				show_header(t);
 				if (t == T_ASCII) {
-					my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
-					my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
+					my_printf("Human time used: %.3f seconds\n", total_human_think / 1000000.);
+					my_printf("Dog time left: %.3f seconds\n", total_dog_time / 1000.);
 					if (human_score_n)
-						my_printf("Average score gain human: %.2f\n", human_score_sum * 100. / human_score_n);
+						my_printf("Average score gain human: %.2f\n", human_score_sum / (100. * human_score_n));
 					if (dog_score_n)
-						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
+						my_printf("Average score gain dog: %.2f\n", dog_score_sum / (100. * dog_score_n));
 				}
 				else {
 					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
@@ -1253,9 +1206,9 @@ void tui()
 					if (human_score_n || dog_score_n) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
-							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / 100. / human_score_n);
+							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / (100. * human_score_n));
 						if (dog_score_n)
-							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / 100. / dog_score_n);
+							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / (100. * dog_score_n));
 					}
 					my_printf("\x1b[2;1H");
 				}
@@ -1337,8 +1290,10 @@ void tui()
 			auto parts = split(line, " ");
 			if (parts[0] == "help")
 				help();
+#if !defined(ESP32)
 			else if (parts[0] == "quit")
 				break;
+#endif
 			else if (parts[0] == "version" || parts[0] == "info")
 				tui_hello();
 			else if (parts[0] == "auto")
@@ -1793,6 +1748,8 @@ void tui()
 
 				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
 
+				auto           color        = sp.at(0)->pos.side_to_move();
+				sp.at(0)->cs.reset_wdl();
 				uint64_t       start_search = esp_timer_get_time();
 				chess_stats    cs_before    = calculate_search_statistics();
 				uint64_t       nodes_searched_start_aprox = cs_before.data.nodes + cs_before.data.qnodes;
@@ -1804,9 +1761,18 @@ void tui()
 				chess_stats cs_after     = calculate_search_statistics();
 				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
 				uint64_t     end_search  = esp_timer_get_time();
-				my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
 
-				emit_pv(sp.at(0)->pos, best_move, t);
+				if (t == T_ASCII)
+					my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+				else
+					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+
+				if (verbose) {
+					uint32_t total = sp.at(0)->cs.win[0] + sp.at(0)->cs.win[1] + sp.at(0)->cs.draw;
+					if (total)
+						my_printf("W/D/L: %d%%/%d%%/%d%%, max. depth: %d/%d\n", sp.at(0)->cs.win[color] * 100 / total, sp.at(0)->cs.draw * 100 / total, sp.at(0)->cs.win[!color] * 100 / total, max_depth, sp.at(0)->md);
+				}
+
 				std::string move_str     = move_to_san(sp.at(0)->pos, best_move);
 				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
 				double      took         = (end_search - start_search) / 1000000.;
