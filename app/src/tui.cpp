@@ -564,7 +564,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	my_printf("TT cut-off    : %s (search), %s (qs)\n",
 			perc(cs.data.tt_query,  cs.data.tt_cutoff ).c_str(),
 			perc(cs.data.qtt_query, cs.data.qtt_cutoff).c_str());
-	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
+	my_printf("Null moves    : %s (hits)\n", perc(cs.data.n_null_move, cs.data.n_null_move_hit).c_str());
 	my_printf("LMR           : %u (total), %s (hits)\n",
 			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());
 	my_printf("Static eval   : %u (total), %s (hits)\n",
