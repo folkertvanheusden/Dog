@@ -1211,53 +1211,62 @@ void tui()
 				}
 			}
 
+			bool in_check = sp.at(0)->pos.in_check();
+
 			if (t != T_ASCII) {
-				store_cursor_position();
-				int16_t score_Dog = -1;
+				bool    speech_cloud = in_check && sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS;
+				int     x            = speech_cloud ? 63 : 69;
+				int16_t score_Dog    = -1;
 				if (player.has_value())
 					score_Dog = get_score(sp.at(0)->pos, !player.value());
 
-				my_printf("\x1b[15;69H / \\__");
+				store_cursor_position();
+				if (speech_cloud) {
+					my_printf("\x1b[14;%dH\x1b[4;1mCHECK\x1b[m!", x + 11);
+					my_printf("\x1b[15;%dH\x1b[2m/\x1b[m", x + 10);
+				}
+
+				my_printf("\x1b[15;%dH / \\__", x);
 
 				if (score_Dog >= max_non_mate && moves_played.empty() == false)
-					my_printf("\x1b[16;69H(    \x1b[1m@\x1b[m\\____");
+					my_printf("\x1b[16;%dH(    \x1b[1m@\x1b[m\\____", x);
 				else
-					my_printf("\x1b[16;69H(    @\\____");
+					my_printf("\x1b[16;%dH(    @\\____", x);
 
 				if (score_Dog > 0 && moves_played.empty() == false)
-					my_printf("\x1b[17;69H /         \x1b[1mO\x1b[m");
+					my_printf("\x1b[17;%dH /         \x1b[1mO\x1b[m", x);
 				else
-					my_printf("\x1b[17;69H /         O");
+					my_printf("\x1b[17;%dH /         O", x);
 
-				my_printf("\x1b[18;69H/   (_____/");
-				my_printf("\x1b[19;69H/_____/   U");
+				my_printf("\x1b[18;%dH/   (_____/", x);
+				my_printf("\x1b[19;%dH/_____/   U", x);
 				restore_cursor_position();
 			}
 
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (sp.at(0)->pos.in_check()) {
-				std::string result = "CHECK";
-				switch(sp.at(0)->pos.game_state()) {
-					case libchess::Position::GameState::CHECKMATE:
-						result = "CHECKMATE";
-						break;
-					case libchess::Position::GameState::STALEMATE:
-						result = "STALEMATE";
-						break;
-					case libchess::Position::GameState::THREEFOLD_REPETITION:
-						result = "THREEFOLD REPETITION";
-						break;
-					case libchess::Position::GameState::FIFTY_MOVES:
-						result = "FIFTY MOVES";
-						break;
-					case libchess::Position::GameState::IN_PROGRESS:
-						break;
-					default:
-						result = "(unknown game state)";
-						break;
-				}
+			std::string result;
+			switch(sp.at(0)->pos.game_state()) {
+				case libchess::Position::GameState::CHECKMATE:
+					result = "CHECKMATE";
+					break;
+				case libchess::Position::GameState::STALEMATE:
+					result = "STALEMATE";
+					break;
+				case libchess::Position::GameState::THREEFOLD_REPETITION:
+					result = "THREEFOLD REPETITION";
+					break;
+				case libchess::Position::GameState::FIFTY_MOVES:
+					result = "FIFTY MOVES";
+					break;
+				case libchess::Position::GameState::IN_PROGRESS:
+					break;
+				default:
+					result = "(unknown game state)";
+					break;
+			}
+			if (result.empty() == false) {
 				if (t != T_ASCII)
 					my_printf("\x1b[4m%s\x1b[m!\n", result.c_str());
 				else
