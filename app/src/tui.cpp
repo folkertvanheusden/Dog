@@ -60,6 +60,12 @@ int32_t          initial_think_time = 1000;
 bool             do_ponder          = false;
 bool             verbose            = false;
 
+void ring_bell()
+{
+	if (do_ping)
+		my_printf("\07");  // bell
+}
+
 #if defined(ESP32)
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
@@ -726,26 +732,54 @@ void abort_search_signal(int sig)
 }
 #endif
 
+constexpr const int KEY_UP    = -10;
+constexpr const int KEY_DOWN  = -11;
+constexpr const int KEY_LEFT  = -12;
+constexpr const int KEY_RIGHT = -13;
+
 int wait_for_key()
 {
-#if defined(ESP32)
+	enum { WFK_PLAIN, WFK_ESC, WFK_BRACKET } state = WFK_PLAIN;
+
 	for(;;) {
+#if defined(ESP32)
+		int    c      = 0;
 		size_t length = 0;
 		ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
-		if (length) {
-			char buffer = 0;
-			if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
-				if (buffer == 13)
-					return 10;
-				return buffer;
-			}
+		if (length == 0) {
+			vTaskDelay(1);
+			continue;
 		}
 
-		vTaskDelay(1);
-	}
+		char buffer = 0;
+		if (uart_read_bytes(uart_num, &buffer, 1, 100))
+			c =  buffer;
 #else
-	return getchar();
+		int c = getchar();
 #endif
+
+		if (state == WFK_PLAIN) {
+			if (c != 27)
+				return c;
+			state = WFK_ESC;
+		}
+		else if (state == WFK_ESC) {
+			if (c != '[' && c != '0')
+				return c;
+			state = WFK_BRACKET;
+		}
+		else if (state == WFK_BRACKET) {
+			if (c == 'A')
+				return KEY_UP;
+			if (c == 'B')
+				return KEY_DOWN;
+			if (c == 'C')
+				return KEY_RIGHT;
+			if (c == 'D')
+				return KEY_LEFT;
+			return c;
+		}
+	}
 }
 
 void press_any_key()
@@ -913,16 +947,23 @@ static void help()
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
 
+std::vector<std::string> history;
+constexpr const int max_history    = 10;
+constexpr const int terminal_width = 80;
+constexpr const char *const prompt = "> ";
+
 std::string my_getline()
 {
 	set_led(127, 127, 127);
 
-	my_printf("> ");
+	my_printf(prompt);
 
+	std::string temp;
 	std::string out;
+	size_t cursor = history.size();
 
 	for(;;) {
-		char c = wait_for_key();
+		int c = wait_for_key();
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
 				my_printf("\n");
@@ -934,12 +975,68 @@ std::string my_getline()
 				my_printf("\x08 \x08");
 				out = out.substr(0, out.size() - 1);
 			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == 21) {
+			out.clear();
+			my_printf("\x1b[2K\r%s", prompt);
 		}
 		else if (c >= 32 && c < 127) {
-			my_printf("%c", c);
-			out += c;
+			if (out.size() < terminal_width - (strlen(prompt) + 1)) {  // prompt & prevent line wrap
+				my_printf("%c", c);
+				out += c;
+			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == KEY_UP) {
+			if (cursor) {
+				if (temp.empty())
+					temp = out;
+				size_t h_size = history.size();
+				cursor--;
+				if (cursor == h_size) {
+					out = temp;
+					temp.clear();
+				}
+				else {
+					out = history[cursor];
+				}
+				my_printf("\x1b[2K\r%s%s", prompt, out.c_str());
+			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == KEY_DOWN) {
+			size_t h_size = history.size();
+			if (cursor <= h_size) {
+				cursor++;
+				if (cursor == h_size + 1) {
+					temp = out;
+					out.clear();
+				}
+				else if (cursor == h_size) {
+					out = temp;
+					temp.clear();
+				}
+				else {
+					out = history.at(cursor);
+				}
+				my_printf("\x1b[2K\r%s%s", prompt, out.c_str());
+			}
+			else {
+				ring_bell();
+			}
 		}
 	}
+
+	while(history.size() >= max_history)
+		history.erase(history.begin());
+	history.push_back(out);
 
 	return out;
 }
@@ -1730,8 +1827,7 @@ void tui()
 			dog_score_sum += score_after - score_before;
 			dog_score_n++;
 
-			if (do_ping)
-				my_printf("\07");  // bell
+			ring_bell();
 
 			p_a_k      = true;
 			show_board = true;
