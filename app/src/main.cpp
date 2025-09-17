@@ -82,6 +82,8 @@ std::vector<search_pars_t *> sp;
 state_exporter              *se { nullptr };
 #endif
 
+constexpr const char *const uart_settings_file = "/spiffs/uart.dat";
+
 static_assert(sizeof(int) >= 4, "INT should be at least 32 bit");
 
 #if defined(linux) || defined(_WIN32) || defined(__APPLE__)
@@ -945,7 +947,7 @@ void main_task()
 	uci_service->register_handler("help",       help_handler, false);
 
 	for(;;) {
-		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench [long]\" for the benchmark, \"info\" for build info\n");
+		printf("# ENTER \"uci\" FOR uci-MODE, \"test\" TO RUN THE UNIT TESTS,\n# \"quit\" TO QUIT, \"bench [long]\" for the benchmark, \"info\" for build info\n# \"bps ...\" set serial baudrate\n");
 
 		std::string line;
 		std::getline(is, line);
@@ -958,6 +960,21 @@ void main_task()
 			uci_hello();
 		else if (line == "test")
 			run_tests();
+#if defined(ESP32)
+		else if (line.substr(0, 3) == "bps") {
+			int bps = std::stoi(line.substr(4));
+			printf("Set baudrate to %d bps\n", bps);
+			ESP_ERROR_CHECK(uart_set_baudrate(uart_num, bps));
+			FILE *fh = fopen(uart_settings_file, "w");
+			if (fh) {
+				fprintf(fh, "%d\n", bps);
+				fclose(fh);
+			}
+			else {
+				printf("Cannot access SPIFFS\n");
+			}
+		}
+#endif
 		else if (line == "bench")
 			run_bench(false, true);
 		else if (line == "bench long")
@@ -1271,9 +1288,18 @@ int main(int argc, char *argv[])
 
 static void init_uart()
 {
+	int   bps = 9600;
+	FILE *fh  = fopen(uart_settings_file, "r");
+	if (fh) {
+		char buffer[16] { };
+		fgets(buffer, sizeof buffer, fh);
+		bps = atoi(buffer);
+		fclose(fh);
+		printf("# set uart to %d bps\n", bps);
+	}
 	// configure UART1 (2nd uart) for TUI
 	uart_config_t uart_config = {
-		.baud_rate  = 9600,
+		.baud_rate  = bps,
 		.data_bits  = UART_DATA_8_BITS,
 		.parity     = UART_PARITY_DISABLE,
 		.stop_bits  = UART_STOP_BITS_1,
@@ -1345,9 +1371,9 @@ extern "C" void app_main()
 	}
 	ESP_ERROR_CHECK(ret_nvs);
 
-	init_uart();
-
 	init_flash_filesystem();
+
+	init_uart();
 
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
