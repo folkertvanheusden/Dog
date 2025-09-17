@@ -1199,7 +1199,7 @@ void tui()
 							total_dog_time / (60 * ms),
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
-					if (human_score_n || dog_score_n) {
+					if (verbose && (human_score_n || dog_score_n)) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
 							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / (100. * human_score_n));
@@ -1273,7 +1273,7 @@ void tui()
 				sp.at(0)->pos = libchess::Position(fen);
 			}
 
-			if (do_ponder && !finished) {
+			if (do_ponder && !finished && verbose) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 				my_printf("While you were thinking, Dog considered %" PRIu64 " positions.\n", end_position_count - start_position_count);
 			}
