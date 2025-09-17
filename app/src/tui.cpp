@@ -881,6 +881,7 @@ static void help()
 	my_printf("submit   send current PGN to server, result is shown\n");
 	my_printf("book     check for a move in the book\n");
 	my_printf("hint     show a hint\n");
+	my_printf("switch   switch color\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
@@ -1607,6 +1608,12 @@ void tui()
 					write_settings();
 				}
 				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
+			}
+			else if (parts[0] == "switch") {
+				if (player.has_value())
+					player = !player.value();
+				else
+					player = !sp.at(0)->pos.side_to_move();
 			}
 			else if (parts[0] == "undo") {
 				if (moves_played.empty())
