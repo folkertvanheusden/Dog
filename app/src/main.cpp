@@ -38,6 +38,7 @@
 
 #include "state_exporter.h"
 #else
+#include <bootloader_random.h>
 #include <fcntl.h>
 #include <driver/gpio.h>
 #include <driver/rmt_tx.h>
@@ -45,6 +46,7 @@
 #include <esp_chip_info.h>
 #include <esp_err.h>
 #include <esp_spiffs.h>
+#include <esp_random.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 #include <nvs_flash.h>
@@ -1374,6 +1376,8 @@ extern "C" void app_main()
 	init_flash_filesystem();
 
 	init_uart();
+
+	bootloader_random_enable();
 
 	setvbuf(stdin,  nullptr, _IONBF, 0);
 	setvbuf(stdout, nullptr, _IONBF, 0);
