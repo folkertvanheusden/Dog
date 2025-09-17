@@ -1212,9 +1212,22 @@ void tui()
 
 			if (t != T_ASCII) {
 				store_cursor_position();
+				int16_t score_Dog = -1;
+				if (player.has_value())
+					score_Dog = get_score(sp.at(0)->pos, !player.value());
+
 				my_printf("\x1b[15;69H / \\__");
-				my_printf("\x1b[16;69H(    @\\____");
-				my_printf("\x1b[17;69H /         O");
+
+				if (score_Dog >= max_non_mate && moves_played.empty() == false)
+					my_printf("\x1b[16;69H(    \x1b[1m@\x1b[m\\____");
+				else
+					my_printf("\x1b[16;69H(    @\\____");
+
+				if (score_Dog > 0 && moves_played.empty() == false)
+					my_printf("\x1b[17;69H /         \x1b[1mO\x1b[m");
+				else
+					my_printf("\x1b[17;69H /         O");
+
 				my_printf("\x1b[18;69H/   (_____/");
 				my_printf("\x1b[19;69H/_____/   U");
 				restore_cursor_position();
