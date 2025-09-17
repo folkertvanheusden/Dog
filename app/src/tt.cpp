@@ -178,7 +178,6 @@ int tt::get_per_mille_filled()
 	int count = 0;
 	for(int i=0; i<1000; i++)
 		count += entries[i].hash != 0;
-
 	return count;
 }
 
