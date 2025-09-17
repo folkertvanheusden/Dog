@@ -887,7 +887,7 @@ static void help()
 	my_printf("trace    on/off\n");
 	my_printf("verbose  on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
-	my_printf("ping     beep on/off\n");
+	my_printf("bell     beep on/off\n");
 	my_printf("redraw   redraw screen\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
@@ -1080,8 +1080,6 @@ void tui()
 	int32_t     dog_score_sum       = 0;
 	int         dog_score_n         = 0;
 	int         expected_move_count = 0;
-	double      match_percentage    = 0.;
-	int         n_match_percentage  = 0;
 	int         game_took           = 0;
 
 #if defined(ESP32)
@@ -1111,8 +1109,6 @@ void tui()
 		dog_score_n         = 0;
 		expected_move_count = 0;
 		player              = libchess::constants::WHITE;
-		match_percentage    = 0.;
-		n_match_percentage  = 0;
 		game_took           = 0;
 
 		for(auto & e: sp) {
@@ -1227,11 +1223,6 @@ void tui()
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (expected_move_count > 1) {
-				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
-				if (n_match_percentage > 1)
-					my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
-			}
 			if (sp.at(0)->pos.in_check()) {
 				std::string result = "CHECK";
 				switch(sp.at(0)->pos.game_state()) {
@@ -1570,7 +1561,7 @@ void tui()
 				}
 				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
 			}
-			else if (parts[0] == "ping") {
+			else if (parts[0] == "ping" || parts[0] == "bell") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
 					write_settings();
@@ -1663,11 +1654,7 @@ void tui()
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					auto cm_rc = compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
-					if (cm_rc.has_value()) {
-						match_percentage   += cm_rc.value();
-						n_match_percentage++;
-					}
+					compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_Dog    = get_score(sp.at(0)->pos, !now_playing);
@@ -1694,6 +1681,9 @@ void tui()
 
 					store_position(sp.at(0)->pos.fen(), total_dog_time);
 
+					if (expected_move_count >= 2)
+						my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
+
 					show_board = true;
 					p_a_k      = true;
 				}
@@ -1717,7 +1707,10 @@ void tui()
 			auto move = pb->query(sp.at(0)->pos, verbose);
 			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
-				my_printf("Book move: %s\n", move.value().to_str().c_str());
+				if (t == T_ASCII)
+					my_printf("Book move: %s\n", move.value().to_str().c_str());
+				else
+					my_printf("Book move: \x1b[1m%s\x1b[m\n", move.value().to_str().c_str());
 
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
