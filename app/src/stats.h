@@ -47,9 +47,13 @@ public:
 		uint32_t  large_stack;
 	} data;
 
+	uint32_t win[2], draw;
+
 	chess_stats();
 	virtual ~chess_stats();
 
 	void reset();
 	void add(const chess_stats & in);
+
+	void reset_wdl();
 };

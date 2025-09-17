@@ -188,10 +188,12 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))  {
 		if (sp.pos.in_check()) {
 			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.win[!sp.pos.side_to_move()]++;
 				sp.cs.data.n_checkmate++;
 				return -max_eval + qsdepth;
 			}
 		}
+		sp.cs.draw++;
 		return 0;
 	}
 
@@ -305,6 +307,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (in_check) {
 			sp.cs.data.n_checkmate++;
 			best_score = -max_eval + qsdepth;
+			sp.cs.win[!sp.pos.side_to_move()]++;
 		}
 		else if (best_score == -32767) {
 			best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
@@ -365,10 +368,12 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (!is_root_position && (sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))) {
 		if (sp.pos.in_check()) {
 			if (sp.pos.legal_move_list().empty()) {
+				sp.cs.win[!sp.pos.side_to_move()]++;
 				sp.cs.data.n_checkmate++;
 				return -max_eval + csd;
 			}
 		}
+		sp.cs.draw++;
 		sp.cs.data.n_draws++;
 		return 0;
 	}
@@ -588,9 +593,11 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (n_played == 0) {
 		if (in_check) {
 			sp.cs.data.n_checkmate++;
+			sp.cs.win[!sp.pos.side_to_move()]++;
 			best_score = -max_eval + csd;
 		}
 		else {
+			sp.cs.draw++;
 			sp.cs.data.n_stalemate++;
 			best_score = 0;
 		}
