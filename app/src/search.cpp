@@ -184,6 +184,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		return nnue_evaluate(sp.nnue_eval, sp.pos);
 
 	sp.cs.data.qnodes++;
+	sp.md = std::max(sp.md, uint16_t(qsdepth));
 
 	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))  {
 		if (sp.pos.in_check()) {
@@ -747,9 +748,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 		uint64_t previous_node_count = 0;
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
-#if defined(ESP32)
 			sp->md = 0;
-#endif
 			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
