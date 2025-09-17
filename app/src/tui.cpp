@@ -572,7 +572,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	if (cs.data.nmc_nodes)
 		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
-                my_printf("Avg.qs c/o    : %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+                my_printf("Avg. qs cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
 	if (verbose) {
 #if defined(ESP32)
 		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
