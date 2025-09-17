@@ -1230,12 +1230,12 @@ void tui()
 			if (player.has_value()) {
 				show_header(t);
 				if (t == T_ASCII) {
-					my_printf("Human think time used: %.3f seconds\n", total_human_think / 1000000.);
-					my_printf("Dog think time left: %.3f seconds\n", total_dog_time / 1000.);
+					my_printf("Human time used: %.3f seconds\n", total_human_think / 1000000.);
+					my_printf("Dog time left: %.3f seconds\n", total_dog_time / 1000.);
 					if (human_score_n)
-						my_printf("Average score gain human: %.2f\n", human_score_sum * 100. / human_score_n);
+						my_printf("Average score gain human: %.2f\n", human_score_sum / (100. * human_score_n));
 					if (dog_score_n)
-						my_printf("Average score gain dog: %.2f\n", dog_score_sum * 100. / dog_score_n);
+						my_printf("Average score gain dog: %.2f\n", dog_score_sum / (100. * dog_score_n));
 				}
 				else {
 					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
@@ -1253,9 +1253,9 @@ void tui()
 					if (human_score_n || dog_score_n) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
-							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / 100. / human_score_n);
+							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / (100. * human_score_n));
 						if (dog_score_n)
-							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / 100. / dog_score_n);
+							my_printf("\x1b[10;69Hdog   %6.2f", dog_score_sum / (100. * dog_score_n));
 					}
 					my_printf("\x1b[2;1H");
 				}
