@@ -54,6 +54,17 @@ dog_clock_t      clock_type = C_TOTAL;
 std::string      wifi_ssid;
 std::string      wifi_psk;
 std::atomic_bool search_aborted { false };
+terminal_t       t                  = T_ASCII;
+bool             default_trace      = false;
+int32_t          initial_think_time = 1000;
+bool             do_ponder          = false;
+bool             verbose            = false;
+
+void ring_bell()
+{
+	if (do_ping)
+		my_printf("\07");  // bell
+}
 
 #if defined(ESP32)
 #define WIFI_CONNECTED_BIT BIT0
@@ -437,8 +448,13 @@ void display(const libchess::Position & p, const terminal_t t, const std::option
 	if (p.game_state() != libchess::Position::GameState::IN_PROGRESS)
 		my_printf("Game is finished\n");
 	else {
-		my_printf("Move number: %d, color: %s, half moves: %d, repetition count: %d\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count());
-		my_printf("%s\n", p.fen().c_str());
+		if (verbose) {
+			my_printf("Move: %d, color: %s, half moves: %d, repetitions: %d, TT: %d (per mille)\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black", p.halfmoves(), p.repeat_count(), tti.get_per_mille_filled());
+			my_printf("%s\n", p.fen().c_str());
+		}
+		else {
+			my_printf("Move: %d, %s\n", p.fullmoves(), p.side_to_move() == libchess::constants::WHITE ? "white":"black");
+		}
 	}
 }
 
@@ -517,12 +533,15 @@ void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const t
 				my_printf("\n"), nr = 0;
 			my_printf(" ");
 
+			int cur_score = get_score(work, move, start_color);
 			make_move(&e, work, move);
-			auto cur_color = work.side_to_move();
-			int  cur_score = nnue_evaluate(&e, start_color);
 
-			if ((start_color == cur_color && cur_score < start_score) || (start_color != cur_color && cur_score > start_score))
-				my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
+			if (cur_score < start_score) {
+				if (t == T_ANSI)
+					my_printf("\x1b[40;31m%s\x1b[m", move.to_str().c_str());
+				else
+					my_printf("%s", move.to_str().c_str());
+			}
 			else if (start_score == cur_score)
 				my_printf("%s", move.to_str().c_str());
 			else {
@@ -531,10 +550,7 @@ void emit_pv(libchess::Position & pos, const libchess::Move & best_move, const t
 				else
 					my_printf("\x1b[1m%s\x1b[m", move.to_str().c_str());
 			}
-			if (work.side_to_move() != start_color)
-				my_printf(" [%.2f] ", -cur_score / 100.);
-			else
-				my_printf(" [%.2f] ", cur_score / 100.);
+			my_printf(" [%.2f] ", cur_score / 100.);
 		}
 	}
 	else {
@@ -716,26 +732,54 @@ void abort_search_signal(int sig)
 }
 #endif
 
+constexpr const int KEY_UP    = -10;
+constexpr const int KEY_DOWN  = -11;
+constexpr const int KEY_LEFT  = -12;
+constexpr const int KEY_RIGHT = -13;
+
 int wait_for_key()
 {
-#if defined(ESP32)
+	enum { WFK_PLAIN, WFK_ESC, WFK_BRACKET } state = WFK_PLAIN;
+
 	for(;;) {
+#if defined(ESP32)
+		int    c      = 0;
 		size_t length = 0;
 		ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &length));
-		if (length) {
-			char buffer = 0;
-			if (uart_read_bytes(uart_num, &buffer, 1, 100)) {
-				if (buffer == 13)
-					return 10;
-				return buffer;
-			}
+		if (length == 0) {
+			vTaskDelay(1);
+			continue;
 		}
 
-		vTaskDelay(1);
-	}
+		char buffer = 0;
+		if (uart_read_bytes(uart_num, &buffer, 1, 100))
+			c =  buffer;
 #else
-	return getchar();
+		int c = getchar();
 #endif
+
+		if (state == WFK_PLAIN) {
+			if (c != 27)
+				return c;
+			state = WFK_ESC;
+		}
+		else if (state == WFK_ESC) {
+			if (c != '[' && c != '0')
+				return c;
+			state = WFK_BRACKET;
+		}
+		else if (state == WFK_BRACKET) {
+			if (c == 'A')
+				return KEY_UP;
+			if (c == 'B')
+				return KEY_DOWN;
+			if (c == 'C')
+				return KEY_RIGHT;
+			if (c == 'D')
+				return KEY_LEFT;
+			return c;
+		}
+	}
 }
 
 void press_any_key()
@@ -779,11 +823,6 @@ void show_header(const terminal_t t)
 	my_printf("\x1b[m\x1b[2;1H");
 }
 
-terminal_t t                  = T_ASCII;
-bool       default_trace      = false;
-int32_t    initial_think_time = 1000;
-bool       do_ponder          = false;
-
 std::optional<std::string> get_cfg_dir()
 {
 	const char *home = std::getenv("HOME");
@@ -824,6 +863,7 @@ void write_settings()
 	fprintf(fh, "%d\n",  do_ping);
 	fprintf(fh, "%s\n",  wifi_ssid.c_str());
 	fprintf(fh, "%s\n",  wifi_psk .c_str());
+	fprintf(fh, "%d\n",  verbose);
 
 	fclose(fh);
 }
@@ -864,6 +904,8 @@ void load_settings()
 	if (lf)
 		*lf = 0x00;
 	wifi_psk       = buffer;
+	fgets(buffer, sizeof buffer, fh);
+	verbose        = atoi(buffer);
 
 	fclose(fh);
 }
@@ -890,6 +932,7 @@ static void help()
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
+	my_printf("verbose  on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
 	my_printf("ping     beep on/off\n");
 	my_printf("redraw   redraw screen\n");
@@ -904,16 +947,23 @@ static void help()
 	my_printf("The score behind a move in the move-list is the absolute score.\n");
 }
 
+std::vector<std::string> history;
+constexpr const int max_history    = 10;
+constexpr const int terminal_width = 80;
+constexpr const char *const prompt = "> ";
+
 std::string my_getline()
 {
 	set_led(127, 127, 127);
 
-	my_printf("> ");
+	my_printf(prompt);
 
+	std::string temp;
 	std::string out;
+	size_t cursor = history.size();
 
 	for(;;) {
-		char c = wait_for_key();
+		int c = wait_for_key();
 		if (c == 13 || c == 10) {
 			if (out.empty() == false) {
 				my_printf("\n");
@@ -925,12 +975,68 @@ std::string my_getline()
 				my_printf("\x08 \x08");
 				out = out.substr(0, out.size() - 1);
 			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == 21) {
+			out.clear();
+			my_printf("\x1b[2K\r%s", prompt);
 		}
 		else if (c >= 32 && c < 127) {
-			my_printf("%c", c);
-			out += c;
+			if (out.size() < terminal_width - (strlen(prompt) + 1)) {  // prompt & prevent line wrap
+				my_printf("%c", c);
+				out += c;
+			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == KEY_UP) {
+			if (cursor) {
+				if (temp.empty())
+					temp = out;
+				size_t h_size = history.size();
+				cursor--;
+				if (cursor == h_size) {
+					out = temp;
+					temp.clear();
+				}
+				else {
+					out = history[cursor];
+				}
+				my_printf("\x1b[2K\r%s%s", prompt, out.c_str());
+			}
+			else {
+				ring_bell();
+			}
+		}
+		else if (c == KEY_DOWN) {
+			size_t h_size = history.size();
+			if (cursor <= h_size) {
+				cursor++;
+				if (cursor == h_size + 1) {
+					temp = out;
+					out.clear();
+				}
+				else if (cursor == h_size) {
+					out = temp;
+					temp.clear();
+				}
+				else {
+					out = history.at(cursor);
+				}
+				my_printf("\x1b[2K\r%s%s", prompt, out.c_str());
+			}
+			else {
+				ring_bell();
+			}
 		}
 	}
+
+	while(history.size() >= max_history)
+		history.erase(history.begin());
+	history.push_back(out);
 
 	return out;
 }
@@ -1502,6 +1608,13 @@ void tui()
 				}
 				my_printf("Tracing is %senabled\n", trace_enabled ? "":"not ");
 			}
+			else if (parts[0] == "verbose" || parts[0] == "debug") {
+				if (parts.size() == 2) {
+					verbose = is_on(parts[1]);
+					write_settings();
+				}
+				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
+			}
 			else if (parts[0] == "ping") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
@@ -1580,7 +1693,7 @@ void tui()
 			else if (parts[0] == "hint")
 				tt_lookup();
 			else if (parts[0] == "book") {
-				auto move = pb->query(sp.at(0)->pos);
+				auto move = pb->query(sp.at(0)->pos, verbose);
 				if (move.has_value())
 					my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
 				else
@@ -1646,7 +1759,7 @@ void tui()
 			auto    now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
 
-			auto move = pb->query(sp.at(0)->pos);
+			auto move = pb->query(sp.at(0)->pos, verbose);
 			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				my_printf("Book move: %s\n", move.value().to_str().c_str());
@@ -1714,8 +1827,7 @@ void tui()
 			dog_score_sum += score_after - score_before;
 			dog_score_n++;
 
-			if (do_ping)
-				my_printf("\07");  // bell
+			ring_bell();
 
 			p_a_k      = true;
 			show_board = true;
