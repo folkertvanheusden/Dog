@@ -628,7 +628,6 @@ void uci_hello() {
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
-	printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
 	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
 }
@@ -1350,13 +1349,18 @@ void init_flash_filesystem()
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
 	if (ret != ESP_OK) {
 		if (ret == ESP_FAIL)
-			my_printf("Failed to mount or format filesystem\n");
+			printf("Failed to mount or format filesystem\n");
 		else if (ret == ESP_ERR_NOT_FOUND)
-			my_printf("Failed to find SPIFFS partition\n");
+			printf("Failed to find SPIFFS partition\n");
 		else
-			my_printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
-		my_printf("Did you run \"pio run -t uploadfs\"?\n");
+			printf("Failed to initialize SPIFFS (%s)\n", esp_err_to_name(ret));
+		printf("Did you run \"pio run -t uploadfs\"?\n");
 	}
+
+	size_t total_spiffs_size = 0;
+	size_t used_bytes        = 0;
+	ESP_ERROR_CHECK(esp_spiffs_info(nullptr, &total_spiffs_size, &used_bytes));
+	printf("SPIFFS size: %zu, free: %zu\n", total_spiffs_size, total_spiffs_size - used_bytes);
 }
 
 void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name)

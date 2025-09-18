@@ -1034,7 +1034,6 @@ void tui_hello()
 	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
-	my_printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
 	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 }
 
