@@ -1724,13 +1724,15 @@ void tui()
 			}
 		}
 		else {
+			uint64_t start_search = esp_timer_get_time();
+
 			set_led(0, 255, 0);
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[15;24r\x1b[15;1H");
 
-			auto    now_playing  = sp.at(0)->pos.side_to_move();
-			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
+			auto     now_playing  = sp.at(0)->pos.side_to_move();
+			int16_t  score_before = get_score(sp.at(0)->pos, now_playing);
 
 			auto move = pb->query(sp.at(0)->pos, verbose);
 			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
@@ -1743,9 +1745,6 @@ void tui()
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
-
-				if (clock_type == C_TOTAL)
-					total_dog_time -= 1;  // 1 millisecond
 			}
 			else {
 				if (total_dog_time <= 0)
@@ -1771,7 +1770,6 @@ void tui()
 
 				auto           color        = sp.at(0)->pos.side_to_move();
 				sp.at(0)->cs.reset_wdl();
-				uint64_t       start_search = esp_timer_get_time();
 				chess_stats    cs_before    = calculate_search_statistics();
 				uint64_t       nodes_searched_start_aprox = cs_before.data.nodes + cs_before.data.qnodes;
 				libchess::Move best_move;
@@ -1823,6 +1821,9 @@ void tui()
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
+
+			uint64_t all_processing_end_search = esp_timer_get_time();
+			total_dog_time -= std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 		}
 	}
 
