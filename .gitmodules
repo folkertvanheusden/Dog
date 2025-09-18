@@ -4,6 +4,6 @@
 [submodule "app/src/fathom"]
 	path = app/src/fathom
 	url = https://github.com/jdart1/Fathom
-[submodule "app/book/chess-openings"]
-	path = app/book/chess-openings
-	url = https://github.com/lichess-org/chess-openings.git
+[submodule "app/Dog-book"]
+	path = app/Dog-book
+	url = https://github.com/folkertvanheusden/Dog-book

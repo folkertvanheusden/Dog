@@ -564,7 +564,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	my_printf("TT cut-off    : %s (search), %s (qs)\n",
 			perc(cs.data.tt_query,  cs.data.tt_cutoff ).c_str(),
 			perc(cs.data.qtt_query, cs.data.qtt_cutoff).c_str());
-	my_printf("Null moves    : %u\n", cs.data.n_null_move_hit);
+	my_printf("Null moves    : %s (hits)\n", perc(cs.data.n_null_move, cs.data.n_null_move_hit).c_str());
 	my_printf("LMR           : %u (total), %s (hits)\n",
 			cs.data.n_lmr, perc(cs.data.n_lmr, cs.data.n_lmr_hit).c_str());
 	my_printf("Static eval   : %u (total), %s (hits)\n",
@@ -572,7 +572,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	if (cs.data.nmc_nodes)
 		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
-                my_printf("Avg.qs c/o    : %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
+                my_printf("Avg. qs cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
 	if (verbose) {
 #if defined(ESP32)
 		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
@@ -881,13 +881,14 @@ static void help()
 	my_printf("submit   send current PGN to server, result is shown\n");
 	my_printf("book     check for a move in the book\n");
 	my_printf("hint     show a hint\n");
+	my_printf("switch   switch color\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
 	my_printf("ponder   on/off\n");
 	my_printf("trace    on/off\n");
 	my_printf("verbose  on/off\n");
 	my_printf("terminal \"ansi\", \"vt100\" or \"text\"\n");
-	my_printf("ping     beep on/off\n");
+	my_printf("bell     beep on/off\n");
 	my_printf("redraw   redraw screen\n");
 	my_printf("stats    show statistics\n");
 	my_printf("cstats   reset statistics\n");
@@ -1033,7 +1034,6 @@ void tui_hello()
 	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
-	my_printf("# GIT revision book    : " GIT_REV_BOOK   "\n\n");
 	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 }
 
@@ -1080,8 +1080,6 @@ void tui()
 	int32_t     dog_score_sum       = 0;
 	int         dog_score_n         = 0;
 	int         expected_move_count = 0;
-	double      match_percentage    = 0.;
-	int         n_match_percentage  = 0;
 	int         game_took           = 0;
 
 #if defined(ESP32)
@@ -1111,8 +1109,6 @@ void tui()
 		dog_score_n         = 0;
 		expected_move_count = 0;
 		player              = libchess::constants::WHITE;
-		match_percentage    = 0.;
-		n_match_percentage  = 0;
 		game_took           = 0;
 
 		for(auto & e: sp) {
@@ -1203,7 +1199,7 @@ void tui()
 							total_dog_time / (60 * ms),
 							(total_dog_time / ms) % 60,
 							total_dog_time % 1000);
-					if (human_score_n || dog_score_n) {
+					if (verbose && (human_score_n || dog_score_n)) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
 							my_printf("\x1b[9;69Hhuman %6.2f", human_score_sum / (100. * human_score_n));
@@ -1214,45 +1210,62 @@ void tui()
 				}
 			}
 
+			bool in_check = sp.at(0)->pos.in_check();
+
 			if (t != T_ASCII) {
+				bool    speech_cloud = in_check && sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS;
+				int     x            = speech_cloud ? 63 : 69;
+				int16_t score_Dog    = -1;
+				if (player.has_value())
+					score_Dog = get_score(sp.at(0)->pos, !player.value());
+
 				store_cursor_position();
-				my_printf("\x1b[15;69H / \\__");
-				my_printf("\x1b[16;69H(    @\\____");
-				my_printf("\x1b[17;69H /         O");
-				my_printf("\x1b[18;69H/   (_____/");
-				my_printf("\x1b[19;69H/_____/   U");
+				if (speech_cloud) {
+					my_printf("\x1b[14;%dH\x1b[4;1mCHECK\x1b[m!", x + 11);
+					my_printf("\x1b[15;%dH\x1b[2m/\x1b[m", x + 10);
+				}
+
+				my_printf("\x1b[15;%dH / \\__", x);
+
+				if (score_Dog >= max_non_mate && moves_played.empty() == false)
+					my_printf("\x1b[16;%dH(    \x1b[1m@\x1b[m\\____", x);
+				else
+					my_printf("\x1b[16;%dH(    @\\____", x);
+
+				if (score_Dog > 0 && moves_played.empty() == false)
+					my_printf("\x1b[17;%dH /         \x1b[1mO\x1b[m", x);
+				else
+					my_printf("\x1b[17;%dH /         O", x);
+
+				my_printf("\x1b[18;%dH/   (_____/", x);
+				my_printf("\x1b[19;%dH/_____/   U", x);
 				restore_cursor_position();
 			}
 
 			show_board = false;
 			display(sp.at(0)->pos, t, moves_played, scores);
 
-			if (expected_move_count > 1) {
-				my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
-				if (n_match_percentage > 1)
-					my_printf("You match for %.2f%% with Dog\n", match_percentage / n_match_percentage);
+			std::string result;
+			switch(sp.at(0)->pos.game_state()) {
+				case libchess::Position::GameState::CHECKMATE:
+					result = "CHECKMATE";
+					break;
+				case libchess::Position::GameState::STALEMATE:
+					result = "STALEMATE";
+					break;
+				case libchess::Position::GameState::THREEFOLD_REPETITION:
+					result = "THREEFOLD REPETITION";
+					break;
+				case libchess::Position::GameState::FIFTY_MOVES:
+					result = "FIFTY MOVES";
+					break;
+				case libchess::Position::GameState::IN_PROGRESS:
+					break;
+				default:
+					result = "(unknown game state)";
+					break;
 			}
-			if (sp.at(0)->pos.in_check()) {
-				std::string result = "CHECK";
-				switch(sp.at(0)->pos.game_state()) {
-					case libchess::Position::GameState::CHECKMATE:
-						result = "CHECKMATE";
-						break;
-					case libchess::Position::GameState::STALEMATE:
-						result = "STALEMATE";
-						break;
-					case libchess::Position::GameState::THREEFOLD_REPETITION:
-						result = "THREEFOLD REPETITION";
-						break;
-					case libchess::Position::GameState::FIFTY_MOVES:
-						result = "FIFTY MOVES";
-						break;
-					case libchess::Position::GameState::IN_PROGRESS:
-						break;
-					default:
-						result = "(unknown game state)";
-						break;
-				}
+			if (result.empty() == false) {
 				if (t != T_ASCII)
 					my_printf("\x1b[4m%s\x1b[m!\n", result.c_str());
 				else
@@ -1282,7 +1295,7 @@ void tui()
 				sp.at(0)->pos = libchess::Position(fen);
 			}
 
-			if (do_ponder && !finished) {
+			if (do_ponder && !finished && verbose) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 				my_printf("While you were thinking, Dog considered %" PRIu64 " positions.\n", end_position_count - start_position_count);
 			}
@@ -1570,7 +1583,7 @@ void tui()
 				}
 				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
 			}
-			else if (parts[0] == "ping") {
+			else if (parts[0] == "ping" || parts[0] == "bell") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
 					write_settings();
@@ -1603,6 +1616,12 @@ void tui()
 					write_settings();
 				}
 				my_printf("Pondering is %senabled\n", do_ponder ? "":"not ");
+			}
+			else if (parts[0] == "switch") {
+				if (player.has_value())
+					player = !player.value();
+				else
+					player = !sp.at(0)->pos.side_to_move();
 			}
 			else if (parts[0] == "undo") {
 				if (moves_played.empty())
@@ -1663,11 +1682,7 @@ void tui()
 				if (move.has_value() == false)
 					move = SAN_to_move(parts[0], sp.at(0)->pos);
 				if (move.has_value() == true) {
-					auto cm_rc = compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
-					if (cm_rc.has_value()) {
-						match_percentage   += cm_rc.value();
-						n_match_percentage++;
-					}
+					compare_moves(sp.at(0)->pos, move.value(), &expected_move_count);
 
 					auto    now_playing  = sp.at(0)->pos.side_to_move();
 					int16_t score_Dog    = get_score(sp.at(0)->pos, !now_playing);
@@ -1694,6 +1709,9 @@ void tui()
 
 					store_position(sp.at(0)->pos.fen(), total_dog_time);
 
+					if (expected_move_count >= 2)
+						my_printf("%d of the move(s) you played were expected.\n", expected_move_count);
+
 					show_board = true;
 					p_a_k      = true;
 				}
@@ -1706,25 +1724,27 @@ void tui()
 			}
 		}
 		else {
+			uint64_t start_search = esp_timer_get_time();
+
 			set_led(0, 255, 0);
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[15;24r\x1b[15;1H");
 
-			auto    now_playing  = sp.at(0)->pos.side_to_move();
-			int16_t score_before = get_score(sp.at(0)->pos, now_playing);
+			auto     now_playing  = sp.at(0)->pos.side_to_move();
+			int16_t  score_before = get_score(sp.at(0)->pos, now_playing);
 
 			auto move = pb->query(sp.at(0)->pos, verbose);
 			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
-				my_printf("Book move: %s\n", move.value().to_str().c_str());
+				if (t == T_ASCII)
+					my_printf("Book move: %s\n", move.value().to_str().c_str());
+				else
+					my_printf("Book move: \x1b[1m%s\x1b[m\n", move.value().to_str().c_str());
 
 				moves_played.push_back({ move_to_san(sp.at(0)->pos, move.value()), "(book)" });
 				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, move.value());
 				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
-
-				if (clock_type == C_TOTAL)
-					total_dog_time -= 1;  // 1 millisecond
 			}
 			else {
 				if (total_dog_time <= 0)
@@ -1750,7 +1770,6 @@ void tui()
 
 				auto           color        = sp.at(0)->pos.side_to_move();
 				sp.at(0)->cs.reset_wdl();
-				uint64_t       start_search = esp_timer_get_time();
 				chess_stats    cs_before    = calculate_search_statistics();
 				uint64_t       nodes_searched_start_aprox = cs_before.data.nodes + cs_before.data.qnodes;
 				libchess::Move best_move;
@@ -1802,6 +1821,9 @@ void tui()
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
+
+			uint64_t all_processing_end_search = esp_timer_get_time();
+			total_dog_time -= std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 		}
 	}
 

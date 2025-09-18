@@ -523,13 +523,13 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
                 int  score  = -max_eval;
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
-                if (n_played == 0)
-                        score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
-                else {
-                        int new_depth = depth - 1;
+		if (n_played == 0)
+			score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+		else {
+			int new_depth = depth - 1;
 
-                        if (n_played >= lmr_start && !sp.pos.is_capture_move(move) && !sp.pos.is_promotion_move(move)) {
-                                is_lmr = true;
+			if (n_played >= lmr_start && !sp.pos.is_capture_move(move) && !sp.pos.is_promotion_move(move)) {
+				is_lmr = true;
 				sp.cs.data.n_lmr++;
 
 				if (alpha == beta -1) {
@@ -543,14 +543,14 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 				}
 			}
 
-                        score = -search(new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
+			score = -search(new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
 
-                        if (is_lmr && score > alpha)
-                                score = -search(depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
+			if (is_lmr && score > alpha)
+				score = -search(depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
 
-                        if (score > alpha && score < beta)
-                                score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
-                }
+			if (score > alpha && score < beta)
+				score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+		}
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
 		n_played++;
