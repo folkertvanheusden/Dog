@@ -59,6 +59,7 @@ bool             default_trace      = false;
 int32_t          initial_think_time = 1000;
 bool             do_ponder          = false;
 bool             verbose            = false;
+bool             use_book           = false;
 
 void ring_bell()
 {
@@ -815,6 +816,7 @@ void write_settings()
 	fprintf(fh, "%s\n",  wifi_ssid.c_str());
 	fprintf(fh, "%s\n",  wifi_psk .c_str());
 	fprintf(fh, "%d\n",  verbose);
+	fprintf(fh, "%d\n",  use_book);
 
 	fclose(fh);
 }
@@ -857,6 +859,8 @@ void load_settings()
 	wifi_psk       = buffer;
 	fgets(buffer, sizeof buffer, fh);
 	verbose        = atoi(buffer);
+	fgets(buffer, sizeof buffer, fh);
+	use_book       = atoi(buffer);
 
 	fclose(fh);
 }
@@ -879,7 +883,7 @@ static void help()
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
 	my_printf("submit   send current PGN to server, result is shown\n");
-	my_printf("book     check for a move in the book\n");
+	my_printf("book     check for a move in the book or disable/enable\n");
 	my_printf("hint     show a hint\n");
 	my_printf("switch   switch color\n");
 	my_printf("undo     take back last move\n");
@@ -1667,11 +1671,18 @@ void tui()
 			else if (parts[0] == "hint")
 				tt_lookup();
 			else if (parts[0] == "book") {
-				auto move = pb->query(sp.at(0)->pos, verbose);
-				if (move.has_value())
-					my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
-				else
-					my_printf("Book has no entry/entries for this position\n");
+				if (parts.size() == 2) {
+					use_book = is_on(parts[1]);
+					write_settings();
+					my_printf("Book is %senabled\n", use_book ? "":"not ");
+				}
+				else {
+					auto move = pb->query(sp.at(0)->pos, verbose);
+					if (move.has_value())
+						my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
+					else
+						my_printf("Book has no entry/entries for this position\n");
+				}
 			}
 			else if (parts[0] == "dog")
 				print_max_ascii();
@@ -1734,8 +1745,11 @@ void tui()
 			auto     now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t  score_before = get_score(sp.at(0)->pos, now_playing);
 
-			auto move = pb->query(sp.at(0)->pos, verbose);
-			assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
+			std::optional<libchess::Move> move;
+			if (use_book) {
+				move = pb->query(sp.at(0)->pos, verbose);
+				assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
+			}
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
 				if (t == T_ASCII)
 					my_printf("Book move: %s\n", move.value().to_str().c_str());
