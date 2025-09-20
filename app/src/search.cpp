@@ -4,6 +4,7 @@
 #endif
 #include <cinttypes>
 #include <cmath>
+#include <set>
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
@@ -706,7 +707,7 @@ void emit_result(libchess::Position & pos, const libchess::Move & best_move, con
 #endif
 }
 
-std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
+std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -715,14 +716,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 #endif
 
 	if (sp->thread_nr == 0) {
-		if (search_time > 0) {
+		if (search_time_max > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-			think_timeout_timer = new std::thread([search_time, sp] {
+			think_timeout_timer = new std::thread([search_time_min, search_time_max, sp] {
 					set_thread_name("searchtotimer");
-					timer(search_time, sp->stop);
+					timer(search_time_max, sp->stop);
 				});
 #else
-			esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
+			esp_timer_start_once(think_timeout_timer, search_time_max * 1000ll);
 #endif
 		}
 	}
@@ -746,6 +747,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 
 		std::vector<uint64_t> node_counts;
 		uint64_t previous_node_count = 0;
+
+		std::set<std::string> itd_moves;  // iterative deepening moves
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			sp->md = 0;
@@ -822,6 +825,10 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 
 				if (sp->thread_nr == 0 && output)
 					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
+
+				itd_moves.insert(best_move.to_str());
+
+				int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
 
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
 				    (thought_ms >= search_time && is_absolute_time == true)) {
