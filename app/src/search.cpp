@@ -707,7 +707,7 @@ void emit_result(libchess::Position & pos, const libchess::Move & best_move, con
 #endif
 }
 
-std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
+std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -716,14 +716,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 #endif
 
 	if (sp->thread_nr == 0) {
-		if (search_time > 0) {
+		if (search_time_max > 0) {
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-			think_timeout_timer = new std::thread([search_time, sp] {
+			think_timeout_timer = new std::thread([search_time_min, search_time_max, sp] {
 					set_thread_name("searchtotimer");
-					timer(search_time, sp->stop);
+					timer(search_time_max, sp->stop);
 				});
 #else
-			esp_timer_start_once(think_timeout_timer, search_time * 1000ll);
+			esp_timer_start_once(think_timeout_timer, search_time_max * 1000ll);
 #endif
 		}
 	}
@@ -826,6 +826,10 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 				if (sp->thread_nr == 0 && output)
 					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
 
+				itd_moves.insert(best_move.to_str());
+
+				int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
+
 				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
 				    (thought_ms >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
@@ -847,14 +851,11 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 					break;
 				}
 
-				itd_moves.insert(best_move.to_str());
 				sp->best_moves[max_depth] = best_move;
 
 				max_depth++;
 			}
 		}
-
-		fprintf(stderr, "%f %zu %d\n", itd_moves.size() / double(max_depth), itd_moves.size(), max_depth);
 	}
 	else {
 #if !defined(__ANDROID__)

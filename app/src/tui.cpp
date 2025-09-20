@@ -1764,23 +1764,23 @@ void tui()
 				if (total_dog_time <= 0)
 					my_printf("The flag fell for Dog, you won!\n");
 
-				int32_t cur_think_time = 0;
+				int32_t cur_think_time_min = 0;
+				int32_t cur_think_time_max = 0;
 				if (clock_type == C_INCREMENTAL)
-					cur_think_time = total_dog_time;
+					cur_think_time_max = cur_think_time_min = total_dog_time;
 				else {
 					const int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
 					const int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
 
-	                                cur_think_time  = total_dog_time / (cur_n_moves + 7);
+	                                cur_think_time_min = total_dog_time / (cur_n_moves + 7);
 
 					const int limit_duration_min = total_dog_time / 15;
-					if (cur_think_time > limit_duration_min)
-						cur_think_time = limit_duration_min;
-
-					total_dog_time -= cur_think_time;
+					if (cur_think_time_min > limit_duration_min)
+						cur_think_time_min = limit_duration_min;
+					cur_think_time_max = cur_think_time_min;  // FIXME
 				}
 
-				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
+				my_printf("Thinking... (%.3f...%.3f seconds)\n", cur_think_time_min / 1000., cur_think_time_max / 1000.);
 
 				auto           color        = sp.at(0)->pos.side_to_move();
 				sp.at(0)->cs.reset_wdl();
@@ -1790,7 +1790,7 @@ void tui()
 				int            best_score { 0 };
 				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time, true, sp.at(0), -1, { }, true);
+				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time_min, cur_think_time_max /* FIXME */, true, sp.at(0), -1, { }, true);
 				chess_stats cs_after     = calculate_search_statistics();
 				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
 				uint64_t     end_search  = esp_timer_get_time();
