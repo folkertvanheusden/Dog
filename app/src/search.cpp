@@ -4,6 +4,7 @@
 #endif
 #include <cinttypes>
 #include <cmath>
+#include <set>
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
@@ -747,6 +748,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 		std::vector<uint64_t> node_counts;
 		uint64_t previous_node_count = 0;
 
+		std::set<std::string> itd_moves;  // iterative deepening moves
+
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			sp->md = 0;
 			if (max_depth >= 4)
@@ -844,11 +847,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time, const bool
 					break;
 				}
 
+				itd_moves.insert(best_move.to_str());
 				sp->best_moves[max_depth] = best_move;
 
 				max_depth++;
 			}
 		}
+
+		fprintf(stderr, "%f %zu %d\n", itd_moves.size() / double(max_depth), itd_moves.size(), max_depth);
 	}
 	else {
 #if !defined(__ANDROID__)
