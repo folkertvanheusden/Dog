@@ -1776,8 +1776,6 @@ void tui()
 					const int limit_duration_min = total_dog_time / 15;
 					if (cur_think_time > limit_duration_min)
 						cur_think_time = limit_duration_min;
-
-					total_dog_time -= cur_think_time;
 				}
 
 				my_printf("Thinking... (%.3f seconds)\n", cur_think_time / 1000.);
