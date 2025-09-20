@@ -1839,14 +1839,14 @@ void tui()
 
 			set_led(0, 0, 255);
 
-			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
-				my_printf("\x1b[1;24r\n\x1b[24;1H");
-
 			uint64_t all_processing_end_search = esp_timer_get_time();
 			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 			total_dog_time -= time_used;
 			if (verbose)
 				my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
+
+			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
+				my_printf("\x1b[1;24r\n\x1b[24;1H");
 		}
 	}
 
