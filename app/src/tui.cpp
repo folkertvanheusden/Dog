@@ -1773,14 +1773,20 @@ void tui()
 					const int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
 
 	                                cur_think_time_min = total_dog_time / (cur_n_moves + 7);
+	                                cur_think_time_max = total_dog_time / cur_n_moves;
 
-					const int limit_duration_min = total_dog_time / 15;
+					int limit_duration_min = total_dog_time / 15;
 					if (cur_think_time_min > limit_duration_min)
 						cur_think_time_min = limit_duration_min;
-					cur_think_time_max = cur_think_time_min;  // FIXME
+					int limit_duration_max = total_dog_time / 10;
+					if (cur_think_time_max > limit_duration_max)
+						cur_think_time_max = limit_duration_max;
 				}
 
-				my_printf("Thinking... (%.3f...%.3f seconds)\n", cur_think_time_min / 1000., cur_think_time_max / 1000.);
+				if (verbose)
+					my_printf("Thinking... (%.3f...%.3f seconds)\n", cur_think_time_min / 1000., cur_think_time_max / 1000.);
+				else
+					my_printf("Thinking... (%.3f seconds)\n", cur_think_time_max / 1000.);
 
 				auto           color        = sp.at(0)->pos.side_to_move();
 				sp.at(0)->cs.reset_wdl();
@@ -1790,7 +1796,7 @@ void tui()
 				int            best_score { 0 };
 				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time_min, cur_think_time_max /* FIXME */, true, sp.at(0), -1, { }, true);
+				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time_min, cur_think_time_max, true, sp.at(0), -1, { }, true);
 				chess_stats cs_after     = calculate_search_statistics();
 				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
 				uint64_t     end_search  = esp_timer_get_time();
@@ -1837,7 +1843,10 @@ void tui()
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
 
 			uint64_t all_processing_end_search = esp_timer_get_time();
-			total_dog_time -= std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
+			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
+			total_dog_time -= time_used;
+			if (verbose)
+				my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
 		}
 	}
 
