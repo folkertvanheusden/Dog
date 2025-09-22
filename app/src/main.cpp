@@ -615,10 +615,10 @@ void uci_hello() {
 	printf("# Version              : " DOG_VERSION "\n");
 	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
 	printf("# Build with           : ");
-#if __GNUC__
-	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-#elif __clang__
+#if __clang__
 	printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#elif __GNUC__
+	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
 	printf("???\n");
 #endif
