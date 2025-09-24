@@ -53,7 +53,7 @@ while True:
     nm_counts[cb] += 1
     n_games += 1
 
-fhs = open('tijd-test1.sh', 'w')
+fhs = open('tijd-test-plot1.sh', 'w')
 fhs.write('/usr/bin/gnuplot << EOF > output.png\n')
 fhs.write('set term png size 1920,1080\n')
 fhs.write('set autoscale\n')
@@ -63,9 +63,20 @@ fhs.write('set grid\n')
 fhs.write('set xlabel "move nr"\n')
 fhs.write('set ylabel "avg time (seconds)"\n')
 
+fhs2 = open('tijd-test-plot2.sh', 'w')
+fhs2.write('/usr/bin/gnuplot << EOF > outputl.png\n')
+fhs2.write('set term png size 1920,1080\n')
+fhs2.write('set autoscale\n')
+fhs2.write(f'set title "latency"\n')
+fhs2.write('set boxwidth 0.4\n')
+fhs2.write('set grid\n')
+fhs2.write('set style data histograms\n')
+fhs2.write('set style fill solid 1.0 border -1\n')
+
 first = True
 for p in players:
     print(latencies[p])
+
     fname = p + '.dat'
     fhd = open(fname, 'w')
     nr = 1
@@ -73,11 +84,23 @@ for p in players:
         fhd.write(f'{nr} {pair[0] / pair[1] if pair[1] else 0}\n')
         nr += 1
     fhd.close()
+
+    fnamel = p + '-l.dat'
+    fhd = open(fnamel, 'w')
+    for k in latencies[p]:
+        fhd.write(f'{k} {latencies[p][k]}\n')
+    fhd.close()
+
     if first:
         first = False
         fhs.write(f'plot "{fname}" using 1:2 axes x1y1 with lines title "{p} ({nm_counts[p]} games)" \\\n')
+        fhs2.write(f'plot "{fnamel}" using 2:xtic(1) \\\n')
     else:
         fhs.write(f',    "{fname}" using 1:2 axes x1y1 with lines title "{p} ({nm_counts[p]} games)" \\\n')
+        fhs2.write(f',    "{fnamel}" using 2:xtic(1)\n')
 fhs.write('')
 fhs.write('EOF\n')
 fhs.close()
+fhs2.write('')
+fhs2.write('EOF\n')
+fhs2.close()
