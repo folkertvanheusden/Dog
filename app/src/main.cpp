@@ -826,21 +826,13 @@ void main_task()
 				is_absolute_time = true;
 			}
 			else {
-				int cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
 				int time_inc     = is_white ? w_inc  : b_inc;
 				int time_inc_opp = is_white ? b_inc  : w_inc;
 				int ms           = is_white ? w_time : b_time;
 				int ms_opponent  = is_white ? b_time : w_time;
 
-				think_time_max = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves);
-				think_time_min = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
-
-				int limit_duration_min = ms / 15;
-				if (think_time_min > limit_duration_min)
-					think_time_min = limit_duration_min;
-				int limit_duration_max = ms / 10;
-				if (think_time_max > limit_duration_max)
-					think_time_max = limit_duration_max;
+				think_time_max = ms / 10 + time_inc * 2 / 3;
+				think_time_min = ms / 20 + time_inc / 2;
 
 				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), moves_to_go, tti.get_per_mille_filled());
 			}
