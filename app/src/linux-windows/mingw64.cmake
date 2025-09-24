@@ -16,4 +16,5 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-set(CMAKE_EXE_LINKER_FLAGS "-lstdc++ -lpthread -lwinpthread -Wl,-Bdynamic")
+#set(CMAKE_EXE_LINKER_FLAGS "-lstdc++ -lpthread -lwinpthread -Wl,-Bdynamic")
+set(CMAKE_EXE_LINKER_FLAGS "-lstdc++ -lpthread -lwinpthread -static")
