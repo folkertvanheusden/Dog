@@ -1016,6 +1016,122 @@ std::string get_local_system_name()
 #endif
 }
 
+std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took)
+{
+#if !defined(ESP32)
+	tm  tm_start_buf { };
+	tm  tm_end_buf   { };
+#if defined(WIN32)
+	memcpy(&tm_start_buf, localtime(&time_start), sizeof(tm));
+	memcpy(&tm_end_buf,   localtime(&time_end  ), sizeof(tm));
+#else
+	tm *tm_start = localtime_r(&time_start, &tm_start_buf);
+	tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
+#endif
+#endif
+
+	std::string pgn = "[Event \"Computer chess event\"]\n"
+		"[Site \"" + get_local_system_name() + "\"]\n"
+#if defined(ESP32)
+		"[Date \"-\"]\n"
+#else
+		"[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
+#endif
+		"[Round \"-\"]\n" +
+		myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
+	if (start_fen != libchess::constants::STARTPOS_FEN) {
+		pgn += "[Setup \"1\"]\n";
+		pgn += "[FEN \"" + start_fen + "\"]\n";
+	}
+#if !defined(ESP32)
+	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+			tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
+			tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
+#if defined(WIN32)
+			0
+#else
+			tm_end_buf.tm_zone
+#endif
+		       );
+#endif
+	if (game_took) {
+#if !defined(ESP32)
+		pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+				tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
+				tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
+#if defined(WIN32)
+				0
+#else
+				tm_end_buf.tm_zone
+#endif
+			       );
+#endif
+		pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
+	}
+
+	if (player.has_value()) {
+		if (player.value() == libchess::constants::WHITE) {
+			pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+			pgn += "[Black \"?\"]\n";
+		}
+		else {
+			pgn += "[White \"?\"]\n";
+			pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+		}
+	}
+	else {
+		pgn += "[White \"?\"]\n";
+		pgn += "[Black \"?\"]\n";
+	}
+	std::string result = "?";
+	auto game_state = sp.at(0)->pos.game_state();
+	if (game_state != libchess::Position::GameState::IN_PROGRESS) {
+		if (game_state != libchess::Position::GameState::CHECKMATE)
+			result = "1/2-1/2";
+		else if ((moves_played.size() & 1) == 0)  // black played last
+			result = "0-1";
+		else
+			result = "1-0";
+	}
+	pgn += "[Result \"" + result + "\"]\n";
+	pgn += "\n";
+
+	auto   current_color = libchess::constants::WHITE;
+	size_t line_len      = 0;
+	int    move_nr       = 0;
+	for(auto & move: moves_played) {
+		std::string add;
+		if (current_color == libchess::constants::WHITE) {
+			move_nr++;
+			add += myformat("%d. %s ", move_nr, move.first.c_str());
+			current_color = libchess::constants::BLACK;
+			if (move.second.empty() == false)
+				add += "{" + move.second + "} ";
+		}
+		else {
+			add += move.first;
+			if (move.second.empty() == false)
+				add += " {" + move.second + "}";
+			add += " ";
+			current_color = libchess::constants::WHITE;
+		}
+
+		// not a hard pgn requirement
+		if (line_len + add.size() > 79) {
+			if (line_len) {
+				pgn     += "\n";
+				line_len = 0;
+			}
+		}
+		pgn      += add;
+		line_len += add.size();
+	}
+
+	pgn += result + "\n\n";
+
+	return pgn;
+}
+
 void tui_hello()
 {
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
@@ -1337,117 +1453,7 @@ void tui()
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
 #endif
 				else {
-#if !defined(ESP32)
-					tm  tm_start_buf { };
-					tm  tm_end_buf   { };
-#if defined(WIN32)
-					memcpy(&tm_start_buf, localtime(&time_start), sizeof(tm));
-					memcpy(&tm_end_buf,   localtime(&time_end  ), sizeof(tm));
-#else
-					tm *tm_start = localtime_r(&time_start, &tm_start_buf);
-					tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
-#endif
-#endif
-
-					std::string pgn = "[Event \"Computer chess event\"]\n"
-							  "[Site \"" + get_local_system_name() + "\"]\n"
-#if defined(ESP32)
-							  "[Date \"-\"]\n"
-#else
-							  "[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
-#endif
-							  "[Round \"-\"]\n" +
-							  myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
-					if (start_fen != libchess::constants::STARTPOS_FEN) {
-						  pgn += "[Setup \"1\"]\n";
-						  pgn += "[FEN \"" + start_fen + "\"]\n";
-					}
-#if !defined(ESP32)
-					pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-							tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
-							tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
-#if defined(WIN32)
-								0
-#else
-								tm_end_buf.tm_zone
-#endif
-							);
-#endif
-					if (game_took) {
-#if !defined(ESP32)
-						pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
-								tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
-								tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
-#if defined(WIN32)
-								0
-#else
-								tm_end_buf.tm_zone
-#endif
-							       );
-#endif
-						pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
-					}
-
-					if (player.has_value()) {
-						if (player.value() == libchess::constants::WHITE) {
-							pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
-							pgn += "[Black \"?\"]\n";
-						}
-						else {
-							pgn += "[White \"?\"]\n";
-							pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
-						}
-					}
-					else {
-						pgn += "[White \"?\"]\n";
-						pgn += "[Black \"?\"]\n";
-					}
-					std::string result = "?";
-					auto game_state = sp.at(0)->pos.game_state();
-					if (game_state != libchess::Position::GameState::IN_PROGRESS) {
-						if (game_state != libchess::Position::GameState::CHECKMATE)
-							result = "1/2-1/2";
-						else if ((moves_played.size() & 1) == 0)  // black played last
-							result = "0-1";
-						else
-							result = "1-0";
-					}
-					pgn += "[Result \"" + result + "\"]\n";
-					pgn += "\n";
-
-					auto   current_color = libchess::constants::WHITE;
-					size_t line_len      = 0;
-					int    move_nr       = 0;
-					for(auto & move: moves_played) {
-						std::string add;
-						if (current_color == libchess::constants::WHITE) {
-							move_nr++;
-							add += myformat("%d. %s ", move_nr, move.first.c_str());
-							current_color = libchess::constants::BLACK;
-							if (move.second.empty() == false)
-								add += "{" + move.second + "} ";
-						}
-						else {
-							add += move.first;
-							if (move.second.empty() == false)
-								add += " {" + move.second + "}";
-							add += " ";
-							current_color = libchess::constants::WHITE;
-						}
-
-						// not a hard pgn requirement
-						if (line_len + add.size() > 79) {
-							if (line_len) {
-								pgn     += "\n";
-								line_len = 0;
-							}
-						}
-						pgn      += add;
-						line_len += add.size();
-					}
-
-					pgn += result + "\n\n";
-
+					std::string pgn = generate_pgn(time_start, time_end, initial_think_time, start_fen, player, moves_played, game_took);
 					my_printf("\n");
 					my_printf("\n");
 #if defined(ESP32)
