@@ -552,11 +552,17 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			if (score > alpha && score < beta)
 				score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
 		}
+		bool do_razoring    = false;
+		bool score_increase = score > best_score;
+		if (!score_increase) {
+			if (depth <= 2 && alpha != beta - 1 && abs(score) < max_non_mate && !in_check)
+				do_razoring = nnue_evaluate(sp.nnue_eval, sp.pos) + depth * 50 + 50 <= alpha;
+		}
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
 		n_played++;
 
-		if (score > best_score) {
+		if (score_increase) {
 			best_score = score;
 			*m         = move;
 
@@ -570,6 +576,10 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 				alpha = score;
 			}
+		}
+		// razoring
+		else if (do_razoring) {
+			break;
 		}
 	}
 
