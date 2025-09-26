@@ -83,13 +83,13 @@ pos gen_parameters(const libchess::Position & lpos)
 	auto crights = lpos.castling_rights();
 	pos.castling = 0;
 	if (crights.is_allowed(libchess::constants::WHITE_KINGSIDE))
-		pos.castling = TB_CASTLING_K;
+		pos.castling |= TB_CASTLING_K;
 	if (crights.is_allowed(libchess::constants::WHITE_QUEENSIDE))
-		pos.castling = TB_CASTLING_Q;
+		pos.castling |= TB_CASTLING_Q;
 	if (crights.is_allowed(libchess::constants::BLACK_KINGSIDE))
-		pos.castling = TB_CASTLING_k;
+		pos.castling |= TB_CASTLING_k;
 	if (crights.is_allowed(libchess::constants::BLACK_QUEENSIDE))
-		pos.castling = TB_CASTLING_q;
+		pos.castling |= TB_CASTLING_q;
 
 	pos.rule50 = lpos.halfmoves();
 
@@ -112,7 +112,6 @@ pos gen_parameters(const libchess::Position & lpos)
 #endif
 
 	return pos;
-
 }
 
 std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess::Position & lpos)
@@ -160,20 +159,16 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 		return { };
 	}
 
-	int score  = 0;
 	int result = TB_GET_WDL(res);
 	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
-		score = -1;
-	else if (result == TB_DRAW)
-		score = 0;
-	else if (result == TB_CURSED_WIN || result == TB_WIN)
-		score = 1;
-	else {
-		printf("# unexpected return code from fathom: %d (%d)\n", result, res);
-		return { };
-	}
+		return -1;
+	if (result == TB_DRAW)
+		return 0;
+	if (result == TB_CURSED_WIN || result == TB_WIN)
+		return 1;
 
-	return score;
+	printf("# unexpected return code from fathom: %d (%d)\n", result, res);
+	return { };
 }
 
 int fathom_init(const std::string & path)
