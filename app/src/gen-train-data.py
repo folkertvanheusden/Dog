@@ -170,11 +170,13 @@ def process(proc, q):
             try:
                 if engine2:
                     engine2.quit()
+            except Exception as e:
+                print(f'quit failure (1): {e}')
+            try:
                 if engine1:
                     engine1.quit()
-
             except Exception as e:
-                print(f'quit failure: {e}')
+                print(f'quit failure (2): {e}')
 
     print('PROCESS TERMINATING')
 
