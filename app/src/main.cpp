@@ -253,7 +253,8 @@ struct {
 	bool                    reconfigure_threads  { false };
 	std::condition_variable search_cv;
 	int                     search_version       { -1    };
-	int                     search_think_time    { 0     };
+	int                     search_think_time_min{ 0     };
+	int                     search_think_time_max{ 0     };
 	bool                    search_is_abs_time   { false };
 	int                     search_max_depth;
 	std::optional<uint64_t> search_max_n_nodes;
@@ -294,11 +295,12 @@ void searcher(const int i)
 
 		last_fen_version = work.search_version;
 
-		int  local_search_think_time  = work.search_think_time;
-		bool local_search_is_abs_time = work.search_is_abs_time;
-		int  local_search_max_depth   = work.search_max_depth;
-		auto local_search_max_n_nodes = work.search_max_n_nodes;
-		bool local_search_output      = work.search_output;
+		int  local_search_think_time_min = work.search_think_time_min;
+		int  local_search_think_time_max = work.search_think_time_max;
+		bool local_search_is_abs_time    = work.search_is_abs_time;
+		int  local_search_max_depth      = work.search_max_depth;
+		auto local_search_max_n_nodes    = work.search_max_n_nodes;
+		bool local_search_output         = work.search_output;
 
 		work.search_count_running++;
 
@@ -309,7 +311,7 @@ void searcher(const int i)
 		libchess::Move best_move;
 		int            best_score { 0 };
 		int            max_depth  { 0 };
-		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
 
 		// notify finished
 		search_lck.lock();
@@ -354,14 +356,15 @@ void start_ponder()
 
 	prepare_threads_state();
 
-	work.search_think_time  = -1;
-	work.search_is_abs_time = false;
-	work.search_max_depth   = -1;
+	work.search_think_time_min = -1;
+	work.search_think_time_max = -1;
+	work.search_is_abs_time    = false;
+	work.search_max_depth      = -1;
 	work.search_max_n_nodes.reset();
 	work.search_version++;
 	work.search_best_move.reset();
-	work.search_best_score = -32768;
-	work.search_output     = false;
+	work.search_best_score     = -32768;
+	work.search_output         = false;
 	work.search_cv.notify_all();
 	my_trace("# ponder started\n");
 
@@ -612,10 +615,10 @@ void uci_hello() {
 	printf("# Version              : " DOG_VERSION "\n");
 	printf("# Build on             : " __DATE__ " " __TIME__ "\n");
 	printf("# Build with           : ");
-#if __GNUC__
-	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-#elif __clang__
+#if __clang__
 	printf("CLANG++ %d.%d.%d\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#elif __GNUC__
+	printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
 	printf("???\n");
 #endif
@@ -706,7 +709,8 @@ void main_task()
 
 	auto play_handler = [](std::istringstream& line_stream) {
 		try {
-			std::optional<int> think_time;
+			std::optional<int> think_time_min;
+			std::optional<int> think_time_max;
 			std::optional<int> max_depth;
 
 			try {
@@ -718,11 +722,12 @@ void main_task()
 					max_depth = std::stoi(temp);
 				}
 				else {
-					think_time = std::stoi(temp);
+					think_time_min = std::stoi(temp);
+					think_time_max = think_time_min;
 				}
 			}
 			catch(...) {
-				printf("No or invalid think time (ms) given, using %d instead\n", think_time.value());
+				printf("No or invalid think time (ms) given, using %d instead\n", think_time_min.value());
 			}
 
 			init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
@@ -738,7 +743,8 @@ void main_task()
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
-					work.search_think_time  = think_time.has_value() ? think_time.value() : -1;
+					work.search_think_time_min = think_time_min.has_value() ? think_time_min.value() : -1;
+					work.search_think_time_max = think_time_max.has_value() ? think_time_max.value() : -1;
 					work.search_is_abs_time = true;
 					work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
 					work.search_max_n_nodes.reset();
@@ -809,29 +815,24 @@ void main_task()
 			int w_inc = a_w_inc.has_value() ? a_w_inc.value() : 0;
 			int b_inc = a_b_inc.has_value() ? a_b_inc.value() : 0;
 
-			int think_time     = 0;
+			int think_time_min = 0;
+			int think_time_max = 0;
 
 			bool is_absolute_time = false;
 			bool is_white         = sp.at(0)->pos.side_to_move() == libchess::constants::WHITE;
 			if (movetime.has_value()) {
-				think_time       = movetime.value();
+				think_time_min   = movetime.value();
+				think_time_max   = think_time_min;
 				is_absolute_time = true;
 			}
 			else {
-				int cur_n_moves  = moves_to_go <= 0 ? 40 : moves_to_go;
 				int time_inc     = is_white ? w_inc  : b_inc;
 				int time_inc_opp = is_white ? b_inc  : w_inc;
 				int ms           = is_white ? w_time : b_time;
 				int ms_opponent  = is_white ? b_time : w_time;
 
-				if (does_game_end_soon(sp.at(0)->pos))
-					think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves);
-				else
-					think_time = (ms + (cur_n_moves - 1) * time_inc) / double(cur_n_moves + 7);
-
-				int limit_duration_min = ms / 15;
-				if (think_time > limit_duration_min)
-					think_time = limit_duration_min;
+				think_time_max = ms / 10 + time_inc * 2 / 3;
+				think_time_min = ms / 20 + time_inc / 2;
 
 				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), moves_to_go, tti.get_per_mille_filled());
 			}
@@ -866,14 +867,15 @@ void main_task()
 
 					prepare_threads_state();
 
-					work.search_think_time  = depth.has_value() && think_time == 0 ? -1 : think_time;
-					work.search_is_abs_time = is_absolute_time;
-					work.search_max_depth   = depth.has_value() ? depth.value() : -1;
-					work.search_max_n_nodes = nodes;
+					work.search_think_time_min = depth.has_value() && think_time_min == 0 ? -1 : think_time_min;
+					work.search_think_time_max = depth.has_value() && think_time_max == 0 ? -1 : think_time_max;
+					work.search_is_abs_time    = is_absolute_time;
+					work.search_max_depth      = depth.has_value() ? depth.value() : -1;
+					work.search_max_n_nodes    = nodes;
 					work.search_version++;
 					work.search_best_move.reset();
-					work.search_best_score = -32768;
-					work.search_output     = true;
+					work.search_best_score     = -32768;
+					work.search_output         = true;
 					work.search_cv.notify_all();
 				}
 
@@ -892,7 +894,7 @@ void main_task()
 			// emit result
 			libchess::UCIService::bestmove(best_move.to_str());
 
-			my_trace("info string had %d ms, used %.3f ms (including overhead)\n", think_time, (esp_timer_get_time() - start_ts) / 1000.);
+			my_trace("info string had %d...%d ms, used %.3f ms (including overhead)\n", think_time_min, think_time_max, (esp_timer_get_time() - start_ts) / 1000.);
 
 			// no longer thinking
 			set_led(0, 0, 255);
@@ -1112,14 +1114,15 @@ void run_bench(const bool long_bench, const bool via_usb)
 				sp.at(0)->pos = libchess::Position(fen);
 				init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 				memset(sp.at(0)->history, 0x00, history_malloc_size);
-				work.search_think_time  = 1 << 31;
-				work.search_is_abs_time = true;
-				work.search_max_depth   = 10;
+				work.search_think_time_min = 1 << 31;
+				work.search_think_time_max = 1 << 31;
+				work.search_is_abs_time    = true;
+				work.search_max_depth      = 10;
 				work.search_max_n_nodes.reset();
 				work.search_version++;
 				work.search_best_move.reset();
-				work.search_best_score = -32768;
-				work.search_output     = false;
+				work.search_best_score     = -32768;
+				work.search_output         = false;
 				work.search_cv.notify_all();
 			}
 			// get
@@ -1138,14 +1141,15 @@ void run_bench(const bool long_bench, const bool via_usb)
 			sp.at(0)->pos = libchess::Position(libchess::constants::STARTPOS_FEN);
 			init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
 			memset(sp.at(0)->history, 0x00, history_malloc_size);
-			work.search_think_time  = 2500;
-			work.search_is_abs_time = true;
-			work.search_max_depth   = 126;
+			work.search_think_time_min = 2500;
+			work.search_think_time_max = 2500;
+			work.search_is_abs_time    = true;
+			work.search_max_depth      = 126;
 			work.search_max_n_nodes.reset();
 			work.search_version++;
 			work.search_best_move.reset();
-			work.search_best_score  = -32768;
-			work.search_output      = true;
+			work.search_best_score     = -32768;
+			work.search_output         = true;
 			work.search_cv.notify_all();
 		}
 		// get
