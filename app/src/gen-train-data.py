@@ -18,7 +18,7 @@ import time
 #logging.basicConfig(level=logging.DEBUG)
 
 host = 'dog.vanheusden.com'
-port = 31251
+port = 31250
 proc = None
 node_count = 10000
 nth = os.sysconf('SC_NPROCESSORS_ONLN')
@@ -66,7 +66,7 @@ def gen_board():
 
     return b
 
-def play(b, engine1, engine2, q):
+def play(b, engine1, engine2, q, id_):
     fens = []
     first = True
     was_capture = False
@@ -84,11 +84,11 @@ def play(b, engine1, engine2, q):
             break
 
         if b.turn == chess.WHITE:
-            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
         else:
-            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
 
@@ -99,21 +99,20 @@ def play(b, engine1, engine2, q):
 
     return fens
 
-def transmit(host, port, name1, name2, result, fens):
-    j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
-    j['data'] = {'result': result, 'fens': fens }
+PIECE_VALUES = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9
+        }
 
-    while True:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.connect((host, port))
-            s.send(json.dumps(j).encode('ascii'))
-            s.close()
-            break
-        except Exception as e:
-            print(f'failure: {e}')
-            time.sleep(1)
-        s.close()
+def is_balanced(b):
+    balanced = 0
+    for pt in (chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
+        balanced += len(b.pieces(pt, chess.WHITE)) * PIECE_VALUES[pt]
+        balanced -= len(b.pieces(pt, chess.BLACK)) * PIECE_VALUES[pt]
+    return not (balanced < -3 or balanced > 3)
 
 def process(proc, q):
     while True:
@@ -127,9 +126,16 @@ def process(proc, q):
 
             print(name1, name2)
 
+            s = None
+            game = 1
+
             while True:
                 b = gen_board()
-                fens = play(b, engine1, engine2, q)
+                if not is_balanced(b):
+                    q.put(('unbalanced', 1))
+                    continue
+
+                fens = play(b, engine1, engine2, q, game)
                 if len(fens) > 0 and b.outcome() != None:
                     result = b.outcome().result()
 
@@ -137,16 +143,38 @@ def process(proc, q):
                     q.put(('gcount', 1))
 
                     if host != None:
-                        transmit(host, port, name1, name2, result, fens)
+                        j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
+                        j['data'] = {'result': result, 'fens': fens }
+
+                        while True:
+                            try:
+                                if s == None:
+                                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
+                                    s.setsockopt(socket.SOL_TCP, 23, 5)  # TCP fastopen (client as well?!)
+                                    s.connect((host, port))
+
+                                s.send((json.dumps(j) + '\n').encode('ascii'))
+                                break
+                            except Exception as e:
+                                print(f'Socket error: {e}')
+                                s.close()
+                                s = None
+                                time.sleep(0.5)
+                game += 1
 
         except Exception as e:
             print(f'failure: {e}')
 
         finally:
-            if engine2:
-                engine2.quit()
-            if engine1:
-                engine1.quit()
+            try:
+                if engine2:
+                    engine2.quit()
+                if engine1:
+                    engine1.quit()
+
+            except Exception as e:
+                print(f'quit failure: {e}')
 
     print('PROCESS TERMINATING')
 
@@ -161,6 +189,7 @@ for i in range(0, nth):
 count = 0
 gcount = 0
 early_abort = 0
+unbalanced = 0
 
 start = time.time()
 while True:
@@ -171,11 +200,13 @@ while True:
         gcount += item[1]
     elif item[0] == 'early_abort':
         early_abort += item[1]
+    elif item[0] == 'unbalanced':
+        unbalanced += item[1]
     else:
         print('Internal error', item[0])
         continue
     t_diff = time.time() - start
-    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
+    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}, unbalanced: {unbalanced}')
 
 for t in processes:
     t.join()
