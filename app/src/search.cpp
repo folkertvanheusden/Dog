@@ -436,10 +436,11 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			if (syzygy_score.has_value()) {
 				sp.cs.data.syzygy_query_hits++;
 				sp.cs.data.tt_store++;
-
-				int score      = syzygy_score.value();
-				int work_score = eval_to_tt(score, csd);
-				tti.store(hash, EXACT, depth, work_score);
+				int score = syzygy_score.value();
+				if (score < 0)
+					score -= -max_eval + csd;
+				else if (score > 0)
+					score = max_eval - csd;
 				return score;
 			}
 		}
@@ -755,6 +756,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
+			assert(score >= -max_eval && score <= max_eval);
 
 			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
