@@ -138,7 +138,7 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	m = get_best_dtz_move(lpos, results, TB_DRAW);
 	if (m.has_value())
-		return { { m.value().first, - m.value().second } };  // Dog doesn't like draws
+		return { { m.value().first, 0 } };
 
 	m = get_best_dtz_move(lpos, results, TB_BLESSED_LOSS);
 	if (m.has_value())
