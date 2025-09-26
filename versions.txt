@@ -8,6 +8,9 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
 
+v4.0 (6ed39c6192975e820911b0fae3a6b2b22a8844f9) played at around 3233 (300 games) @ Dio/CEGT(discord)
+with syzygy
+
 v3.51 versus v3.11
 	system without AVX512
 	Results of Dog-3.51 vs Dog-3.11 (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
