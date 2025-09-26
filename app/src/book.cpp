@@ -62,7 +62,7 @@ polyglot_book::polyglot_book(const std::string & filename)
 		assert((size % sizeof(polyglot_entry)) == 0);
 	}
 	else {
-		printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
+		my_printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
 	}
 }
 
@@ -142,11 +142,11 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 		if (index == end)
 			break;
 		if (fseek(fh, index * sizeof(polyglot_entry), SEEK_SET) == -1) {
-			printf("Seek in book failed: %s\n", strerror(errno));
+			my_printf("Seek in book failed: %s\n", strerror(errno));
 			break;
 		}
 		if (fread(&entry, sizeof(polyglot_entry), 1, fh) != 1) {
-			printf("Problem reading from book: %s\n", strerror(errno));
+			my_printf("Problem reading from book: %s\n", strerror(errno));
 			break;
 		}
 		if (my_NTOHLL(entry.hash) != hash)
@@ -155,7 +155,7 @@ void polyglot_book::scan(const libchess::Position & p, const long start_index, c
 		if (p.is_legal_move(move))
 			moves_out.push_back({ convert_polyglot_move(my_NTOHS(entry.move), p), my_NTOHS(entry.weight) });
 		else
-			printf("Book: hash collision! (%s)\n", move.to_str().c_str());
+			my_printf("Book: hash collision! (%s)\n", move.to_str().c_str());
 	}
 }
 
@@ -175,12 +175,12 @@ std::optional<libchess::Move> polyglot_book::query(const libchess::Position & p,
 		size_t mid = (low + high) / 2;
 
 		if (fseek(fh, mid * sizeof(polyglot_entry), SEEK_SET) == -1) {
-			printf("Seek in book failed: %s\n", strerror(errno));
+			my_printf("Seek in book failed: %s\n", strerror(errno));
 			break;
 		}
 		polyglot_entry entry { };
 		if (fread(&entry, sizeof(polyglot_entry), 1, fh) != 1) {
-			printf("Problem reading from book: %s\n", strerror(errno));
+			my_printf("Problem reading from book: %s\n", strerror(errno));
 			break;
 		}
 
