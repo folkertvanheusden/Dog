@@ -23,13 +23,6 @@
 #include "tui.h"
 
 
-#define my_assert(x) \
-        if (!(x)) { \
-                fprintf(stderr, "assert fail at line %d (%s) in %s\n", __LINE__, __func__, __FILE__); \
-                delete_threads(); \
-                exit(1); \
-        }
-
 std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m)
 {
 	auto m_obj = libchess::Move::from(m);
@@ -323,8 +316,8 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		}
 	}
 
-	my_assert(best_score >= -max_eval);
-	my_assert(best_score <=  max_eval);
+	assert(best_score >= -max_eval);
+	assert(best_score <=  max_eval);
 
 	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
 		sp.cs.data.qtt_store++;
@@ -763,7 +756,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
 			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
-			my_assert(score >= -max_eval && score <= max_eval);
+			assert(score >= -max_eval && score <= max_eval);
 
 			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
