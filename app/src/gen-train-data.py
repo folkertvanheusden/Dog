@@ -77,12 +77,6 @@ def play(b, engine1, engine2, q, id_):
         elif b.is_check() == False and was_capture == False:
             store_fen = b.fen()
 
-        # count number of pieces. if 4 or less: stop.
-        piece_count = chess.popcount(b.occupied)
-        if piece_count < 4:
-            q.put(('early_abort', 1))
-            break
-
         if b.turn == chess.WHITE:
             result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
@@ -190,7 +184,6 @@ for i in range(0, nth):
 
 count = 0
 gcount = 0
-early_abort = 0
 unbalanced = 0
 
 start = time.time()
@@ -200,15 +193,13 @@ while True:
         count += item[1]
     elif item[0] == 'gcount':
         gcount += item[1]
-    elif item[0] == 'early_abort':
-        early_abort += item[1]
     elif item[0] == 'unbalanced':
         unbalanced += item[1]
     else:
         print('Internal error', item[0])
         continue
     t_diff = time.time() - start
-    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}, unbalanced: {unbalanced}')
+    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, unbalanced: {unbalanced}')
 
 for t in processes:
     t.join()
