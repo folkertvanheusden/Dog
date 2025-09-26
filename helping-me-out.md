@@ -19,7 +19,7 @@ There are 2 ways:
 ```
 
 That's it! Interrupt the program whenever you like.
-To completely delete the docker you created for Dog, enter:
+To completely stop and delete the docker you created for Dog, enter:
 
 ```
     docker rm -f dog
@@ -35,7 +35,7 @@ This is the recipe for Linux systems. It has 2 steps that depend on the distribu
 Debian/Ubuntu (DEB based systems):
 ```
     sudo apt update
-    sudo apt install clang cmake git build-essential screen python3-pip python3-venv
+    sudo apt install clang cmake git build-essential python3-pip python3-venv
 ```
 
 Fedora (RPM based systems):
