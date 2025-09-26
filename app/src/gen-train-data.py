@@ -66,7 +66,7 @@ def gen_board():
 
     return b
 
-def play(b, engine1, engine2, q):
+def play(b, engine1, engine2, q, id_):
     fens = []
     first = True
     was_capture = False
@@ -84,11 +84,11 @@ def play(b, engine1, engine2, q):
             break
 
         if b.turn == chess.WHITE:
-            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
         else:
-            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE)
+            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
 
@@ -98,6 +98,21 @@ def play(b, engine1, engine2, q):
             fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
 
     return fens
+
+PIECE_VALUES = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9
+        }
+
+def is_balanced(b):
+    balanced = 0
+    for pt in (chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
+        balanced += len(b.pieces(pt, chess.WHITE)) * PIECE_VALUES[pt]
+        balanced -= len(b.pieces(pt, chess.BLACK)) * PIECE_VALUES[pt]
+    return not (balanced < -3 or balanced > 3)
 
 def process(proc, q):
     while True:
@@ -113,9 +128,15 @@ def process(proc, q):
 
             s = None
 
+            game = 1
+
             while True:
                 b = gen_board()
-                fens = play(b, engine1, engine2, q)
+                if not is_balanced(b):
+                    q.put(('unbalanced', 1))
+                    continue
+
+                fens = play(b, engine1, engine2, q, game)
                 if len(fens) > 0 and b.outcome() != None:
                     result = b.outcome().result()
 
@@ -141,6 +162,7 @@ def process(proc, q):
                                 s.close()
                                 s = None
                                 time.sleep(0.5)
+                game += 1
 
         except Exception as e:
             print(f'failure: {e}')
@@ -168,6 +190,7 @@ for i in range(0, nth):
 count = 0
 gcount = 0
 early_abort = 0
+unbalanced = 0
 
 start = time.time()
 while True:
@@ -178,11 +201,13 @@ while True:
         gcount += item[1]
     elif item[0] == 'early_abort':
         early_abort += item[1]
+    elif item[0] == 'unbalanced':
+        unbalanced += item[1]
     else:
         print('Internal error', item[0])
         continue
     t_diff = time.time() - start
-    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}')
+    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, early aborts: {early_abort}, unbalanced: {unbalanced}')
 
 for t in processes:
     t.join()
