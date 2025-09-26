@@ -122,7 +122,7 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 	unsigned res = tb_probe_root(pos.white, pos.black, pos.kings, pos.queens, pos.rooks, pos.bishops, pos.knights, pos.pawns, pos.rule50, pos.castling, pos.ep, pos.turn, results);
 
 	if (res == TB_RESULT_FAILED) {
-		printf("# TB_RESULT_FAILED\n");
+		my_trace("# TB_RESULT_FAILED\n");
 		return { };
 	}
 
