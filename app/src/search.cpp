@@ -422,30 +422,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		depth--;
 	}
 	////////
-
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-	if (with_syzygy && !is_root_position) {
-		// check piece count
-		unsigned counts = sp.pos.occupancy_bb().popcount();
-
-		// syzygy count?
-		if (counts <= TB_LARGEST) {
-			sp.cs.data.syzygy_queries++;
-			std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
-
-			if (syzygy_score.has_value()) {
-				sp.cs.data.syzygy_query_hits++;
-				sp.cs.data.tt_store++;
-				int score = syzygy_score.value();
-				if (score < 0)
-					score -= -max_eval + csd;
-				else if (score > 0)
-					score = max_eval - csd;
-				return score;
-			}
-		}
-	}
-#endif
 	bool in_check = sp.pos.in_check();
 
 	if (!is_root_position && !in_check && depth <= 7 && beta <= max_non_mate) {
@@ -520,6 +496,30 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			continue;
 
 		sp.cur_move = move.value();
+
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
+		if (sp.pos.is_capture_move(move) && with_syzygy && !is_root_position) {
+			// check piece count
+			unsigned counts = sp.pos.occupancy_bb().popcount();
+
+			// syzygy count?
+			if (counts <= TB_LARGEST) {
+				sp.cs.data.syzygy_queries++;
+				std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
+
+				if (syzygy_score.has_value()) {
+					sp.cs.data.syzygy_query_hits++;
+					sp.cs.data.tt_store++;
+					int score = syzygy_score.value();
+					if (score < 0)
+						score = -max_non_mate - 1;
+					else if (score > 0)
+						score =  max_non_mate + 1;
+					return score;
+				}
+			}
+		}
+#endif
 
                 bool is_lmr = false;
                 int  score  = -max_eval;
