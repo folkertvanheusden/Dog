@@ -230,8 +230,7 @@ bool does_game_end_soon(const libchess::Position & pos_in)
 			break;
 
 		work.make_move(cur_move);
-		rc |= work.game_state() != libchess::Position::GameState::IN_PROGRESS;
-		if (work.is_repeat(1)) {
+		if (work.is_repeat() || work.halfmoves() >= 100 || work.game_state() != libchess::Position::GameState::IN_PROGRESS) {
 			rc = true;
 			break;
 		}

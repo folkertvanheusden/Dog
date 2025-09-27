@@ -855,6 +855,8 @@ void main_task()
 					has_best   = true;
 
 					my_trace("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
+
+					emit_result(sp.at(0)->pos, best_move, best_score, 0, { }, 0, { 0, 0 });
 				}
 			}
 #endif

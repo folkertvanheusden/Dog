@@ -7,6 +7,15 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+619c4c870a7166e1c1f15ce3a734f21f788d7c79
+	Results of Dog-syzygy vs Dog-plain (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
+	Elo: 14.09 +/- 10.56, nElo: 22.72 +/- 17.00
+	LOS: 99.56 %, DrawRatio: 44.64 %, PairsRatio: 1.35
+	Games: 1604, Wins: 441, Losses: 376, Draws: 787, Points: 834.5 (52.03 %)
+	Ptnml(0-2): [30, 159, 358, 226, 29], WL/DD Ratio: 0.78
+	LLR: 2.99 (101.4%) (-2.94, 2.94) [-5.00, 5.00]
+
+
 v4.0 (4f87cff84bb02c53f23a185b4959692634a67938) versus yukari 2025/4/01 -->> WITHOUT non-root SYZYGY in search!
 	Results of Dog vs yukari-2025.4.1 (8+0.08, 1t, 256MB - 16MB, 8mvs_big_+80_+109.epd):
 	Elo: -241.40 +/- 44.11, nElo: -372.27 +/- 49.66
