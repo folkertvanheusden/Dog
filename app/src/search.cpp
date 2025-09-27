@@ -435,6 +435,30 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		}
 	}
 
+#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
+	if (with_syzygy && !is_root_position) {
+		// check piece count
+		unsigned counts = sp.pos.occupancy_bb().popcount();
+
+		// syzygy count?
+		if (counts <= TB_LARGEST) {
+			sp.cs.data.syzygy_queries++;
+			std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
+
+			if (syzygy_score.has_value()) {
+				sp.cs.data.syzygy_query_hits++;
+				sp.cs.data.tt_store++;
+				int score = syzygy_score.value();
+				if (score < 0)
+					score = -max_non_mate - 1;
+				else if (score > 0)
+					score =  max_non_mate + 1;
+				return score;
+			}
+		}
+	}
+#endif
+
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= 2 && !in_check && !is_root_position && null_move_depth < 2) {
@@ -496,30 +520,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 			continue;
 
 		sp.cur_move = move.value();
-
-#if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-		if (sp.pos.is_capture_move(move) && with_syzygy && !is_root_position) {
-			// check piece count
-			unsigned counts = sp.pos.occupancy_bb().popcount();
-
-			// syzygy count?
-			if (counts <= TB_LARGEST) {
-				sp.cs.data.syzygy_queries++;
-				std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
-
-				if (syzygy_score.has_value()) {
-					sp.cs.data.syzygy_query_hits++;
-					sp.cs.data.tt_store++;
-					int score = syzygy_score.value();
-					if (score < 0)
-						score = -max_non_mate - 1;
-					else if (score > 0)
-						score =  max_non_mate + 1;
-					return score;
-				}
-			}
-		}
-#endif
 
                 bool is_lmr = false;
                 int  score  = -max_eval;
@@ -864,6 +864,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		if (output)
 			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 #endif
+		emit_result(sp->pos, best_move, best_score, 0, { }, 0, { 0, 0 });
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);
 	}
 

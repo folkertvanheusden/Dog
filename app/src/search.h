@@ -25,3 +25,4 @@ bool is_insufficient_material_draw(const libchess::Position & pos);
 int qs(int alpha, int beta, int qsdepth, search_pars_t & sp);
 std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output);
 std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m);
+void emit_result(libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes);
