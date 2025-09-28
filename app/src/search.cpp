@@ -484,13 +484,15 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		sp.cs.data.n_null_move++;
 
 		sp.pos.make_null_move();
-		libchess::Move ignore { };
-		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp, pv);
+		libchess::MoveList ignore_pv;
+		libchess::Move     ignore_move { };
+		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore_move, sp, &ignore_pv);
 		sp.pos.unmake_move();
 
                 if (nmscore >= beta) {
-			libchess::Move ignore2 { };
-			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, pv);
+			libchess::MoveList ignore_pv2;
+			libchess::Move     ignore2 { };
+			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, &ignore_pv2);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
 				pv->clear();
