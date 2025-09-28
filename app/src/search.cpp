@@ -58,7 +58,7 @@ void sort_movelist_compare::add_first_move(const libchess::Move move)
 // MVV-LVA
 int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 {
-	for(size_t i=0; i<n_first_moves; i++) {
+	for(int i=0; i<n_first_moves; i++) {
 		if (move == first_moves[i])
 			return INT_MAX - i;
 	}
@@ -173,6 +173,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (check_min_stack_size(sp)) {
 			sp.md_limit = sp.md;
 			sp.cs.data.large_stack++;
+			pv->clear();
 			return nnue_evaluate(sp.nnue_eval, sp.pos);
 		}
 	}
@@ -254,7 +255,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
-	size_t m_idx = 0;
+	size_t m_idx  = 0;
 	while(m_idx < n_moves) {
 		size_t selected_idx = m_idx;
 		for(size_t i=m_idx; i<n_moves; i++) {
@@ -354,20 +355,24 @@ void update_history(const search_pars_t & sp, const int index, const int bonus)
 	sp.history[index] += final_value;
 }
 
-int search(int depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp)
+int search(int depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
 {
 	if (sp.stop->flag)
 		return 0;
 
-	if (depth == 0)
-		return qs(alpha, beta, max_depth, sp);
+	if (depth == 0) {
+		int score = qs(alpha, beta, max_depth, sp);
+		pv->clear();
+		return score;
+	}
 
 	sp.cs.data.nodes++;
 
 	const int  csd              = max_depth -  depth;
 	bool       is_root_position = max_depth == depth;
 
-	if (!is_root_position && (sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))) {
+	if (!is_root_position && (sp.pos.is_repeat() || sp.pos.halfmoves() > 100 || is_insufficient_material_draw(sp.pos))) {
+		pv->clear();
 		if (sp.pos.in_check()) {
 			if (sp.pos.legal_move_list().empty()) {
 				sp.cs.win[!sp.pos.side_to_move()]++;
@@ -411,10 +416,13 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 				sp.cs.data.tt_cutoff++;
 				if (tt_move.has_value()) {
 					*m = tt_move.value();  // move in TT is valid
+					pv->clear();
 					return work_score;
 				}
-				if (!is_root_position)
+				if (!is_root_position) {
+					pv->clear();
 					return work_score;
+				}
 			}
 		}
 	}
@@ -431,6 +439,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		// static null pruning (reverse futility pruning)
 		if (staticeval - depth * 121 > beta) {
 			sp.cs.data.n_static_eval_hit++;
+			pv->clear();
 			return (beta + staticeval) / 2;
 		}
 	}
@@ -441,15 +450,18 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 		sp.cs.data.n_null_move++;
 
 		sp.pos.make_null_move();
-		libchess::Move ignore { };
-		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore, sp);
+		libchess::MoveList ignore_pv;
+		libchess::Move     ignore_move { };
+		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore_move, sp, &ignore_pv);
 		sp.pos.unmake_move();
 
                 if (nmscore >= beta) {
-			libchess::Move ignore2 { };
-			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp);
+			libchess::MoveList ignore_pv2;
+			libchess::Move     ignore2 { };
+			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, &ignore_pv2);
 			if (verification >= beta) {
 				sp.cs.data.n_null_move_hit++;
+				pv->clear();
 				return abs(nmscore) >= max_non_mate ? beta : nmscore;
 			}
                 }
@@ -478,7 +490,8 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move;
 
-	size_t m_idx = 0;
+	libchess::MoveList child_pv;
+	size_t             m_idx    = 0;
 	while(m_idx < n_moves) {
 		size_t selected_idx = m_idx;
 		for(size_t i=m_idx; i<n_moves; i++) {
@@ -526,7 +539,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
 		if (n_played == 0)
-			score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+			score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 		else {
 			int new_depth = depth - 1;
 
@@ -545,21 +558,26 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 				}
 			}
 
-			score = -search(new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
+			score = -search(new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 
 			if (is_lmr && score > alpha)
-				score = -search(depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp);
+				score = -search(depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 
 			if (score > alpha && score < beta)
-				score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp);
+				score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 		}
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
 		n_played++;
 
 		if (score > best_score) {
-			best_score = score;
-			*m         = move;
+			best_score         = score;
+			*m                 = move;
+
+			pv->clear();
+			pv->add(move);
+			for(auto & child_pv_move: child_pv)
+				pv->add(child_pv_move);
 
 			if (score > alpha) {
 				if (score >= beta) {
@@ -653,21 +671,20 @@ double calculate_EBF(const std::vector<uint64_t> & node_counts)
         return n >= 3 ? sqrt(double(node_counts.at(n - 1)) / double(node_counts.at(n - 3))) : -1;
 }
 
-std::string gen_pv_str_from_tt(libchess::Position & p, const libchess::Move & m)
+std::string gen_pv_str(const libchess::MoveList & pv)
 {
-	std::vector<libchess::Move> pv = get_pv_from_tt(p, m);
 	std::string pv_str;
-	for(auto & move : pv) {
-		if (pv_str.empty() == false)
+	for(int i=0; i<pv.size(); i++) {
+		if (i)
 			pv_str += " ";
-		pv_str += move.to_str();
+		pv_str += (pv.cbegin() + i)->to_str();
 	}
 	return pv_str;
 }
 
-void emit_result(libchess::Position & pos, const libchess::Move & best_move, const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes)
+void emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv)
 {
-	std::string pv_str     = gen_pv_str_from_tt(pos, best_move);
+	std::string pv_str     = gen_pv_str(pv);
 	double      ebf        = calculate_EBF(node_counts);
 	std::string ebf_str    = ebf >= 0 ? std::to_string(ebf) : "";
 	if (ebf_str.empty() == false)
@@ -755,7 +772,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			sp->md = 0;
 			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
-			int score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp);
+			libchess::MoveList pv;
+			int                score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, &pv);
 			assert(score >= -max_eval && score <= max_eval);
 
 			auto counts = simple_search_statistics();
@@ -765,7 +783,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					my_trace("info string stop flag set\n");
 #endif
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
-					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
+					libchess::MoveList l_pv;
+					l_pv.add(best_move);
+					emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv);
 				}
 				break;
 			}
@@ -826,14 +846,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0 && output)
-					emit_result(sp->pos, best_move, best_score, thought_ms, node_counts, max_depth, counts);
+					emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv);
 
 				itd_moves.insert(best_move.to_str());
 
 				int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
 
-				if ((thought_ms > uint64_t(search_time / 2) && search_time > 0 && is_absolute_time == false) ||
-				    (thought_ms >= search_time && is_absolute_time == true)) {
+				if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
+				    (int(thought_ms) >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
 					if (output)
 						my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
@@ -864,7 +884,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		if (output)
 			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 #endif
-		emit_result(sp->pos, best_move, best_score, 0, { }, 0, { 0, 0 });
+		libchess::MoveList pv;
+		pv.add(best_move);
+		emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);
 	}
 

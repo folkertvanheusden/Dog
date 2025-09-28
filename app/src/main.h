@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -37,7 +38,7 @@ typedef struct
 #endif
 
 	libchess::Position pos { libchess::constants::STARTPOS_FEN };
-	libchess::Move   best_moves[128];
+	std::array<libchess::Move, 128> best_moves;
 
 	std::thread     *thread_handle { nullptr };
 	Eval            *nnue_eval     { nullptr };

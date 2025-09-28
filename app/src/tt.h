@@ -49,7 +49,6 @@ public:
 	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score);
 };
 
-std::vector<libchess::Move> get_pv_from_tt(libchess::Position & pos, const libchess::Move & start_move);
 bool does_game_end_soon(const libchess::Position & pos_in);
 int eval_to_tt  (const int eval, const int ply);
 int eval_from_tt(const int eval, const int ply);
