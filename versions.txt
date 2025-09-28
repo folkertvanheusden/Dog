@@ -26,7 +26,7 @@ v4.0 (4f87cff84bb02c53f23a185b4959692634a67938) versus yukari 2025/4/01 -->> WIT
 
 	Elo: -200.15 +/- 35.35, nElo: -337.50 +/- 47.91 -->> WITH syzygy
 
-v4.0 (6ed39c6192975e820911b0fae3a6b2b22a8844f9) played at around 3233 (300 games) @ Dio/CEGT(discord)
+v4.0 (6ed39c6192975e820911b0fae3a6b2b22a8844f9) played at around 3233 (300 games) @ pre-test_CEGT(via discord - Jörg Burwitz)
 with syzygy
 
 v3.51 versus v3.11
