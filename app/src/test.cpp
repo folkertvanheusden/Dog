@@ -232,7 +232,7 @@ void tests()
 		Move best_move  { 0 };
 		int  best_score { 0 };
 		int  max_depth  { 0 };
-		std::tie(best_move, best_score, max_depth) = search_it(100, 100, false, sp.at(0), -1, { }, false);
+		std::tie(best_move, best_score, max_depth) = search_it(100, 100, false, sp.at(0), -1, { }, O_NONE);
 		
 		my_assert(best_move == *Move::from(entry.second));
 
@@ -482,7 +482,7 @@ void test_mate_finder(const std::string & filename, const int search_time)
 	for(size_t i=0; i<n; i++) {
 		clear_flag(sp.at(0)->stop);
 		sp.at(0)->pos = positions.at(i).first;
-		auto rc  = search_it(search_time, search_time, false, sp.at(0), -1, { }, false);
+		auto rc  = search_it(search_time, search_time, false, sp.at(0), -1, { }, O_NONE);
 
 		bool hit = abs(std::get<1>(rc)) >= max_non_mate;
 		mates_found += hit;

@@ -682,7 +682,7 @@ std::string gen_pv_str(const libchess::MoveList & pv)
 	return pv_str;
 }
 
-void emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv)
+std::string emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv)
 {
 	std::string pv_str     = gen_pv_str(pv);
 	double      ebf        = calculate_EBF(node_counts);
@@ -705,27 +705,33 @@ void emit_result(const int best_score, const uint64_t thought_ms, const std::vec
 	}
 
 	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
-	printf("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
+#if defined(ESP32)
+	extern bool verbose;
+	std::string msg1;
+	if (verbose)
+		msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
+	else
+		msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
+	std::string msg2 = "pv: " + pv_str + "\n";
+	return msg1 + msg2;
+#else
+	return myformat("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 			max_depth, score_str.c_str(),
 			nodes.first, ebf_str.c_str(), thought_ms, nps,
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
-
-#if defined(ESP32)
-	extern bool verbose;
-	if (verbose) {
-		std::string msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
-		to_uart(msg1.c_str(), msg1.size());
-	}
-	else {
-		std::string msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
-		to_uart(msg1.c_str(), msg1.size());
-	}
-	std::string msg2 = "pv: " + pv_str + "\n";
-	to_uart(msg2.c_str(), msg2.size());
 #endif
 }
 
-std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const bool output)
+void emit(const std::string & text)
+{
+#if defined(ESP32)
+	to_uart(text.c_str(), text.size());
+#else
+	printf("%s", text.c_str());
+#endif
+}
+
+std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -750,6 +756,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	int     max_depth  = 1;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
+
+	std::string should_output;
 
 	if (move_list.size() > 1) {
 		int16_t alpha     = -32767;
@@ -778,14 +786,18 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
-				if (sp->thread_nr == 0 && output) {
+				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
 #if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
 #endif
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 					libchess::MoveList l_pv;
 					l_pv.add(best_move);
-					emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv);
+					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv);
+					if (output == O_FULL)
+						emit(temp);
+					else
+						should_output = temp;
 				}
 				break;
 			}
@@ -845,8 +857,13 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
-				if (sp->thread_nr == 0 && output)
-					emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv);
+				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
+					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv);
+					if (output == O_FULL)
+						emit(temp);
+					else
+						should_output = temp;
+				}
 
 				itd_moves.insert(best_move.to_str());
 
@@ -855,8 +872,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
 				    (int(thought_ms) >= search_time && is_absolute_time == true)) {
 #if !defined(__ANDROID__)
-					if (output)
-						my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
+					my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
 #endif
 					break;
 				}
@@ -868,8 +884,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					break;
 
 				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
-					if (output)
-						my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+					my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
 					break;
 				}
 
@@ -881,13 +896,17 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	}
 	else {
 #if !defined(__ANDROID__)
-		if (output)
-			my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
+		my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 #endif
 		libchess::MoveList pv;
 		pv.add(best_move);
-		emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);
+
+		auto temp = emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
+		if (output == O_FULL)
+			emit(temp);
+		else
+			should_output = temp;
 	}
 
 	if (sp->thread_nr == 0) {
@@ -906,6 +925,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		vTaskGetRunTimeStats();
 #endif
 	}
+
+	if (output == O_MINIMAL && should_output.empty() == false)
+		emit(should_output);
 
 	return { best_move, best_score, max_depth };
 }

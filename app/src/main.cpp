@@ -244,6 +244,11 @@ void set_thread_name(std::string name)
 #endif
 }
 
+bool allow_minimal         = false;
+auto allow_minimal_handler = [](const bool value) {
+	allow_minimal = value;
+};
+
 inbuf i;
 std::istream is(&i);
 
@@ -307,11 +312,15 @@ void searcher(const int i)
 		clear_flag(sp.at(i)->stop);
 		search_lck.unlock();
 
+		output_type_t o = O_NONE;
+		if (i == 0 && local_search_output)
+			o = allow_minimal ? O_MINIMAL : O_FULL;
+
 		// search!
 		libchess::Move best_move;
 		int            best_score { 0 };
 		int            max_depth  { 0 };
-		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, i == 0 && local_search_output);
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o);
 
 		// notify finished
 		search_lck.lock();
@@ -936,6 +945,8 @@ void main_task()
 	uci_service->register_option(commerial_option);
 	libchess::UCIStringOption opponent_option("UCI_Opponent", "", opponent_option_handler);
 	uci_service->register_option(opponent_option);
+	libchess::UCICheckOption allow_minimal_option("Minimal", allow_minimal, allow_minimal_handler);
+	uci_service->register_option(allow_minimal_option);
 
 	uci_service->register_position_handler(position_handler);
 	uci_service->register_go_handler      (go_handler);
