@@ -165,7 +165,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libchess::MoveList *const pv)
+int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 {
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
@@ -179,20 +179,16 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libches
 	}
 	else if (qsdepth >= sp.md_limit) {
 		sp.cs.data.large_stack++;
-		pv->clear();
 		return nnue_evaluate(sp.nnue_eval, sp.pos);
 	}
 #endif
-	if (qsdepth >= 127) {
-		pv->clear();
+	if (qsdepth >= 127)
 		return nnue_evaluate(sp.nnue_eval, sp.pos);
-	}
 
 	sp.cs.data.qnodes++;
 	sp.md = std::max(sp.md, uint16_t(qsdepth));
 
 	if (sp.pos.halfmoves() >= 100 || sp.pos.is_repeat() || is_insufficient_material_draw(sp.pos))  {
-		pv->clear();
 		if (sp.pos.in_check()) {
 			if (sp.pos.legal_move_list().empty()) {
 				sp.cs.win[!sp.pos.side_to_move()]++;
@@ -223,7 +219,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libches
 				(flag == UPPERBOUND && work_score <= alpha);
 		if (use) {
 			sp.cs.data.qtt_cutoff++;
-			pv->clear();
 			return work_score;
 		}
 
@@ -240,7 +235,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libches
 		best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
 		if (best_score > alpha && best_score >= beta) {
 			sp.cs.data.n_standing_pat++;
-			pv->clear();
 			return best_score;
 		}
 
@@ -261,7 +255,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libches
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
-	libchess::MoveList child_pv;
 	size_t m_idx  = 0;
 	while(m_idx < n_moves) {
 		size_t selected_idx = m_idx;
@@ -291,17 +284,12 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp, libches
 		n_played++;
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
-		int score = -qs(-beta, -alpha, qsdepth + 1, sp, &child_pv);
+		int score = -qs(-beta, -alpha, qsdepth + 1, sp);
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
 		if (score > best_score) {
 			best_score = score;
 			m          = move;
-
-			pv->clear();
-			pv->add(move);
-			for(auto & child_pv_move: child_pv)
-				pv->add(child_pv_move);
 
 			if (score > alpha) {
 				if (score >= beta) {
@@ -372,8 +360,11 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	if (sp.stop->flag)
 		return 0;
 
-	if (depth == 0)
-		return qs(alpha, beta, max_depth, sp, pv);
+	if (depth == 0) {
+		int score = qs(alpha, beta, max_depth, sp);
+		pv->clear();
+		return score;
+	}
 
 	sp.cs.data.nodes++;
 
@@ -793,7 +784,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					my_trace("info string stop flag set\n");
 #endif
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
-					emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv);
+					libchess::MoveList l_pv;
+					l_pv.add(best_move);
+					emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv);
 				}
 				break;
 			}
