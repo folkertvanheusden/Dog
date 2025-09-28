@@ -181,37 +181,6 @@ int tt::get_per_mille_filled()
 	return count;
 }
 
-std::vector<libchess::Move> get_pv_from_tt(libchess::Position & pos, const libchess::Move & start_move)
-{
-	std::vector<libchess::Move> out { start_move };
-	pos.make_move(start_move);
-	int undo_n = 1;
-
-	for(int i=0; i<64; i++) {
-		std::optional<tt_entry> te = tti.lookup(pos.hash());
-		if (!te.has_value())
-			break;
-
-		if (te.value().M == 0)
-			break;
-
-		libchess::Move cur_move { uint_to_libchessmove(te.value().M) };
-		if (!pos.is_legal_move(cur_move))
-			break;
-
-		out.push_back(cur_move);
-		pos.make_move(cur_move);
-		undo_n++;
-		if (pos.is_repeat(1))
-			break;
-	}
-
-	for(int i=0; i<undo_n; i++)
-		pos.unmake_move();
-
-	return out;
-}
-
 bool does_game_end_soon(const libchess::Position & pos_in)
 {
 	bool rc   = false;

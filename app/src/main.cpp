@@ -856,7 +856,9 @@ void main_task()
 
 					my_trace("# Syzygy hit %s with score %d\n", best_move.to_str().c_str(), best_score);
 
-					emit_result(sp.at(0)->pos, best_move, best_score, 0, { }, 0, { 0, 0 });
+					libchess::MoveList pv;
+					pv.add(best_move);
+					emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
 				}
 			}
 #endif
