@@ -1802,7 +1802,7 @@ void tui()
 				int            best_score { 0 };
 				int            max_depth  { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time_min, cur_think_time_max, true, sp.at(0), -1, { }, true);
+				std::tie(best_move, best_score, max_depth) = search_it(cur_think_time_min, cur_think_time_max, true, sp.at(0), -1, { }, O_FULL, true);
 				chess_stats cs_after     = calculate_search_statistics();
 				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
 				uint64_t     end_search  = esp_timer_get_time();
