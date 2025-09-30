@@ -173,7 +173,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (check_min_stack_size(sp)) {
 			sp.md_limit = sp.md;
 			sp.cs.data.large_stack++;
-			pv->clear();
 			return nnue_evaluate(sp.nnue_eval, sp.pos);
 		}
 	}
@@ -682,7 +681,7 @@ std::string gen_pv_str(const libchess::MoveList & pv)
 	return pv_str;
 }
 
-std::string emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv)
+std::string emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv, const bool is_tui)
 {
 	std::string pv_str     = gen_pv_str(pv);
 	double      ebf        = calculate_EBF(node_counts);
@@ -705,33 +704,37 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 	}
 
 	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
-#if defined(ESP32)
-	extern bool verbose;
-	std::string msg1;
-	if (verbose)
-		msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
-	else
-		msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
-	std::string msg2 = "pv: " + pv_str + "\n";
-	return msg1 + msg2;
-#else
+
+	if (is_tui) {
+		extern bool verbose;
+		std::string msg1;
+		if (verbose)
+			msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
+		else
+			msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
+		std::string msg2 = "pv: " + pv_str + "\n";
+		return msg1 + msg2;
+	}
+
 	return myformat("info depth %d %s nodes %" PRIu64 " %stime %" PRIu64 " nps %" PRIu64 " tbhits %" PRIu64 " hashfull %d pv %s\n",
 			max_depth, score_str.c_str(),
 			nodes.first, ebf_str.c_str(), thought_ms, nps,
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
-#endif
 }
 
-void emit(const std::string & text)
+void emit(const std::string & text, const bool is_tui)
 {
 #if defined(ESP32)
-	to_uart(text.c_str(), text.size());
+	if (is_tui)
+		to_uart(text.c_str(), text.size());
+	else
+		printf("%s", text.c_str());
 #else
 	printf("%s", text.c_str());
 #endif
 }
 
-std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output)
+std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -793,9 +796,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 					libchess::MoveList l_pv;
 					l_pv.add(best_move);
-					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv);
+					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv, is_tui);
 					if (output == O_FULL)
-						emit(temp);
+						emit(temp, is_tui);
 					else
 						should_output = temp;
 				}
@@ -858,9 +861,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
-					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv);
+					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv, is_tui);
 					if (output == O_FULL)
-						emit(temp);
+						emit(temp, is_tui);
 					else
 						should_output = temp;
 				}
@@ -902,9 +905,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		pv.add(best_move);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);
 
-		auto temp = emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
+		auto temp = emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, is_tui);
 		if (output == O_FULL)
-			emit(temp);
+			emit(temp, is_tui);
 		else
 			should_output = temp;
 	}
@@ -927,7 +930,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	}
 
 	if (output == O_MINIMAL && should_output.empty() == false)
-		emit(should_output);
+		emit(should_output, is_tui);
 
 	return { best_move, best_score, max_depth };
 }

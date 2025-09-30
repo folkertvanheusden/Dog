@@ -320,7 +320,7 @@ void searcher(const int i)
 		libchess::Move best_move;
 		int            best_score { 0 };
 		int            max_depth  { 0 };
-		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o);
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
 
 		// notify finished
 		search_lck.lock();
@@ -867,7 +867,7 @@ void main_task()
 
 					libchess::MoveList pv;
 					pv.add(best_move);
-					emit_result(best_score, 0, { }, 0, { 0, 0 }, pv);
+					printf("%s", emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, false).c_str());
 				}
 			}
 #endif
