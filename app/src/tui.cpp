@@ -1593,7 +1593,7 @@ void tui()
 				}
 				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
 			}
-			else if (parts[0] == "ping" || parts[0] == "bell") {
+			else if (parts[0] == "ping" || parts[0] == "bell" || parts[0] == "beep") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
 					write_settings();
