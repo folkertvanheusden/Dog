@@ -10,6 +10,8 @@
 #include <driver/uart.h>
 #include <esp_chip_info.h>
 #include <esp_http_client.h>
+#include <esp_sntp.h>
+#include <esp_netif_sntp.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 #include <esp_wifi.h>
@@ -123,9 +125,11 @@ std::string myformat(const char *const fmt, ...)
 }
 
 #if defined(ESP32)
-std::string push_pgn(const std::string & pgn)
+esp_netif_t *p           = nullptr;
+uint64_t     org_tt_size = 0;
+bool enable_wifi()
 {
-	uint64_t org_tt_size = tti.get_size();
+	org_tt_size = tti.get_size();
 	tti.set_size(0);
 
 	my_printf("free heap size: %d, min_free_heap_size: %d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
@@ -136,9 +140,9 @@ std::string push_pgn(const std::string & pgn)
 	ESP_ERROR_CHECK(esp_netif_init());
 
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
-	esp_netif_t *p = esp_netif_create_default_wifi_sta();
+	p = esp_netif_create_default_wifi_sta();
 
-	esp_netif_set_hostname(p, "Dog " DOG_VERSION);
+	esp_netif_set_hostname(p, "Dog-" DOG_VERSION);
 
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -169,17 +173,23 @@ std::string push_pgn(const std::string & pgn)
 			pdFALSE,
 			portMAX_DELAY);
 
-	if (bits & WIFI_CONNECTED_BIT)
-		my_printf("Connected to %s\n", wifi_config.sta.ssid);
-	else
-		my_printf("Connection failed\n");
-
 	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, instance_got_ip));
 	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    instance_any_id));
 
 	vEventGroupDelete(s_wifi_event_group);
 	// wifi is setup now
 
+	if (bits & WIFI_CONNECTED_BIT) {
+		my_printf("Connected to %s\n", wifi_config.sta.ssid);
+		return true;
+	}
+
+	my_printf("Connection failed\n");
+	return false;
+}
+
+std::string push_pgn(const std::string & pgn)
+{
 	char recv_buffer[16] { };
 	esp_http_client_config_t http_config = {
 		.url           = "https://vanheusden.com/pgn/",
@@ -200,6 +210,14 @@ std::string push_pgn(const std::string & pgn)
 	}
 	esp_http_client_cleanup(client);
 
+	if (err == ESP_OK && strncmp(recv_buffer, "OK:", 3) == 0)
+		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
+
+	return "";
+}
+
+void disable_wifi()
+{
 	//
 	my_printf("stop wifi\n");
 	esp_wifi_disconnect();
@@ -208,11 +226,22 @@ std::string push_pgn(const std::string & pgn)
 	esp_event_loop_delete_default();
 
 	tti.set_size(org_tt_size);
+}
 
-	if (strncmp(recv_buffer, "OK:", 3) == 0)
-		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
+bool sync_time()
+{
+	if (!enable_wifi())
+		return false;
 
-	return "";
+	esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+	esp_netif_sntp_init(&config);
+	sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+	bool rc = esp_netif_sntp_sync_wait(pdMS_TO_TICKS(10000)) == ESP_OK;
+	esp_sntp_stop();
+
+	disable_wifi();
+
+	return rc;
 }
 #endif
 
@@ -879,6 +908,7 @@ static void help()
 	my_printf("moves    show valid moves\n");
 #if defined(ESP32)
 	my_printf("cfgwifi  ssid|password\n");
+	my_printf("synctime\n");
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
@@ -1018,7 +1048,6 @@ std::string get_local_system_name()
 
 std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took)
 {
-#if !defined(ESP32)
 	tm  tm_start_buf { };
 	tm  tm_end_buf   { };
 #if defined(WIN32)
@@ -1028,44 +1057,35 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 	tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 	tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
 #endif
-#endif
 
 	std::string pgn = "[Event \"Computer chess event\"]\n"
 		"[Site \"" + get_local_system_name() + "\"]\n"
-#if defined(ESP32)
-		"[Date \"-\"]\n"
-#else
 		"[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
-#endif
 		"[Round \"-\"]\n" +
 		myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
 	if (start_fen != libchess::constants::STARTPOS_FEN) {
 		pgn += "[Setup \"1\"]\n";
 		pgn += "[FEN \"" + start_fen + "\"]\n";
 	}
-#if !defined(ESP32)
 	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
 			tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
 			tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
-#if defined(WIN32)
-			0
+#if defined(WIN32) || defined(ESP32)
+			""
 #else
 			tm_end_buf.tm_zone
 #endif
 		       );
-#endif
 	if (game_took) {
-#if !defined(ESP32)
 		pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
 				tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
 				tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
-#if defined(WIN32)
-				0
+#if defined(WIN32) || defined(ESP32)
+				""
 #else
 				tm_end_buf.tm_zone
 #endif
 			       );
-#endif
 		pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
 	}
 
@@ -1202,13 +1222,10 @@ void tui()
 	int         expected_move_count = 0;
 	int         game_took           = 0;
 
-#if defined(ESP32)
-	uint64_t time_start = esp_timer_get_time();
-	uint64_t time_end   = 0;
-#else
-	time_t time_start = time(nullptr);
-	time_t time_end   = 0;
-#endif
+	uint64_t time_start   = esp_timer_get_time();
+	uint64_t time_end     = 0;
+	time_t   t_time_start = time(nullptr);
+	time_t   t_time_end   = 0;
 
 	auto reset_state = [&]()
 	{
@@ -1236,12 +1253,9 @@ void tui()
 			e->cs.reset();
 		}
 
-#if defined(ESP32)
-		time_start = esp_timer_get_time();
-#else
-		time_start = time(nullptr);
-		time_end   = 0;
-#endif
+		time_start   = esp_timer_get_time();
+		t_time_start = time(nullptr);
+		t_time_end   = 0;
 	};
 
 	for(;;) {
@@ -1272,13 +1286,9 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (finished && game_took == 0) {
-#if defined(ESP32)
-			time_end  = esp_timer_get_time();
-			game_took = std::max(uint64_t(1), (time_end - time_start) / 1000000);
-#else
-			time_end  = time(nullptr);
-			game_took = std::max(time_t(1), time_end - time_start);
-#endif
+			time_end   = esp_timer_get_time();
+			t_time_end = time(nullptr);
+			game_took  = std::max(uint64_t(1), (time_end - time_start) / 1000000);
 		}
 
 		if (p_a_k && player.has_value()) {
@@ -1440,28 +1450,53 @@ void tui()
 				else {
 					auto parts_wifi = split(parts[1], "|");
 					wifi_ssid = parts_wifi[0];
-					wifi_psk  = parts_wifi[1];
+					if (parts_wifi.size() == 2)
+						wifi_psk = parts_wifi[1];
+					else
+						wifi_psk.clear();
 					write_settings();
+				}
+			}
+			else if (parts[0] == "synctime") {
+				if (wifi_ssid.empty())
+					my_printf("Please configure WiFi settings first (\"cfgwifi\")\n");
+				else if (!sync_time())
+					my_printf("Failed to sync time\n");
+				else {
+					time_t now = time(nullptr);
+					my_printf(ctime(&now));
 				}
 			}
 #endif
 			else if (parts[0] == "submit" || parts[0] == "publish") {
+#if defined(ESP32)
+				static bool notified = false;
+				time_t      t        = time(nullptr);
+				my_printf(ctime(&t));
+#endif
 				if (moves_played.empty())
 					my_printf("No moves played yet\n");
 #if defined(ESP32)
 				else if (wifi_ssid.empty())
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
+				else if (t < 1759338625 && notified == false) {
+					my_printf("Please sync time first (synctime)\n");
+					notified = true;  // bother only once
+				}
 #endif
 				else {
-					std::string pgn = generate_pgn(time_start, time_end, initial_think_time, start_fen, player, moves_played, game_took);
+					std::string pgn = generate_pgn(t_time_start, t_time_end, initial_think_time, start_fen, player, moves_played, game_took);
 					my_printf("\n");
 					my_printf("\n");
 #if defined(ESP32)
-					const std::string result_url = push_pgn(pgn);
-					if (result_url.empty())
-						my_printf(" > Submit failed!\n");
-					else
-						my_printf("PGN can be found at: %s\n", result_url.c_str());
+					if (enable_wifi()) {
+						const std::string result_url = push_pgn(pgn);
+						if (result_url.empty())
+							my_printf(" > Submit failed!\n");
+						else
+							my_printf("PGN can be found at: %s\n", result_url.c_str());
+						disable_wifi();
+					}
 #else
 					std::string filename = myformat("%" PRIx64 ".pgn", esp_timer_get_time());
 					std::ofstream fh(filename);
