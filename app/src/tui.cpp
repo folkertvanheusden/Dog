@@ -1320,15 +1320,25 @@ void tui()
 					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
 					constexpr const uint32_t ms = 1000;
 					constexpr const uint32_t us = ms * ms;
-					my_printf("\x1b[3;69H%02d:%02d.%03d",
-							total_human_think / (60 * us),
-							(total_human_think / us) % 60,
-							(total_human_think / ms) % ms);
+					if (int64_t(total_human_think) >= 0) {
+						my_printf("\x1b[3;69H%02d:%02d.%03d",
+								total_human_think / (60 * us),
+								(total_human_think / us) % 60,
+								(total_human_think / ms) % ms);
+					}
+					else {
+						my_printf("\x1b[3;69Hflag fell");
+					}
 					my_printf("\x1b[5;69H\x1b[4mDog\x1b[24m");
-					my_printf("\x1b[6;69H%02d:%02d.%03d",
-							total_dog_time / (60 * ms),
-							(total_dog_time / ms) % 60,
-							total_dog_time % 1000);
+					if (total_dog_time >= 0) {
+						my_printf("\x1b[6;69H%02d:%02d.%03d",
+								total_dog_time / (60 * ms),
+								(total_dog_time / ms) % 60,
+								total_dog_time % 1000);
+					}
+					else {
+						my_printf("\x1b[6;69Hflag fell");
+					}
 					if (verbose && (human_score_n || dog_score_n)) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
