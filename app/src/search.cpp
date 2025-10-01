@@ -709,10 +709,10 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 		extern bool verbose;
 		std::string msg1;
 		if (verbose)
-			msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\n";
+			msg1 = myformat("depth: %d, duration: %.3f, NPS: %" PRIu64, max_depth, thought_ms / 1000., nps) + ", " + score_str_human + "\r\n";
 		else
-			msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\n";
-		std::string msg2 = "pv: " + pv_str + "\n";
+			msg1 = myformat("depth: %d (%.3fs), ", max_depth, thought_ms / 1000.) + score_str_human + "\r\n";
+		std::string msg2 = "pv: " + pv_str + "\r\n";
 		return msg1 + msg2;
 	}
 
