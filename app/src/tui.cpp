@@ -1751,6 +1751,9 @@ void tui()
 			auto     now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t  score_before = get_score(sp.at(0)->pos, now_playing);
 
+			int32_t cur_think_time_min = 0;
+			int32_t cur_think_time_max = 0;
+
 			std::optional<libchess::Move> move;
 			if (use_book) {
 				move = pb->query(sp.at(0)->pos, verbose);
@@ -1770,8 +1773,6 @@ void tui()
 				if (total_dog_time <= 0)
 					my_printf("The flag fell for Dog, you won!\n");
 
-				int32_t cur_think_time_min = 0;
-				int32_t cur_think_time_max = 0;
 				if (clock_type == C_INCREMENTAL)
 					cur_think_time_max = cur_think_time_min = total_dog_time;
 				else {
@@ -1838,8 +1839,12 @@ void tui()
 			uint64_t all_processing_end_search = esp_timer_get_time();
 			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 			total_dog_time -= time_used;
-			if (verbose)
-				my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
+			if (verbose) {
+				if (cur_think_time_max)
+					my_printf("Calculated for %.3f seconds (%.2f%%)\n", time_used / 1000., time_used * 100. / cur_think_time_max);
+				else
+					my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
+			}
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
