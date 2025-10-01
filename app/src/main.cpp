@@ -867,7 +867,7 @@ void main_task()
 
 					libchess::MoveList pv;
 					pv.add(best_move);
-					printf("%s", emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, false).c_str());
+					printf("%s", emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, false, think_time_max).c_str());
 				}
 			}
 #endif
