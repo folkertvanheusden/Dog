@@ -940,7 +940,7 @@ constexpr const int max_history    = 10;
 constexpr const int terminal_width = 80;
 constexpr const char *const prompt = "> ";
 
-std::string my_getline()
+std::string my_getline(const char *const prompt)
 {
 	set_led(127, 127, 127);
 
@@ -1046,7 +1046,7 @@ std::string get_local_system_name()
 #endif
 }
 
-std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took)
+std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took, const std::optional<std::string> & opponent)
 {
 	tm  tm_start_buf { };
 	tm  tm_end_buf   { };
@@ -1090,13 +1090,14 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 	}
 
 	if (player.has_value()) {
+		std::string opponent_cur = opponent.has_value() ? opponent.value() : "?";
 		if (player.value() == libchess::constants::WHITE) {
-			pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
-			pgn += "[Black \"?\"]\n";
+			pgn += "[White \"" + opponent_cur + "\"]\n";
+			pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
 		}
 		else {
-			pgn += "[White \"?\"]\n";
-			pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+			pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+			pgn += "[Black \"" + opponent_cur + "\"]\n";
 		}
 	}
 	else {
@@ -1426,7 +1427,7 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-			std::string line  = my_getline();
+			std::string line  = my_getline(prompt);
 			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
@@ -1495,7 +1496,11 @@ void tui()
 				}
 #endif
 				else {
-					std::string pgn = generate_pgn(t_time_start, t_time_end, initial_think_time, start_fen, player, moves_played, game_took);
+					my_printf("Set opponent name? (y/n)\n");
+					std::optional<std::string> opponent;
+					if (wait_for_key() == 'y')
+						opponent = my_getline("=");
+					std::string pgn = generate_pgn(t_time_start, t_time_end, initial_think_time, start_fen, player, moves_played, game_took, opponent);
 					my_printf("\n");
 					my_printf("\n");
 #if defined(ESP32)
