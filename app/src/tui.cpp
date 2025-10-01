@@ -1535,6 +1535,21 @@ void tui()
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
+				my_printf("Play with W(hite) or with B(lack)?\n");
+				for(;;) {
+					int c = toupper(wait_for_key());
+					if (c == 3)
+						break;
+
+					if (c == 'W') {
+						player = libchess::constants::WHITE;
+						break;
+					}
+					else if (c == 'B') {
+						player = libchess::constants::BLACK;
+						break;
+					}
+				}
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
