@@ -216,12 +216,12 @@ std::string push_pgn(const std::string & pgn)
 }
 #endif
 
-bool store_position(const std::string & fen, const int total_dog_time)
+bool store_position(const std::string & fen, const int initial_think_time)
 {
 	FILE *fh = fopen(RECALL_FILE, "w");
 	if (fh) {
 		fprintf(fh, "%s\n", fen.c_str());
-		fprintf(fh, "%d\n", total_dog_time);
+		fprintf(fh, "%d\n", initial_think_time);
 		fclose(fh);
 
 		return true;
@@ -1521,7 +1521,7 @@ void tui()
 				}
 				my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
 				if (parts.size() != 2)
-					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time     / 1000.);
+					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time / 1000.);
 			}
 			else if (parts[0] == "clock") {
 				if (parts.size() == 2) {
@@ -1775,18 +1775,8 @@ void tui()
 				if (clock_type == C_INCREMENTAL)
 					cur_think_time_max = cur_think_time_min = total_dog_time;
 				else {
-					const int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
-					const int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
-
-	                                cur_think_time_min = total_dog_time / (cur_n_moves + 7);
-	                                cur_think_time_max = total_dog_time / cur_n_moves;
-
-					int limit_duration_min = total_dog_time / 15;
-					if (cur_think_time_min > limit_duration_min)
-						cur_think_time_min = limit_duration_min;
-					int limit_duration_max = total_dog_time / 10;
-					if (cur_think_time_max > limit_duration_max)
-						cur_think_time_max = limit_duration_max;
+					cur_think_time_max = total_dog_time / 10;
+					cur_think_time_min = total_dog_time / 20;
 				}
 
 				if (verbose)
