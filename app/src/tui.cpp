@@ -1300,6 +1300,7 @@ void tui()
 				press_any_key();
 				stop_ponder();
 				sp.at(0)->pos = libchess::Position(fen);
+				check_not_searching();
 			}
 			else {
 				press_any_key();
@@ -1419,6 +1420,8 @@ void tui()
 			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
 
+		check_not_searching();
+
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
 			if (do_ponder && !finished) {
@@ -1435,6 +1438,8 @@ void tui()
 				// because pondering does not reset the libchess::Position-object:
 				sp.at(0)->pos = libchess::Position(fen);
 			}
+
+			check_not_searching();
 
 			if (do_ponder && !finished && verbose) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
@@ -1914,6 +1919,8 @@ void tui()
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
 		}
+
+		check_not_searching();
 	}
 
 	delete pb;
