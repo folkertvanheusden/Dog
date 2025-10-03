@@ -3,6 +3,7 @@
 // Some parts are not mine (e.g. the inbuf class): see the url
 // above it for details.
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cinttypes>
 #include <condition_variable>
@@ -263,6 +264,8 @@ struct {
 	bool                    search_is_abs_time   { false };
 	int                     search_max_depth;
 	std::optional<uint64_t> search_max_n_nodes;
+	int                     search_n_started     { 0     };
+	std::condition_variable search_cv_started;
 	std::condition_variable search_cv_finished;
 	std::optional<libchess::Move> search_best_move;
 	int                     search_best_score    { 0     };
@@ -308,6 +311,8 @@ void searcher(const int i)
 		bool local_search_output         = work.search_output;
 
 		work.search_count_running++;
+		work.search_n_started++;
+		work.search_cv_started.notify_one();
 
 		clear_flag(sp.at(i)->stop);
 		search_lck.unlock();
@@ -361,20 +366,24 @@ void prepare_threads_state()
 void start_ponder()
 {
 	my_trace("# start ponder\n");
-	std::unique_lock<std::mutex> lck(work.search_fen_lock);
+	{
+		std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
-	prepare_threads_state();
+		prepare_threads_state();
 
-	work.search_think_time_min = -1;
-	work.search_think_time_max = -1;
-	work.search_is_abs_time    = false;
-	work.search_max_depth      = -1;
-	work.search_max_n_nodes.reset();
-	work.search_version++;
-	work.search_best_move.reset();
-	work.search_best_score     = -32768;
-	work.search_output         = false;
-	work.search_cv.notify_all();
+		work.search_think_time_min = -1;
+		work.search_think_time_max = -1;
+		work.search_is_abs_time    = false;
+		work.search_max_depth      = -1;
+		work.search_max_n_nodes.reset();
+		work.search_version++;
+		work.search_best_move.reset();
+		work.search_best_score     = -32768;
+		work.search_output         = false;
+		work.search_n_started      = 0;
+		work.search_cv.notify_all();
+	}
+
 	my_trace("# ponder started\n");
 
 	if (t != T_ASCII) {
@@ -382,6 +391,8 @@ void start_ponder()
 		my_printf("\x1b[1;80H\x1b[1;5;7mP");
 		restore_cursor_position();
 	}
+
+	wait_searches_started(true);
 }
 
 void stop_ponder()
@@ -407,6 +418,21 @@ void stop_ponder()
 	}
 
 	my_trace("# ponder stopped\n");
+}
+
+void check_not_searching()
+{
+	my_trace("# check not searching\n");
+
+	std::unique_lock<std::mutex> lck(work.search_fen_lock);
+	assert(work.search_count_running == 0);
+}
+
+void wait_searches_started(const bool all)
+{
+	std::unique_lock<std::mutex> lck(work.search_fen_lock);
+	while((work.search_n_started < sp.size() && all == true) || (work.search_n_started == 0 && all == false))
+		work.search_cv_started.wait(lck);
 }
 
 void delete_threads()
@@ -763,6 +789,7 @@ void main_task()
 					work.search_output     = true;
 					work.search_cv.notify_all();
 				}
+				wait_searches_started(true);
 				// get
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
@@ -867,7 +894,7 @@ void main_task()
 
 					libchess::MoveList pv;
 					pv.add(best_move);
-					printf("%s", emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, false).c_str());
+					printf("%s", emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, false, think_time_max).c_str());
 				}
 			}
 #endif
@@ -891,6 +918,8 @@ void main_task()
 					work.search_output         = true;
 					work.search_cv.notify_all();
 				}
+
+				wait_searches_started(true);
 
 				// get
 				{
@@ -1140,6 +1169,7 @@ void run_bench(const bool long_bench, const bool via_usb)
 				work.search_output         = false;
 				work.search_cv.notify_all();
 			}
+			wait_searches_started(true);
 			// get
 			{
 				std::unique_lock<std::mutex> lck(work.search_fen_lock);
@@ -1167,6 +1197,7 @@ void run_bench(const bool long_bench, const bool via_usb)
 			work.search_output         = true;
 			work.search_cv.notify_all();
 		}
+		wait_searches_started(true);
 		// get
 		{
 			std::unique_lock<std::mutex> lck(work.search_fen_lock);

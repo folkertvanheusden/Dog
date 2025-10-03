@@ -10,6 +10,8 @@
 #include <driver/uart.h>
 #include <esp_chip_info.h>
 #include <esp_http_client.h>
+#include <esp_sntp.h>
+#include <esp_netif_sntp.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 #include <esp_wifi.h>
@@ -123,9 +125,11 @@ std::string myformat(const char *const fmt, ...)
 }
 
 #if defined(ESP32)
-std::string push_pgn(const std::string & pgn)
+esp_netif_t *p           = nullptr;
+uint64_t     org_tt_size = 0;
+bool enable_wifi()
 {
-	uint64_t org_tt_size = tti.get_size();
+	org_tt_size = tti.get_size();
 	tti.set_size(0);
 
 	my_printf("free heap size: %d, min_free_heap_size: %d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
@@ -136,9 +140,9 @@ std::string push_pgn(const std::string & pgn)
 	ESP_ERROR_CHECK(esp_netif_init());
 
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
-	esp_netif_t *p = esp_netif_create_default_wifi_sta();
+	p = esp_netif_create_default_wifi_sta();
 
-	esp_netif_set_hostname(p, "Dog " DOG_VERSION);
+	esp_netif_set_hostname(p, "Dog-" DOG_VERSION);
 
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -169,17 +173,23 @@ std::string push_pgn(const std::string & pgn)
 			pdFALSE,
 			portMAX_DELAY);
 
-	if (bits & WIFI_CONNECTED_BIT)
-		my_printf("Connected to %s\n", wifi_config.sta.ssid);
-	else
-		my_printf("Connection failed\n");
-
 	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, instance_got_ip));
 	ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    instance_any_id));
 
 	vEventGroupDelete(s_wifi_event_group);
 	// wifi is setup now
 
+	if (bits & WIFI_CONNECTED_BIT) {
+		my_printf("Connected to %s\n", wifi_config.sta.ssid);
+		return true;
+	}
+
+	my_printf("Connection failed\n");
+	return false;
+}
+
+std::string push_pgn(const std::string & pgn)
+{
 	char recv_buffer[16] { };
 	esp_http_client_config_t http_config = {
 		.url           = "https://vanheusden.com/pgn/",
@@ -200,6 +210,14 @@ std::string push_pgn(const std::string & pgn)
 	}
 	esp_http_client_cleanup(client);
 
+	if (err == ESP_OK && strncmp(recv_buffer, "OK:", 3) == 0)
+		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
+
+	return "";
+}
+
+void disable_wifi()
+{
 	//
 	my_printf("stop wifi\n");
 	esp_wifi_disconnect();
@@ -208,20 +226,31 @@ std::string push_pgn(const std::string & pgn)
 	esp_event_loop_delete_default();
 
 	tti.set_size(org_tt_size);
+}
 
-	if (strncmp(recv_buffer, "OK:", 3) == 0)
-		return myformat("https://vanheusden.com/pgn/?%s", &recv_buffer[3]);
+bool sync_time()
+{
+	if (!enable_wifi())
+		return false;
 
-	return "";
+	esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+	esp_netif_sntp_init(&config);
+	sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+	bool rc = esp_netif_sntp_sync_wait(pdMS_TO_TICKS(10000)) == ESP_OK;
+	esp_sntp_stop();
+
+	disable_wifi();
+
+	return rc;
 }
 #endif
 
-bool store_position(const std::string & fen, const int total_dog_time)
+bool store_position(const std::string & fen, const int initial_think_time)
 {
 	FILE *fh = fopen(RECALL_FILE, "w");
 	if (fh) {
 		fprintf(fh, "%s\n", fen.c_str());
-		fprintf(fh, "%d\n", total_dog_time);
+		fprintf(fh, "%d\n", initial_think_time);
 		fclose(fh);
 
 		return true;
@@ -879,6 +908,7 @@ static void help()
 	my_printf("moves    show valid moves\n");
 #if defined(ESP32)
 	my_printf("cfgwifi  ssid|password\n");
+	my_printf("synctime\n");
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
@@ -910,7 +940,7 @@ constexpr const int max_history    = 10;
 constexpr const int terminal_width = 80;
 constexpr const char *const prompt = "> ";
 
-std::string my_getline()
+std::string my_getline(const char *const prompt)
 {
 	set_led(127, 127, 127);
 
@@ -1016,9 +1046,8 @@ std::string get_local_system_name()
 #endif
 }
 
-std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took)
+std::string generate_pgn(const time_t time_start, const time_t time_end, const int32_t initial_think_time, const std::string & start_fen, std::optional<libchess::Color> & player, const std::vector<std::pair<std::string, std::string> > & moves_played, const int game_took, const std::optional<std::string> & opponent)
 {
-#if !defined(ESP32)
 	tm  tm_start_buf { };
 	tm  tm_end_buf   { };
 #if defined(WIN32)
@@ -1028,55 +1057,47 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 	tm *tm_start = localtime_r(&time_start, &tm_start_buf);
 	tm *tm_end   = localtime_r(&time_end,   &tm_end_buf  );
 #endif
-#endif
 
 	std::string pgn = "[Event \"Computer chess event\"]\n"
 		"[Site \"" + get_local_system_name() + "\"]\n"
-#if defined(ESP32)
-		"[Date \"-\"]\n"
-#else
 		"[Date \"" + myformat("%04d-%02d-%02d", tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday) + "\"]\n"
-#endif
 		"[Round \"-\"]\n" +
 		myformat("[TimeControl \"40/%d\"]\n", std::max(int32_t(1), initial_think_time / 1000));
 	if (start_fen != libchess::constants::STARTPOS_FEN) {
 		pgn += "[Setup \"1\"]\n";
 		pgn += "[FEN \"" + start_fen + "\"]\n";
 	}
-#if !defined(ESP32)
 	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
 			tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
 			tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
-#if defined(WIN32)
-			0
+#if defined(WIN32) || defined(ESP32)
+			""
 #else
 			tm_end_buf.tm_zone
 #endif
 		       );
-#endif
 	if (game_took) {
-#if !defined(ESP32)
 		pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
 				tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
 				tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
-#if defined(WIN32)
-				0
+#if defined(WIN32) || defined(ESP32)
+				""
 #else
 				tm_end_buf.tm_zone
 #endif
 			       );
-#endif
 		pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
 	}
 
 	if (player.has_value()) {
+		std::string opponent_cur = opponent.has_value() ? opponent.value() : "?";
 		if (player.value() == libchess::constants::WHITE) {
-			pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
-			pgn += "[Black \"?\"]\n";
+			pgn += "[White \"" + opponent_cur + "\"]\n";
+			pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
 		}
 		else {
-			pgn += "[White \"?\"]\n";
-			pgn += "[Black \"Dog v" DOG_VERSION "\"]\n";
+			pgn += "[White \"Dog v" DOG_VERSION "\"]\n";
+			pgn += "[Black \"" + opponent_cur + "\"]\n";
 		}
 	}
 	else {
@@ -1202,13 +1223,10 @@ void tui()
 	int         expected_move_count = 0;
 	int         game_took           = 0;
 
-#if defined(ESP32)
-	uint64_t time_start = esp_timer_get_time();
-	uint64_t time_end   = 0;
-#else
-	time_t time_start = time(nullptr);
-	time_t time_end   = 0;
-#endif
+	uint64_t time_start   = esp_timer_get_time();
+	uint64_t time_end     = 0;
+	time_t   t_time_start = time(nullptr);
+	time_t   t_time_end   = 0;
 
 	auto reset_state = [&]()
 	{
@@ -1236,12 +1254,9 @@ void tui()
 			e->cs.reset();
 		}
 
-#if defined(ESP32)
-		time_start = esp_timer_get_time();
-#else
-		time_start = time(nullptr);
-		time_end   = 0;
-#endif
+		time_start   = esp_timer_get_time();
+		t_time_start = time(nullptr);
+		t_time_end   = 0;
 	};
 
 	for(;;) {
@@ -1272,13 +1287,9 @@ void tui()
 
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (finished && game_took == 0) {
-#if defined(ESP32)
-			time_end  = esp_timer_get_time();
-			game_took = std::max(uint64_t(1), (time_end - time_start) / 1000000);
-#else
-			time_end  = time(nullptr);
-			game_took = std::max(time_t(1), time_end - time_start);
-#endif
+			time_end   = esp_timer_get_time();
+			t_time_end = time(nullptr);
+			game_took  = std::max(uint64_t(1), (time_end - time_start) / 1000000);
 		}
 
 		if (p_a_k && player.has_value()) {
@@ -1289,6 +1300,7 @@ void tui()
 				press_any_key();
 				stop_ponder();
 				sp.at(0)->pos = libchess::Position(fen);
+				check_not_searching();
 			}
 			else {
 				press_any_key();
@@ -1310,15 +1322,25 @@ void tui()
 					my_printf("\x1b[2;69H\x1b[4mHuman\x1b[24m");
 					constexpr const uint32_t ms = 1000;
 					constexpr const uint32_t us = ms * ms;
-					my_printf("\x1b[3;69H%02d:%02d.%03d",
-							total_human_think / (60 * us),
-							(total_human_think / us) % 60,
-							(total_human_think / ms) % ms);
+					if (int64_t(total_human_think) >= 0) {
+						my_printf("\x1b[3;69H%02d:%02d.%03d",
+								total_human_think / (60 * us),
+								(total_human_think / us) % 60,
+								(total_human_think / ms) % ms);
+					}
+					else {
+						my_printf("\x1b[3;69Hflag fell");
+					}
 					my_printf("\x1b[5;69H\x1b[4mDog\x1b[24m");
-					my_printf("\x1b[6;69H%02d:%02d.%03d",
-							total_dog_time / (60 * ms),
-							(total_dog_time / ms) % 60,
-							total_dog_time % 1000);
+					if (total_dog_time >= 0) {
+						my_printf("\x1b[6;69H%02d:%02d.%03d",
+								total_dog_time / (60 * ms),
+								(total_dog_time / ms) % 60,
+								total_dog_time % 1000);
+					}
+					else {
+						my_printf("\x1b[6;69Hflag fell");
+					}
 					if (verbose && (human_score_n || dog_score_n)) {
 						my_printf("\x1b[8;69H\x1b[4mAvg. gain\x1b[24m");
 						if (human_score_n)
@@ -1398,6 +1420,8 @@ void tui()
 			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
 		}
 
+		check_not_searching();
+
 		if ((player.has_value() && player.value() == sp.at(0)->pos.side_to_move()) || finished) {
 			std::string fen;
 			if (do_ponder && !finished) {
@@ -1406,7 +1430,7 @@ void tui()
 			}
 
 			human_think_start = esp_timer_get_time();
-			std::string line  = my_getline();
+			std::string line  = my_getline(prompt);
 			human_think_end   = esp_timer_get_time();
 
 			if (fen.empty() == false) {
@@ -1414,6 +1438,8 @@ void tui()
 				// because pondering does not reset the libchess::Position-object:
 				sp.at(0)->pos = libchess::Position(fen);
 			}
+
+			check_not_searching();
 
 			if (do_ponder && !finished && verbose) {
 				uint64_t end_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
@@ -1440,28 +1466,57 @@ void tui()
 				else {
 					auto parts_wifi = split(parts[1], "|");
 					wifi_ssid = parts_wifi[0];
-					wifi_psk  = parts_wifi[1];
+					if (parts_wifi.size() == 2)
+						wifi_psk = parts_wifi[1];
+					else
+						wifi_psk.clear();
 					write_settings();
+				}
+			}
+			else if (parts[0] == "synctime") {
+				if (wifi_ssid.empty())
+					my_printf("Please configure WiFi settings first (\"cfgwifi\")\n");
+				else if (!sync_time())
+					my_printf("Failed to sync time\n");
+				else {
+					time_t now = time(nullptr);
+					my_printf(ctime(&now));
 				}
 			}
 #endif
 			else if (parts[0] == "submit" || parts[0] == "publish") {
+#if defined(ESP32)
+				static bool notified = false;
+				time_t      t        = time(nullptr);
+				my_printf(ctime(&t));
+#endif
 				if (moves_played.empty())
 					my_printf("No moves played yet\n");
 #if defined(ESP32)
 				else if (wifi_ssid.empty())
 					my_printf("WiFi is not configured yet (see cfgwifi)\n");
+				else if (t < 1759338625 && notified == false) {
+					my_printf("Please sync time first (synctime)\n");
+					notified = true;  // bother only once
+				}
 #endif
 				else {
-					std::string pgn = generate_pgn(time_start, time_end, initial_think_time, start_fen, player, moves_played, game_took);
+					my_printf("Set opponent name? (y/n)\n");
+					std::optional<std::string> opponent;
+					if (wait_for_key() == 'y')
+						opponent = my_getline("=");
+					std::string pgn = generate_pgn(t_time_start, t_time_end, initial_think_time, start_fen, player, moves_played, game_took, opponent);
 					my_printf("\n");
 					my_printf("\n");
 #if defined(ESP32)
-					const std::string result_url = push_pgn(pgn);
-					if (result_url.empty())
-						my_printf(" > Submit failed!\n");
-					else
-						my_printf("PGN can be found at: %s\n", result_url.c_str());
+					if (enable_wifi()) {
+						const std::string result_url = push_pgn(pgn);
+						if (result_url.empty())
+							my_printf(" > Submit failed!\n");
+						else
+							my_printf("PGN can be found at: %s\n", result_url.c_str());
+						disable_wifi();
+					}
 #else
 					std::string filename = myformat("%" PRIx64 ".pgn", esp_timer_get_time());
 					std::ofstream fh(filename);
@@ -1485,6 +1540,21 @@ void tui()
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
+				my_printf("Play with W(hite) or with B(lack)?\n");
+				for(;;) {
+					int c = toupper(wait_for_key());
+					if (c == 3)
+						break;
+
+					if (c == 'W') {
+						player = libchess::constants::WHITE;
+						break;
+					}
+					else if (c == 'B') {
+						player = libchess::constants::BLACK;
+						break;
+					}
+				}
 			}
 			else if (parts[0] == "redraw")
 				show_board = true;
@@ -1521,7 +1591,7 @@ void tui()
 				}
 				my_printf("Initial think time for Dog: %.3f seconds\n", initial_think_time / 1000.);
 				if (parts.size() != 2)
-					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time     / 1000.);
+					my_printf("Current time left for Dog : %.3f seconds\n", total_dog_time / 1000.);
 			}
 			else if (parts[0] == "clock") {
 				if (parts.size() == 2) {
@@ -1593,7 +1663,7 @@ void tui()
 				}
 				my_printf("%s is %senabled\n", parts[0].c_str(), verbose ? "":"not ");
 			}
-			else if (parts[0] == "ping" || parts[0] == "bell") {
+			else if (parts[0] == "ping" || parts[0] == "bell" || parts[0] == "beep") {
 				if (parts.size() == 2) {
 					do_ping = is_on(parts[1]);
 					write_settings();
@@ -1751,6 +1821,9 @@ void tui()
 			auto     now_playing  = sp.at(0)->pos.side_to_move();
 			int16_t  score_before = get_score(sp.at(0)->pos, now_playing);
 
+			int32_t cur_think_time_min = 0;
+			int32_t cur_think_time_max = 0;
+
 			std::optional<libchess::Move> move;
 			if (use_book) {
 				move = pb->query(sp.at(0)->pos, verbose);
@@ -1770,23 +1843,11 @@ void tui()
 				if (total_dog_time <= 0)
 					my_printf("The flag fell for Dog, you won!\n");
 
-				int32_t cur_think_time_min = 0;
-				int32_t cur_think_time_max = 0;
 				if (clock_type == C_INCREMENTAL)
 					cur_think_time_max = cur_think_time_min = total_dog_time;
 				else {
-					const int moves_to_go = 40 - sp.at(0)->pos.fullmoves();
-					const int cur_n_moves = moves_to_go <= 0 ? 40 : moves_to_go;
-
-	                                cur_think_time_min = total_dog_time / (cur_n_moves + 7);
-	                                cur_think_time_max = total_dog_time / cur_n_moves;
-
-					int limit_duration_min = total_dog_time / 15;
-					if (cur_think_time_min > limit_duration_min)
-						cur_think_time_min = limit_duration_min;
-					int limit_duration_max = total_dog_time / 10;
-					if (cur_think_time_max > limit_duration_max)
-						cur_think_time_max = limit_duration_max;
+					cur_think_time_max = total_dog_time / 10;
+					cur_think_time_min = total_dog_time / 20;
 				}
 
 				if (verbose)
@@ -1848,12 +1909,18 @@ void tui()
 			uint64_t all_processing_end_search = esp_timer_get_time();
 			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 			total_dog_time -= time_used;
-			if (verbose)
-				my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
+			if (verbose) {
+				if (cur_think_time_max)
+					my_printf("Calculated for %.3f seconds (%.2f%%)\n", time_used / 1000., time_used * 100. / cur_think_time_max);
+				else
+					my_printf("Calculated for %.3f seconds\n", time_used / 1000.);
+			}
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
 		}
+
+		check_not_searching();
 	}
 
 	delete pb;

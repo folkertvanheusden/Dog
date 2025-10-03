@@ -18,13 +18,15 @@ Then run: `xboard -fUCI -fcp app/wrapper.sh` (this requires 'socat' to be instal
 
 The program also has a integrated text-interface. For that just run it and enter "tui".
 
-To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14):
+To build it for Linux (requires at least gcc/g++ 14 or clang/clang++ 14, gcc produces faster binaries):
 
 	cd app/src/linux-windows
 	mkdir build
 	cd build
 	cmake ..
 	make
+
+'Dog-native' is probably the fastest on your computer. If it won't run, try Dog-avx512 then Dog-avx2 and if all fails, try Dog.
 
 Debian/Ubuntu users can then also run:
 

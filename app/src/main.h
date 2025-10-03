@@ -79,6 +79,8 @@ void set_flag(end_t *const stop);
 void clear_flag(end_t *const stop);
 void start_ponder();
 void stop_ponder();
+void check_not_searching();
+void wait_searches_started(const bool all);
 void set_thread_name(std::string name);
 chess_stats calculate_search_statistics();
 std::pair<uint64_t, uint64_t> simple_search_statistics();  // nodes, syzyg hits
