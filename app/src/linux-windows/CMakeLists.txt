@@ -143,14 +143,18 @@ add_executable(
   Dog-avx
   ${APP_SOURCES}
 )
-
 target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3 -DBUILD_TARGET=\"AVX\")
+
+add_executable(
+  Dog-avx512
+  ${APP_SOURCES}
+)
+target_compile_options(Dog-avx PRIVATE -mavx512f -mavx512vbmi2 -O3 -DBUILD_TARGET=\"AVX512\")
 
 add_executable(
   Dog-native
   ${APP_SOURCES}
 )
-
 target_compile_options(Dog-native PRIVATE -march=native -mtune=native -O3 -DBUILD_TARGET=\"native\")
 
 add_executable(
