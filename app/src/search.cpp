@@ -776,7 +776,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		int beta_repeat  = 0;
 
 		std::vector<uint64_t> node_counts;
-		uint64_t previous_node_count = 0;
+		uint64_t              previous_node_count = 0;
 
 		std::set<std::string> itd_moves;  // iterative deepening moves
 
