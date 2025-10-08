@@ -650,9 +650,7 @@ void timer(const int think_time, end_t *const ei)
 
 	set_flag(ei);
 
-#if !defined(__ANDROID__)
 	my_trace("# time is up; set stop flag\n");
-#endif
 }
 
 double calculate_EBF(const std::vector<uint64_t> & node_counts)
@@ -782,9 +780,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
-#if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
-#endif
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 					libchess::MoveList l_pv;
 					l_pv.add(best_move);
@@ -866,9 +862,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 				if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
 				    (int(thought_ms) >= search_time && is_absolute_time == true)) {
-#if !defined(__ANDROID__)
-					my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
-#endif
+					my_trace("info string %d time %u is up %" PRIu64 " (%.2f %% | %.2f %%)\n", sp->pos.fullmoves(), search_time, thought_ms, thought_ms * 100. / search_time, thought_ms * 100. / search_time_max);
 					break;
 				}
 
@@ -890,9 +884,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		}
 	}
 	else {
-#if !defined(__ANDROID__)
 		my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
-#endif
 		libchess::MoveList pv;
 		pv.add(best_move);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);

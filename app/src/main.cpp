@@ -99,6 +99,7 @@ auto allow_tracing_handler = [](const bool value) {
 };
 void my_trace(const char *const fmt, ...)
 {
+#if !defined(__ANDROID__)
 	if (trace_enabled) {
 		va_list ap { };
 		va_start(ap, fmt);
@@ -128,6 +129,7 @@ void my_trace(const char *const fmt, ...)
 			fprintf(stderr, "Cannot access %s: %s\n", my_trace_file.c_str(), strerror(errno));
 		}
 	}
+#endif
 #endif
 }
 
@@ -200,9 +202,7 @@ auto stop_handler = []()
 {
 	for(auto & i: sp)
 		set_flag(i->stop);
-#if !defined(__ANDROID__)
 	my_trace("# stop_handler invoked\n");
-#endif
 };
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
@@ -953,7 +953,7 @@ void main_task()
 #if defined(__ANDROID__)
 			__android_log_print(ANDROID_LOG_INFO, APPNAME, "EXCEPTION in main: %s", e.what());
 #else
-			printf("# EXCEPTION in main: %s\n", e.what());
+			my_trace("# EXCEPTION in main: %s\n", e.what());
 #endif
 		}
 	};
@@ -1235,7 +1235,7 @@ void help()
 	printf("-p    allow pondering\n");
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
-	printf("-R x  my_trace to file\n");
+	printf("-R x  trace to file x\n");
 	printf("-r    enable tracing to screen\n");
 	printf("-U    run unit tests\n");
 	printf("-Q x:y:z run test type x againt file y with search time z (ms), with x is \"matefinder\"\n");
