@@ -7,6 +7,15 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+small net for esp32 measured on pc
+344603d04391ba916b7054869ec3a869920a5b7c versus 764384d8809daaebf00ac106f360edef708a1e3d
+	Results of Dog-new-small vs Dog-base-small (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
+	Elo: 27.40 +/- 15.54, nElo: 41.05 +/- 23.17
+	LOS: 99.97 %, DrawRatio: 39.35 %, PairsRatio: 1.38
+	Games: 864, Wins: 276, Losses: 208, Draws: 380, Points: 466.0 (53.94 %)
+	Ptnml(0-2): [9, 101, 170, 117, 35], WL/DD Ratio: 1.10
+	LLR: 2.95 (100.0%) (-2.94, 2.94) [-5.00, 5.00]
+
 344603d04391ba916b7054869ec3a869920a5b7c versus d3003ea2147f9e43dbb1ccb3ee392a8fa6c57741
 	Results of Dog-native vs Dog-base (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
 	Elo: 28.59 +/- 15.29, nElo: 45.13 +/- 24.02
