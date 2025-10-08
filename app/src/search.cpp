@@ -271,15 +271,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		if (sp.pos.is_legal_generated_move(move) == false)
 			continue;
 
-		if (!in_check && sp.pos.is_capture_move(move)) {
-			auto piece_to    = sp.pos.piece_on(move.to_square());
-			int  eval_target = move.type() == libchess::Move::Type::ENPASSANT ? libchess::constants::PAWN : piece_to->type();
-			auto piece_from  = sp.pos.piece_on(move.from_square());
-			int  eval_killer = piece_from->type();
-			if (eval_killer > eval_target && sp.pos.attackers_to(move.to_square(), !sp.pos.side_to_move()))
-				continue;
-		}
-
 		n_played++;
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
@@ -776,7 +767,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		int beta_repeat  = 0;
 
 		std::vector<uint64_t> node_counts;
-		uint64_t previous_node_count = 0;
+		uint64_t              previous_node_count = 0;
 
 		std::set<std::string> itd_moves;  // iterative deepening moves
 
