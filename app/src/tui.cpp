@@ -61,7 +61,7 @@ bool             default_trace      = false;
 int32_t          initial_think_time = 1000;
 bool             do_ponder          = false;
 bool             verbose            = false;
-bool             use_book           = false;
+bool             use_book           = true;
 
 void ring_bell()
 {
@@ -1417,7 +1417,11 @@ void tui()
 
 		if (first) {
 			first = false;
-			my_printf("ponder: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
+#if defined(ESP32)
+			my_printf("ponder: %s, book: %s, bell: %s, wifi ssid: %s\n", do_ponder?"on":"off", use_book?"on":"off", do_ping?"on":"off", wifi_ssid.c_str());
+#else
+			my_printf("ponder: %s, book: %s, bell: %s\n", do_ponder?"on":"off", use_book?"on":"off", do_ping?"on":"off");
+#endif
 		}
 
 		check_not_searching();
