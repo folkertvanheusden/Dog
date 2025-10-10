@@ -959,7 +959,7 @@ void main_task()
 	};
 
 #if !defined(ESP32)
-	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 2, thread_count_handler);
+	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 128, thread_count_handler);
 	uci_service->register_option(thread_count_option);
 	libchess::UCISpinOption hash_size_option("Hash", (tti.get_size() + 1023) / (1024 * 1024), 1, 1024, hash_size_handler);
 	uci_service->register_option(hash_size_option);
