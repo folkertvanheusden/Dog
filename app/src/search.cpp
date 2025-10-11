@@ -502,6 +502,8 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move;
 
+	int new_depth_basic = sp.pos.in_check() || n_moves == 1 ? depth : depth -1;
+
 	libchess::MoveList child_pv;
 	size_t             m_idx    = 0;
 	while(m_idx < n_moves) {
@@ -527,7 +529,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
 		if (n_played == 0)
-			score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
+			score = -search(new_depth_basic, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 		else {
 			int new_depth = depth - 1;
 
