@@ -181,33 +181,6 @@ int tt::get_per_mille_filled()
 	return count;
 }
 
-bool does_game_end_soon(const libchess::Position & pos_in)
-{
-	bool rc   = false;
-	auto work = pos_in;
-
-	for(int i=0; i<64; i++) {
-		std::optional<tt_entry> te = tti.lookup(work.hash());
-		if (!te.has_value())
-			break;
-
-		if (te.value().M == 0)
-			break;
-
-		libchess::Move cur_move { uint_to_libchessmove(te.value().M) };
-		if (!work.is_legal_move(cur_move))
-			break;
-
-		work.make_move(cur_move);
-		if (work.is_repeat() || work.halfmoves() >= 100 || work.game_state() != libchess::Position::GameState::IN_PROGRESS) {
-			rc = true;
-			break;
-		}
-	}
-
-	return rc;
-}
-
 int eval_to_tt(const int eval, const int ply)
 {
 	if (eval > max_non_mate)
