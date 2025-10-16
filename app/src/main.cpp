@@ -301,6 +301,8 @@ void searcher(const int i)
 		if (work.reconfigure_threads)
 			break;
 
+		my_trace("# thread %d starts\n", i);
+
 		last_fen_version = work.search_version;
 
 		int  local_search_think_time_min = work.search_think_time_min;
@@ -327,6 +329,8 @@ void searcher(const int i)
 		int            max_depth  { 0 };
 		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
 
+		my_trace("# thread %d finished\n", i);
+
 		// notify finished
 		search_lck.lock();
 
@@ -343,7 +347,7 @@ void searcher(const int i)
 		work.search_cv_finished.notify_one();
 	}
 
-	printf("Thread %d finished\n", i);
+	my_trace("Thread %d stops\n", i);
 }
 
 void prepare_threads_state()
