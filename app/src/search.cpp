@@ -856,12 +856,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 				itd_moves.insert(best_move.to_str());
 
-				int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
+				if (sp->thread_nr == 0) {
+					int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
 
-				if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
-				    (int(thought_ms) >= search_time && is_absolute_time == true)) {
-					my_trace("info string %d time %u is up %" PRIu64 " (%.2f %% | %.2f %%)\n", sp->pos.fullmoves(), search_time, thought_ms, thought_ms * 100. / search_time, thought_ms * 100. / search_time_max);
-					break;
+					if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
+					    (int(thought_ms) >= search_time && is_absolute_time == true)) {
+						my_trace("info string %d time %u is up %" PRIu64 " (%.2f %% | %.2f %%)\n", sp->pos.fullmoves(), search_time, thought_ms, thought_ms * 100. / search_time, thought_ms * 100. / search_time_max);
+						break;
+					}
 				}
 
 				add_alpha = 75;
