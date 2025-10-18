@@ -323,8 +323,6 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 
 		if (best_score > start_alpha && m.has_value())
 			tti.store(hash, flag, 0, work_score, m.value());
-		else if (tt_move.has_value())
-			tti.store(hash, flag, 0, work_score, tt_move.value());
 		else
 			tti.store(hash, flag, 0, work_score);
 	}
@@ -345,7 +343,7 @@ void update_history(const search_pars_t & sp, const int index, const int bonus)
 	sp.history[index] += final_value;
 }
 
-int search(int depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
+int search(int depth, int alpha, const int beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
 {
 	if (sp.stop->flag)
 		return 0;
@@ -504,6 +502,8 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 	std::optional<libchess::Move> beta_cutoff_move;
 	libchess::Move new_move;
 
+	int new_depth_basic = sp.pos.in_check() || n_moves == 1 ? depth : depth -1;
+
 	libchess::MoveList child_pv;
 	size_t             m_idx    = 0;
 	while(m_idx < n_moves) {
@@ -529,7 +529,7 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
 		if (n_played == 0)
-			score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
+			score = -search(new_depth_basic, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 		else {
 			int new_depth = depth - 1;
 
@@ -627,8 +627,6 @@ int search(int depth, int16_t alpha, const int16_t beta, const int null_move_dep
 
 		if (best_score > start_alpha && m->value())
 			tti.store(hash, flag, depth, work_score, *m);
-		else if (tt_move.has_value())
-			tti.store(hash, flag, depth, work_score, tt_move.value());
 		else
 			tti.store(hash, flag, depth, work_score);
 	}
@@ -650,9 +648,7 @@ void timer(const int think_time, end_t *const ei)
 
 	set_flag(ei);
 
-#if !defined(__ANDROID__)
 	my_trace("# time is up; set stop flag\n");
-#endif
 }
 
 double calculate_EBF(const std::vector<uint64_t> & node_counts)
@@ -747,19 +743,19 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		}
 	}
 
-	int16_t best_score = 0;
-	int     max_depth  = 1;
+	int best_score = 0;
+	int max_depth  = 1;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
 	std::string should_output;
 
 	if (move_list.size() > 1) {
-		int16_t alpha     = -32767;
-		int16_t beta      =  32767;
+		int alpha     = -32767;
+		int beta      =  32767;
 
-		int16_t add_alpha = 75;
-		int16_t add_beta  = 75;
+		int add_alpha = 75;
+		int add_beta  = 75;
 
 		libchess::Move cur_move;
 
@@ -782,9 +778,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			auto counts = simple_search_statistics();
 			if (sp->stop->flag) {
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
-#if !defined(__ANDROID__)
 					my_trace("info string stop flag set\n");
-#endif
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 					libchess::MoveList l_pv;
 					l_pv.add(best_move);
@@ -862,14 +856,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 				itd_moves.insert(best_move.to_str());
 
-				int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
+				if (sp->thread_nr == 0) {
+					int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
 
-				if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
-				    (int(thought_ms) >= search_time && is_absolute_time == true)) {
-#if !defined(__ANDROID__)
-					my_trace("info string time %u is up %" PRIu64 "\n", search_time, thought_ms);
-#endif
-					break;
+					if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
+					    (int(thought_ms) >= search_time && is_absolute_time == true)) {
+						my_trace("info string %d time %u is up %" PRIu64 " (%.2f %% | %.2f %%)\n", sp->pos.fullmoves(), search_time, thought_ms, thought_ms * 100. / search_time, thought_ms * 100. / search_time_max);
+						break;
+					}
 				}
 
 				add_alpha = 75;
@@ -890,9 +884,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		}
 	}
 	else {
-#if !defined(__ANDROID__)
 		my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
-#endif
 		libchess::MoveList pv;
 		pv.add(best_move);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);

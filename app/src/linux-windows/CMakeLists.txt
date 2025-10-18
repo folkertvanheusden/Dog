@@ -92,7 +92,7 @@ MESSAGE("Book GIT revision: ${GIT_REV_BOOK}")
 
 set(PROJECT_VERSION_MAJOR 4)
 set(PROJECT_VERSION_MINOR 10)
-set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.1")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOG_VERSION=\"\\\"${DOG_VERSION}\\\"\" -DDEBUG=${MY_DEBUG} -Wall -Wextra -pedantic -DBUILD_TYPE=\"\\\"${CMAKE_BUILD_TYPE}\\\"\"")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGIT_REV_DOG=\"\\\"${GIT_REV_DOG}\\\"\" -DGIT_REV_LC=\"\\\"${GIT_REV_LC}\\\"\" -DGIT_REV_FATHOM=\"\\\"${GIT_REV_FATHOM}\\\"\" -DGIT_REV_BOOK=\"\\\"${GIT_REV_BOOK}\\\"\"")
 
@@ -140,16 +140,16 @@ add_executable(
 target_compile_options(Dog PRIVATE -DBUILD_TARGET=\"regular\")
 
 add_executable(
-  Dog-avx
+  Dog-avx2
   ${APP_SOURCES}
 )
-target_compile_options(Dog-avx PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3 -DBUILD_TARGET=\"AVX\")
+target_compile_options(Dog-avx2 PRIVATE -mavx2 -mbmi2 -mavx -mbmi -O3 -DBUILD_TARGET=\"AVX2\")
 
 add_executable(
   Dog-avx512
   ${APP_SOURCES}
 )
-target_compile_options(Dog-avx PRIVATE -mavx512f -mavx512vbmi2 -O3 -DBUILD_TARGET=\"AVX512\")
+target_compile_options(Dog-avx512 PRIVATE -mavx512f -mavx512vbmi2 -O3 -DBUILD_TARGET=\"AVX512\")
 
 add_executable(
   Dog-native
@@ -170,30 +170,36 @@ include(FindPkgConfig)
 
 if (ASAN EQUAL 1)
 	target_link_libraries(Dog PRIVATE -fsanitize=address,undefined Threads::Threads)
-	target_link_libraries(Dog-avx PRIVATE -fsanitize=address,undefined Threads::Threads)
+	target_link_libraries(Dog-avx2 PRIVATE -fsanitize=address,undefined Threads::Threads)
+	target_link_libraries(Dog-avx512 PRIVATE -fsanitize=address,undefined Threads::Threads)
 	target_link_libraries(Dog-native PRIVATE -fsanitize=address,undefined Threads::Threads)
 elseif (TSAN EQUAL 1)
 	target_link_libraries(Dog PRIVATE -fsanitize=thread Threads::Threads)
-	target_link_libraries(Dog-avx PRIVATE -fsanitize=thread Threads::Threads)
+	target_link_libraries(Dog-avx2 PRIVATE -fsanitize=thread Threads::Threads)
+	target_link_libraries(Dog-avx512 PRIVATE -fsanitize=thread Threads::Threads)
 	target_link_libraries(Dog-native PRIVATE -fsanitize=thread Threads::Threads)
 elseif (MSAN EQUAL 1)
 	target_link_libraries(Dog PRIVATE -fsanitize=memory Threads::Threads)
-	target_link_libraries(Dog-avx PRIVATE -fsanitize=memory Threads::Threads)
+	target_link_libraries(Dog-avx2 PRIVATE -fsanitize=memory Threads::Threads)
+	target_link_libraries(Dog-avx512 PRIVATE -fsanitize=memory Threads::Threads)
 	target_link_libraries(Dog-native PRIVATE -fsanitize=memory Threads::Threads)
 else()
 	target_link_libraries(Dog PRIVATE Threads::Threads)
-	target_link_libraries(Dog-avx PRIVATE Threads::Threads)
+	target_link_libraries(Dog-avx2 PRIVATE Threads::Threads)
+	target_link_libraries(Dog-avx512 PRIVATE Threads::Threads)
 	target_link_libraries(Dog-native PRIVATE Threads::Threads)
 endif()
 
 if (GPROF EQUAL 1)
 	target_link_libraries(Dog PRIVATE -pg)
-	target_link_libraries(Dog-avx PRIVATE -pg)
+	target_link_libraries(Dog-avx2 PRIVATE -pg)
+	target_link_libraries(Dog-avx512 PRIVATE -pg)
 	target_link_libraries(Dog-native PRIVATE -pg)
 endif()
 
 target_include_directories(Dog PUBLIC ../../include ../fathom/src)
-target_include_directories(Dog-avx PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-avx2 PUBLIC ../../include ../fathom/src)
+target_include_directories(Dog-avx512 PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-native PUBLIC ../../include ../fathom/src)
 target_include_directories(Dog-stats-prober PUBLIC ../../include ../fathom/src)
 
