@@ -343,7 +343,7 @@ void update_history(const search_pars_t & sp, const int index, const int bonus)
 	sp.history[index] += final_value;
 }
 
-int search(int depth, int16_t alpha, const int16_t beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
+int search(int depth, int alpha, const int beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
 {
 	if (sp.stop->flag)
 		return 0;
@@ -743,19 +743,19 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		}
 	}
 
-	int16_t best_score = 0;
-	int     max_depth  = 1;
+	int best_score = 0;
+	int max_depth  = 1;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
 	std::string should_output;
 
 	if (move_list.size() > 1) {
-		int16_t alpha     = -32767;
-		int16_t beta      =  32767;
+		int alpha     = -32767;
+		int beta      =  32767;
 
-		int16_t add_alpha = 75;
-		int16_t add_beta  = 75;
+		int add_alpha = 75;
+		int add_beta  = 75;
 
 		libchess::Move cur_move;
 
