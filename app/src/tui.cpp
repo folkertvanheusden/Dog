@@ -582,6 +582,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	my_printf("Check-mates   : %u\n", cs.data.n_checkmate);
 	my_printf("Stale-mates   : %u\n", cs.data.n_stalemate);
 	my_printf("Draws         : %u\n", cs.data.n_draws);
+	my_printf("Asp.win resize: %u\n", cs.data.asp_win_resizes);
 	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,
 			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
