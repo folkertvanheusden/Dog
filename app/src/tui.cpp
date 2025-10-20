@@ -1068,6 +1068,7 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 		pgn += "[Setup \"1\"]\n";
 		pgn += "[FEN \"" + start_fen + "\"]\n";
 	}
+	pgn += "[Mode \"OTB\"]\n";
 	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d%s%s\"]\n",
 			tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
 			tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
