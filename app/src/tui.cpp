@@ -1068,23 +1068,23 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 		pgn += "[Setup \"1\"]\n";
 		pgn += "[FEN \"" + start_fen + "\"]\n";
 	}
-	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+	pgn += myformat("[GameStartTime \"%04d-%02d-%02dT%02d:%02d:%02d%s%s\"]\n",
 			tm_start_buf.tm_year+1900, tm_start_buf.tm_mon+1, tm_start_buf.tm_mday,
 			tm_start_buf.tm_hour,      tm_start_buf.tm_min,   tm_start_buf.tm_sec,
 #if defined(WIN32) || defined(ESP32)
-			""
+			"", ""
 #else
-			tm_end_buf.tm_zone
+			" ", tm_end_buf.tm_zone
 #endif
 		       );
 	if (game_took) {
-		pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d %s\"]\n",
+		pgn += myformat("[GameEndTime \"%04d-%02d-%02dT%02d:%02d:%02d%s%s\"]\n",
 				tm_end_buf.tm_year+1900, tm_end_buf.tm_mon+1, tm_end_buf.tm_mday,
 				tm_end_buf.tm_hour,      tm_end_buf.tm_min,   tm_end_buf.tm_sec,
 #if defined(WIN32) || defined(ESP32)
-				""
+				"", ""
 #else
-				tm_end_buf.tm_zone
+				" ", tm_end_buf.tm_zone
 #endif
 			       );
 		pgn += myformat("[GameDuration \"%02d:%02d:%02d\"]\n", game_took / 3600, (game_took / 60) % 60, game_took % 60);
@@ -1138,8 +1138,8 @@ std::string generate_pgn(const time_t time_start, const time_t time_end, const i
 			current_color = libchess::constants::WHITE;
 		}
 
-		// not a hard pgn requirement
-		if (line_len + add.size() > 79) {
+		// 255 (including lf) is a hard pgn requirement
+		if (line_len + add.size() > 250) {
 			if (line_len) {
 				pgn     += "\n";
 				line_len = 0;
@@ -1159,7 +1159,7 @@ void tui_hello()
 	my_printf("\n\n\n# HELLO, THIS IS DOG\n\n");
 	my_printf("# Version              : " DOG_VERSION "\n");
 	my_printf("# Build on             : " __DATE__ " " __TIME__ "\n");
-	my_printf("# Build type           : " BUILD_TYPE     "\n");
+	my_printf("# Build type           : " BUILD_TYPE  "\n");
 	my_printf("# Build with           : ");
 #if __GNUC__
 	my_printf("GNU-C++ %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
@@ -1176,7 +1176,7 @@ void tui_hello()
 	my_printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	my_printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	my_printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
-	my_printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
+	my_printf("# Dog is a chess program written by Folkert van Heusden.\n");
 }
 
 void tui()
@@ -1639,8 +1639,8 @@ void tui()
 				sp.at(0)->pos = libchess::Position(fen);
 				start_fen     = fen;
 				my_printf("FEN set, polyglot zobrist hash: %" PRIx64 "\n", sp.at(0)->pos.hash());
-				p_a_k      = true;
-				show_board = true;
+				p_a_k         = true;
+				show_board    = true;
 			}
 			else if (parts[0] == "cls" || parts[0] == "clear") {
 				if (t == T_ASCII)
