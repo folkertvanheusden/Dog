@@ -6,6 +6,9 @@
 #include <valgrind/helgrind.h>
 #endif
 #endif
+#if defined(linux)
+#include <sys/mman.h>
+#endif
 
 #if defined(ESP32)
 #include <esp_heap_caps.h>
@@ -65,7 +68,19 @@ void tt::allocate()
 		}
 	}
 #else
-	entries = reinterpret_cast<tt_entry *>(malloc(n_entries * sizeof(tt_entry)));
+	size_t s = n_entries * sizeof(tt_entry);
+#if defined(linux)
+	if (posix_memalign(reinterpret_cast<void **>(&entries), 1024 * 1024 * 2, s)) {
+		printf("# posix_memalign failed: %s\n", strerror(errno));
+		entries = reinterpret_cast<tt_entry *>(malloc(s));
+	}
+	else {
+		if (madvise(entries, s, MADV_HUGEPAGE) == -1)
+			printf("# madvise failed: %s\n", strerror(errno));
+	}
+#else
+	entries = reinterpret_cast<tt_entry *>(malloc(s));
+#endif
 #endif
 }
 

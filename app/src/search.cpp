@@ -796,6 +796,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			previous_node_count  = cur_n_nodes;
 
 			if (score <= alpha) {
+				sp->cs.data.asp_win_resizes++;
 				if (alpha_repeat >= 3)
 					alpha = -max_eval;
 				else {
@@ -809,6 +810,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				}
 			}
 			else if (score >= beta) {
+				sp->cs.data.asp_win_resizes++;
 				if (beta_repeat >= 3)
 					beta = max_eval;
 				else {

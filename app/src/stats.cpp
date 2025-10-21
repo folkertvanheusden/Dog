@@ -31,6 +31,8 @@ void chess_stats::add(const chess_stats & source)
 	this->data.n_checkmate     += source.data.n_checkmate;
 	this->data.n_stalemate     += source.data.n_stalemate;
 
+	this->data.asp_win_resizes += source.data.asp_win_resizes;
+
         this->data.tt_query   += source.data.tt_query;
         this->data.tt_hit     += source.data.tt_hit;
         this->data.tt_store   += source.data.tt_store;

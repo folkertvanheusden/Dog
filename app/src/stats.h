@@ -17,6 +17,8 @@ public:
 		int       n_alpha_distances;
 		int       n_beta_distances;
 
+		uint32_t  asp_win_resizes;
+
 		uint32_t  tt_query;
 		uint32_t  tt_hit;
 		uint32_t  tt_store;
