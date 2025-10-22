@@ -133,7 +133,7 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	m = get_best_dtz_move(lpos, results, TB_CURSED_WIN);
 	if (m.has_value())
-		return { { m.value().first, max_eval - m.value().second } };
+		return { { m.value().first, 0 } };
 
 	m = get_best_dtz_move(lpos, results, TB_DRAW);
 	if (m.has_value())
@@ -141,7 +141,7 @@ std::optional<std::pair<libchess::Move, int> > probe_fathom_root(const libchess:
 
 	m = get_best_dtz_move(lpos, results, TB_BLESSED_LOSS);
 	if (m.has_value())
-		return { { m.value().first, -(max_eval - m.value().second) } };
+		return { { m.value().first, 0 } };
 
 	m = get_best_dtz_move(lpos, results, TB_LOSS);
 	if (m.has_value())
