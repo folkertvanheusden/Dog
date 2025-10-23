@@ -94,21 +94,6 @@ pos gen_parameters(const libchess::Position & lpos)
 	std::optional<libchess::Square> ep = lpos.enpassant_square();
 	pos.ep = ep.has_value() ? ep.value() : 0;
 
-#if 0
-	printf("# white: %lx\n", pos.white);
-	printf("# black: %lx\n", pos.black);
-	printf("# kings: %lx\n", pos.kings);
-	printf("# queens: %lx\n", pos.queens);
-	printf("# rooks: %lx\n", pos.rooks);
-	printf("# bishops: %lx\n", pos.bishops);
-	printf("# knights: %lx\n", pos.knights);
-	printf("# pawns: %lx\n", pos.pawns);
-	printf("# rule50: %d\n", pos.rule50);
-	printf("# castling: %d\n", pos.castling);
-	printf("# ep: %d\n", pos.ep);
-	printf("# turn: %d\n", pos.turn);
-#endif
-
 	return pos;
 }
 
@@ -158,11 +143,11 @@ std::optional<int> probe_fathom_nonroot(const libchess::Position & lpos)
 	}
 
 	int result = TB_GET_WDL(res);
-	if (result == TB_LOSS || result == TB_BLESSED_LOSS)
+	if (result == TB_LOSS)
 		return -1;
-	if (result == TB_DRAW)
+	if (result == TB_DRAW || result == TB_BLESSED_LOSS || result == TB_CURSED_WIN)
 		return 0;
-	if (result == TB_CURSED_WIN || result == TB_WIN)
+	if (result == TB_WIN)
 		return 1;
 
 	printf("# unexpected return code from fathom: %d (%d)\n", result, res);
