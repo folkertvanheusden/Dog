@@ -1,3 +1,4 @@
+#include <climits>
 #include <optional>
 
 #include "main.h"
@@ -23,12 +24,11 @@ struct pos {
 static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(const libchess::Position & pos, unsigned *results, unsigned wdl)
 {
 	unsigned selected_move = 0;
-	int      best_dtz      = 1000;
+	int      best_dtz      = INT_MAX;
 
 	std::optional<std::pair<libchess::Move, int> > rc;
 
 	for(unsigned i = 0; results[i] != TB_RESULT_FAILED; i++) {
-		// printf("%d], %d, %d|%d\n", i, results[i], TB_GET_WDL(results[i]), wdl);
 		if (TB_GET_WDL(results[i]) == wdl) {
 			int dtz = TB_GET_DTZ(results[i]);
 
@@ -40,10 +40,8 @@ static std::optional<std::pair<libchess::Move, int> > get_best_dtz_move(const li
 	}
 
 	if (selected_move != 0) {
-		// printf("selected move: %u\n", selected_move);
-
-		unsigned from     = TB_GET_FROM(selected_move);
-		unsigned to       = TB_GET_TO(selected_move);
+		unsigned from     = TB_GET_FROM    (selected_move);
+		unsigned to       = TB_GET_TO      (selected_move);
 		unsigned promotes = TB_GET_PROMOTES(selected_move);
 		char     to_type  = 0x00;
 
