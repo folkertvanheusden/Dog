@@ -24,7 +24,6 @@ node_count = 10000
 nth = os.sysconf('SC_NPROCESSORS_ONLN')
 
 def help():
-    print(f'-H x  host to send data to (default: {host})')
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print(f'-t x  # processes (default: {nth})')
