@@ -810,6 +810,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				}
 			}
 			else if (score >= beta) {
+				if (score == max_eval && beta == max_eval)
+					break;
 				sp->cs.data.asp_win_resizes++;
 				if (beta_repeat >= 3)
 					beta = max_eval;
