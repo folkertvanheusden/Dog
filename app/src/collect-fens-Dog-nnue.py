@@ -9,8 +9,8 @@ import time
 
 
 host = '0.0.0.0'
-port = 31250
-db_file = '/home/folkert/dog-fens/storage/Dog-nnue-fens1b.db'
+port = 31251
+db_file = '/home/folkert/dog-fens/Dog-nnue-fens2.db'
 
 def init_db(db_file):
     con = sqlite3.connect(db_file)
@@ -53,30 +53,19 @@ def pusher(q):
     con = init_db(db_file)
     prev_commit = time.time()
 
-    hosts = dict()
-    interval_fen_count = 0
-
     while True:
         try:
             (j, addr) = q.get()
-            h = str(addr[0])
 
             cur = con.cursor()
             for fen in j['data']['fens']:
                 cur.execute('INSERT INTO fens(fen, result, nodes, name1, name2, host, addr, port, score) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            (fen['fen'], j['data']['result'], fen['node-count'], j['name1'], j['name2'], j['host'], h, addr[1], fen['score']))
+                            (fen['fen'], j['data']['result'], fen['node-count'], j['name1'], j['name2'], j['host'], str(addr[0]), addr[1], fen['score']))
             cur.close()
 
             gcount += 1
-            n_fens = len(j['data']['fens'])
-            count += n_fens
-            interval_fen_count += n_fens
+            count += len(j['data']['fens'])
             n_commit += 1
-
-            if h in hosts:
-                hosts[h] += n_fens
-            else:
-                hosts[h] = n_fens
 
         except Exception as e:
             print(e)
@@ -89,17 +78,6 @@ def pusher(q):
             n_commit = 0
             prev_commit = now
             con.commit()
-
-            t_diff = now - start
-            if commit_total_n:
-                print(f'{time.ctime()}, total games {gcount}, g/s {gcount / t_diff:.2f}, fens {count}, f/s: {count / t_diff:.2f}, per commit: {commit_total / commit_total_n:.2f}, interval: {interval_fen_count}')
-            else:
-                print(f'{time.ctime()}, total games {gcount}, g/s {gcount / t_diff:.2f}, fens {count}, f/s: {count / t_diff:.2f}')
-            interval_fen_count = 0
-
-            for h in hosts:
-                print(f'\t{h}: {hosts[h] / 60:.2f} fens/s')
-            hosts = dict()
 
     con.close()
 
@@ -116,18 +94,14 @@ def handle_client(c, addr, q):
                 break
             data += in_.decode()
 
-            lf = data.find('\n')
-            if lf != -1:
-                j = json.loads(data[0:lf])
-                q.put((j, addr))
-                data = data[lf + 1:]
+        j = json.loads(data)
+
+        q.put((j, addr))
 
     except Exception as e:
         print(e)
 
     c.close()
-
-print(time.ctime())
 
 q = queue.Queue()
 
@@ -138,10 +112,8 @@ th.start()
 while True:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    TCP_FASTOPEN = 23
-    s.setsockopt(socket.SOL_TCP, TCP_FASTOPEN, 5)
     s.bind((host, port))
-    s.listen(socket.SOMAXCONN)
+    s.listen()
 
     while True:
         c, addr = s.accept()
@@ -149,3 +121,11 @@ while True:
         th = threading.Thread(target=handle_client, args=(c, addr, q))
         th.daemon = True
         th.start()
+
+        now = time.time()
+        t_diff = now - start
+
+        if commit_total_n:
+            print(f'{time.ctime()}, {addr}, total games {gcount}, g/s {gcount / t_diff:.2f}, fens {count}, f/s: {count / t_diff:.2f}, per commit: {commit_total / commit_total_n:.2f}')
+        else:
+            print(f'{time.ctime()}, {addr}, total games {gcount}, g/s {gcount / t_diff:.2f}, fens {count}, f/s: {count / t_diff:.2f}')
