@@ -473,6 +473,9 @@ void delete_threads()
 
 void allocate_threads(const int n)
 {
+	if (n == sp.size())
+		return;
+
 	delete_threads();
 
 	for(int i=0; i<n; i++) {
