@@ -1,5 +1,7 @@
 #! /bin/sh
 
+echo 20 | sudo tee /proc/sys/vm/nr_hugepages
+
 /usr/local/bin/icsdroneng \
         -icsPort 5000 -icsHost nightmare-chess.nl -handle DogPC -password uemw \
         -dontReuseEngine off \
