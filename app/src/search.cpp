@@ -356,7 +356,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 
 	sp.cs.data.nodes++;
 
-	const int  csd              = max_depth -  depth;
+	const int  csd              = max_depth -  depth + 1;
 	bool       is_root_position = max_depth == depth;
 
 	if (!is_root_position && (sp.pos.is_repeat() || sp.pos.halfmoves() > 100 || is_insufficient_material_draw(sp.pos))) {
@@ -810,8 +810,6 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				}
 			}
 			else if (score >= beta) {
-				if (score == max_eval && beta == max_eval)
-					break;
 				sp->cs.data.asp_win_resizes++;
 				if (beta_repeat >= 3)
 					beta = max_eval;
