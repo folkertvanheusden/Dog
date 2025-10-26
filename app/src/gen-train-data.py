@@ -61,7 +61,7 @@ def gen_board():
         moves = [m for m in b.legal_moves]
         b.push(random.choice(moves))
         if b.outcome() != None:
-            return None
+            break
 
     return b
 
@@ -124,8 +124,6 @@ def process(proc, q):
 
             while True:
                 b = gen_board()
-                if b == None:
-                    continue
                 if not is_balanced(b):
                     q.put(('unbalanced', 1))
                     continue
