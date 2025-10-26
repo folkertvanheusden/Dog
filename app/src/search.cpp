@@ -797,6 +797,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 			if (score <= alpha) {
 				sp->cs.data.asp_win_resizes++;
+				my_trace("# alpha %d <= %d, resizes: %d, md: %d\n", score, alpha, sp->cs.data.asp_win_resizes, max_depth);
 				if (alpha_repeat >= 3)
 					alpha = -max_eval;
 				else {
@@ -811,6 +812,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			}
 			else if (score >= beta) {
 				sp->cs.data.asp_win_resizes++;
+				my_trace("# beta %d >= %d, resizes: %d, md: %d\n", score, alpha, sp->cs.data.asp_win_resizes, max_depth);
 				if (beta_repeat >= 3)
 					beta = max_eval;
 				else {
