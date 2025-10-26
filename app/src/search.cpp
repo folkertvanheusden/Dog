@@ -835,15 +835,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					sp->cs.data.n_beta_distances++;
 				}
 
-				alpha_repeat = beta_repeat = 0;
+				alpha_repeat = 0;
+				beta_repeat  = 0;
 
-				alpha = score - add_alpha;
-				if (alpha < -max_eval)
-					alpha = -max_eval;
+				add_alpha = 75;
+				add_beta  = 75;
 
-				beta = score + add_beta;
-				if (beta > max_eval)
-					beta = max_eval;
+				alpha = std::max(-max_eval, score - add_alpha);
+				beta  = std::min( max_eval, score + add_beta );
 
 				best_move  = cur_move;
 				best_score = score;
@@ -869,9 +868,6 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 						break;
 					}
 				}
-
-				add_alpha = 75;
-				add_beta  = 75;
 
 				if (max_depth == 127)
 					break;
