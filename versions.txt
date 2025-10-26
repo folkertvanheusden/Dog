@@ -7,6 +7,11 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+e64a10bffc0f8f30433a99681ccf58469d8cdfb5
+csd = max_depth - depth + 1 (+1 is new)
+   # PLAYER             :  RATING  ERROR  POINTS  PLAYED   (%)
+   1 Dog-native-base    :  2300.5    2.5  4692.0    9355    50
+   2 Dog-native         :  2299.5    2.5  4663.0    9355    50
 
 c34c025ab2ce57c1789fbb5de612799d1cc36070 versus b1e2c59630ae921df863fe0c9167612c98838954
 cursed win / blessed loss: use 0 score (draw) in syzygy -> revised: also inner nodes
