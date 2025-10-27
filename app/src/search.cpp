@@ -872,14 +872,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				if (max_depth == 127)
 					break;
 
-				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
-					my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
-					break;
-				}
-
 				sp->best_moves[max_depth] = best_move;
 
 				max_depth++;
+			}
+
+			if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
+				my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+				break;
 			}
 		}
 	}
