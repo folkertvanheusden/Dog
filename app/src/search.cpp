@@ -835,15 +835,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					sp->cs.data.n_beta_distances++;
 				}
 
-				alpha_repeat = beta_repeat = 0;
+				alpha_repeat = 0;
+				beta_repeat  = 0;
 
-				alpha = score - add_alpha;
-				if (alpha < -max_eval)
-					alpha = -max_eval;
+				add_alpha = 75;
+				add_beta  = 75;
 
-				beta = score + add_beta;
-				if (beta > max_eval)
-					beta = max_eval;
+				alpha = std::max(-max_eval, score - add_alpha);
+				beta  = std::min( max_eval, score + add_beta );
 
 				best_move  = cur_move;
 				best_score = score;
@@ -870,20 +869,17 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 					}
 				}
 
-				add_alpha = 75;
-				add_beta  = 75;
-
 				if (max_depth == 127)
 					break;
-
-				if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
-					my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
-					break;
-				}
 
 				sp->best_moves[max_depth] = best_move;
 
 				max_depth++;
+			}
+
+			if (max_n_nodes.has_value() && cur_n_nodes >= max_n_nodes.value()) {
+				my_trace("info string node limit reached with %zu nodes\n", size_t(cur_n_nodes));
+				break;
 			}
 		}
 	}
