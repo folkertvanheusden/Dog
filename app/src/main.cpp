@@ -726,6 +726,7 @@ void main_task()
 	};
 
 	auto ucinewgame_handler = [&global_cs](std::istringstream&) {
+		my_trace("# ucinewgame\n");
 		stop_ponder();
 		for(auto & i: sp)
 			memset(i->history, 0x00, history_malloc_size);
