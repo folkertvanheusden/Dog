@@ -21,12 +21,14 @@ host = 'dog.vanheusden.com'
 port = 31250
 proc = None
 node_count = 10000
+max_time = 10000
 nth = os.sysconf('SC_NPROCESSORS_ONLN')
 
 def help():
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print(f'-t x  # processes (default: {nth})')
+    print(f'-t M  maximum time usage in milliseconds, a fail safe (default: {max_time / 1000})')
     print('-h    this help')
 
 try:
@@ -77,11 +79,11 @@ def play(b, engine1, engine2, q, id_):
             store_fen = b.fen()
 
         if b.turn == chess.WHITE:
-            result = engine1.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
+            result = engine1.play(b, chess.engine.Limit(nodes=node_count, time=max_time/1000), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
         else:
-            result = engine2.play(b, chess.engine.Limit(nodes=node_count), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
+            result = engine2.play(b, chess.engine.Limit(nodes=node_count, time=max_time/1000), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
             was_capture = b.is_capture(result.move)
             b.push(result.move)
 
