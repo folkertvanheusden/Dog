@@ -21,7 +21,7 @@ host = 'dog.vanheusden.com'
 port = 31250
 proc = None
 node_count = 10000
-nth = os.sysconf('SC_NPROCESSORS_ONLN')
+nth = multiprocessing.cpu_count()
 
 def help():
     print(f'-H x  host to send data to (default: {host})')
@@ -29,31 +29,6 @@ def help():
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print(f'-t x  # processes (default: {nth})')
     print('-h    this help')
-
-try:
-    opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
-
-except getopt.GetoptError as err:
-    print(err)
-    help()
-    sys.exit(2)
-
-for o, a in opts:
-    if o == '-e':
-        proc = a
-    elif o == '-d':
-        node_count = float(a)
-    elif o == '-h':
-        host = a
-    elif o == '-t':
-        nth = int(a)
-    elif o == '-h':
-        help()
-        sys.exit(0)
-
-if proc == None:
-    help()
-    sys.exit(1)
 
 def gen_board():
     b = chess.Board()
@@ -144,8 +119,6 @@ def process(proc, q):
                             try:
                                 if s == None:
                                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                    s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-                                    s.setsockopt(socket.SOL_TCP, 23, 5)  # TCP fastopen (client as well?!)
                                     s.connect((host, port))
 
                                 s.send((json.dumps(j) + '\n').encode('ascii'))
@@ -174,32 +147,58 @@ def process(proc, q):
 
     print('PROCESS TERMINATING')
 
-q = multiprocessing.Queue()
+if __name__ == '__main__':
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
 
-processes = []
-for i in range(0, nth):
-    t = multiprocessing.Process(target=process, args=(proc,q,))
-    processes.append(t)
-    t.start()
+    except getopt.GetoptError as err:
+        print(err)
+        help()
+        sys.exit(2)
 
-count = 0
-gcount = 0
-unbalanced = 0
+    for o, a in opts:
+        if o == '-e':
+            proc = a
+        elif o == '-d':
+            node_count = float(a)
+        elif o == '-h':
+            host = a
+        elif o == '-t':
+            nth = int(a)
+        elif o == '-h':
+            help()
+            sys.exit(0)
 
-start = time.time()
-while True:
-    item = q.get()
-    if item[0] == 'count':
-        count += item[1]
-    elif item[0] == 'gcount':
-        gcount += item[1]
-    elif item[0] == 'unbalanced':
-        unbalanced += item[1]
-    else:
-        print('Internal error', item[0])
-        continue
-    t_diff = time.time() - start
-    print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, unbalanced: {unbalanced}')
+    if proc == None:
+        help()
+        sys.exit(1)
 
-for t in processes:
-    t.join()
+    q = multiprocessing.Queue()
+
+    processes = []
+    for i in range(0, nth):
+        t = multiprocessing.Process(target=process, args=(proc,q,))
+        processes.append(t)
+        t.start()
+
+    count = 0
+    gcount = 0
+    unbalanced = 0
+
+    start = time.time()
+    while True:
+        item = q.get()
+        if item[0] == 'count':
+            count += item[1]
+        elif item[0] == 'gcount':
+            gcount += item[1]
+        elif item[0] == 'unbalanced':
+            unbalanced += item[1]
+        else:
+            print('Internal error', item[0])
+            continue
+        t_diff = time.time() - start
+        print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, unbalanced: {unbalanced}')
+
+    for t in processes:
+        t.join()
