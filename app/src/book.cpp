@@ -52,18 +52,26 @@ struct polyglot_entry {
 
 static_assert(sizeof(polyglot_entry) == 16, "Polyglot entry must be 16 bytes in size");
 
-polyglot_book::polyglot_book(const std::string & filename)
+polyglot_book::polyglot_book()
 {
+}
+
+bool polyglot_book::begin(const std::string & filename)
+{
+	if (fh)
+		fclose(fh);
+
 	fh = fopen(filename.c_str(), "rb");
 	if (fh) {
 		fseek(fh, 0, SEEK_END);
 		const long size = ftell(fh);
 		n = size / sizeof(polyglot_entry);
 		assert((size % sizeof(polyglot_entry)) == 0);
+		return true;
 	}
-	else {
-		my_printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
-	}
+
+	my_printf("Failed to open book %s: %s\n", filename.c_str(), strerror(errno));
+	return false;
 }
 
 polyglot_book::~polyglot_book()

@@ -53,6 +53,7 @@ uint64_t esp_timer_get_time();
 constexpr size_t history_size        = 2 * 6 * 64;
 constexpr size_t history_malloc_size = sizeof(int16_t) * history_size;
 
+#include "book.h"
 #include "inbuf.h"
 #include "tt.h"
 
@@ -61,6 +62,7 @@ extern inbuf              i;
 extern std::istream       is;
 extern tt                 tti;
 extern bool               with_syzygy;
+extern polyglot_book      pb;
 
 #if defined(ESP32)
 #include <esp_timer.h>

@@ -64,6 +64,7 @@
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
 
+#include "book.h"
 #include "eval.h"
 #include "inbuf.h"
 #include "main.h"
@@ -84,6 +85,8 @@ std::vector<search_pars_t *> sp;
 #if !defined(ESP32)
 state_exporter              *se { nullptr };
 #endif
+
+polyglot_book pb;
 
 constexpr const char *const uart_settings_file = "/spiffs/uart.dat";
 
@@ -907,6 +910,13 @@ void main_task()
 			}
 #endif
 
+			auto book_move = pb.query(sp.at(0)->pos, false);
+			if (book_move.has_value()) {
+				my_trace("# book suggestion: %s\n", book_move.value().to_str().c_str());
+				best_move = book_move.value();
+				has_best  = true;
+			}
+
 			// main search
 			if (!has_best) {
 				// put
@@ -1244,6 +1254,7 @@ void help()
 	printf("-s x  set path to Syzygy\n");
 	printf("-H x  set size of hashtable to x MB\n");
 	printf("-R x  trace to file x\n");
+	printf("-b x  select polyglot format opening book\n");
 	printf("-r    enable tracing to screen\n");
 	printf("-U    run unit tests\n");
 	printf("-Q x:y:z run test type x againt file y with search time z (ms), with x is \"matefinder\"\n");
@@ -1266,7 +1277,7 @@ int main(int argc, char *argv[])
 	bool tui          = false;
 	int  thread_count =  1;
 	int  c            = -1;
-	while((c = getopt(argc, argv, "Tt:ps:UR:rH:Q:h")) != -1) {
+	while((c = getopt(argc, argv, "b:Tt:ps:UR:rH:Q:h")) != -1) {
 		if (c == 'U') {
 			run_tests();
 			return 1;
@@ -1287,6 +1298,12 @@ int main(int argc, char *argv[])
 			thread_count = atoi(optarg);
 		else if (c == 'T')
 			tui = true;
+		else if (c == 'b') {
+			if (!pb.begin(optarg)) {
+				printf("Cannot open polyglot file \"%s\".\n", optarg);
+				return 1;
+			}
+		}
 		else if (c == 'p')
 			allow_ponder = true;
 		else if (c == 's') {
@@ -1436,6 +1453,7 @@ extern "C" void app_main()
 	ESP_ERROR_CHECK(ret_nvs);
 
 	init_flash_filesystem();
+	pb.polyglot_book("/spiffs/dog-book.bin");
 
 	init_uart();
 

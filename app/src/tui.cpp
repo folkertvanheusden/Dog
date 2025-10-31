@@ -574,7 +574,7 @@ std::string get_soc_name()
 }
 #endif
 
-void show_stats(polyglot_book *const pb, const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
+void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
 	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
 	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
@@ -645,7 +645,7 @@ void show_stats(polyglot_book *const pb, const libchess::Position & pos, const c
 	int complexity_w = get_complexity(sp.at(0)->pos, libchess::constants::WHITE) * 100 / 32;
 	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
-	my_printf("Book size     : %zu\n", pb->size());
+	my_printf("Book size     : %zu\n", pb.size());
 	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
 }
 
@@ -1202,12 +1202,6 @@ void tui()
 	std::vector<int16_t>           scores;
 	std::vector<std::pair<std::string, std::string> > moves_played;
 
-#if defined(ESP32)
-	auto *pb = new polyglot_book("/spiffs/dog-book.bin");
-#else
-	auto *pb = new polyglot_book("dog-book.bin");
-#endif
-
 	bool show_board = true;
 	bool p_a_k      = false;
 	bool first      = true;
@@ -1623,7 +1617,7 @@ void tui()
 				for(auto & t: sp)
 					md_limit = std::min(md_limit, t->md_limit);
 #endif
-				show_stats(pb, sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
+				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
 			}
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
@@ -1759,7 +1753,7 @@ void tui()
 					my_printf("Book is %senabled\n", use_book ? "":"not ");
 				}
 				else {
-					auto move = pb->query(sp.at(0)->pos, verbose);
+					auto move = pb.query(sp.at(0)->pos, verbose);
 					if (move.has_value())
 						my_printf("Book suggestion: %s\n", move.value().to_str().c_str());
 					else
@@ -1832,7 +1826,7 @@ void tui()
 
 			std::optional<libchess::Move> move;
 			if (use_book) {
-				move = pb->query(sp.at(0)->pos, verbose);
+				move = pb.query(sp.at(0)->pos, verbose);
 				assert(move.has_value() == false || sp.at(0)->pos.is_legal_move(move.value()));
 			}
 			if (move.has_value() && sp.at(0)->pos.is_legal_move(move.value())) {
@@ -1928,8 +1922,6 @@ void tui()
 
 		check_not_searching();
 	}
-
-	delete pb;
 
 	trace_enabled = true;
 }
