@@ -14,6 +14,8 @@ There are 2 ways:
 DOCKER
 ------
 
+Note that this requires the Docker framework to be installed first. That is beyond the scope of this document though.
+
 ```shell
 git clone --recursive https://github.com/folkertvanheusden/Dog.git
 cd Dog
