@@ -3,6 +3,9 @@
 # written by folkert van heusden
 # mit license
 
+# windows:
+# pyinstaller.exe -F gen-train-data.py --collect-all chess
+
 import chess
 import chess.engine
 import getopt
@@ -151,6 +154,8 @@ def process(proc, q):
     print('PROCESS TERMINATING')
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
 
