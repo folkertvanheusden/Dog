@@ -1,3 +1,4 @@
+#pragma once
 #include <cstdint>
 #include <cstdio>
 #if defined(ESP32)
@@ -24,8 +25,10 @@ private:
 	void scan(const libchess::Position & p, const long start_index, const int direction, const long end, std::vector<std::pair<libchess::Move, int> > & moves_out);
 
 public:
-	polyglot_book(const std::string & filename);
+	polyglot_book();
 	~polyglot_book();
+
+	bool   begin(const std::string & filename);
 
 	size_t size() const;
 
