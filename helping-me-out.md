@@ -9,7 +9,8 @@ That way we're certain that e.g. libchess is always the latest version!
 
 There are 2 ways:
 
-* DOCKER
+DOCKER
+======
 
 ```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
@@ -26,11 +27,12 @@ To completely stop and delete the docker you created for Dog, enter:
 ```
 
 
-* WITHOUT DOCKER
+WITHOUT DOCKER
+==============
 
 This is the recipe for Linux systems. It has 2 steps that depend on the distribution you use.
 
-** step 1
+* step 1
 
 Debian/Ubuntu (DEB based systems):
 ```
@@ -43,7 +45,7 @@ Fedora (RPM based systems):
     sudo dnf install cmake git g++ python3-pip
 ```
 
-** step 2
+* step 2
 
 ```
     git clone --recursive https://github.com/folkertvanheusden/Dog.git
