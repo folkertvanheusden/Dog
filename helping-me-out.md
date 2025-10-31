@@ -64,6 +64,6 @@ pip install python-chess
 ./gen-train-data.py -e linux-windows/build/Dog
 ```
 
-*NOTE: for systems with large amounts of threads, do not forget to run ulimit -n 8192 ! (or bigger)
+*NOTE: for systems with large amounts of threads, do not forget to run `ulimit -n 32768` ! (or bigger)
 
 Interrupt the program whenever you want.
