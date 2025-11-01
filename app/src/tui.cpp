@@ -337,7 +337,7 @@ std::string format_move_and_score(const std::string & move, int16_t score)
 	}
 
 	int space_to_add = max_move_len - move.size();
-	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
+	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6d]", score);
 }
 
 void store_cursor_position()
@@ -1869,9 +1869,9 @@ void tui()
 				uint64_t     end_search  = esp_timer_get_time();
 
 				if (t == T_ASCII)
-					my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+					my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
 				else
-					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %d)\n", best_move.to_str().c_str(), best_score);
 
 				if (verbose) {
 					uint32_t total = sp.at(0)->cs.win[0] + sp.at(0)->cs.win[1] + sp.at(0)->cs.draw;

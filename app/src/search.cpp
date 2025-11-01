@@ -687,7 +687,7 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 	}
 	else {
 		score_str = "score cp " + std::to_string(best_score);
-		score_str_human = myformat("score: %.2f", best_score / 100.);
+		score_str_human = myformat("score: %d", best_score);
 	}
 
 	uint64_t nps = uint64_t(nodes.first * 1000 / use_thought_ms);
