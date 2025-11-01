@@ -574,7 +574,7 @@ std::string get_soc_name()
 }
 #endif
 
-void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
+void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose)
 {
 	my_printf("Nodes         : %u\n", cs.data.nodes);
 	my_printf("QS nodes      : %u\n", cs.data.qnodes);
@@ -615,7 +615,7 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 }
 
 #if defined(ESP32)
-void sysinfo()
+void sysinfo(const chess_stats & cs, const uint16_t md_limit)
 {
 	my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
 			heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
@@ -1474,8 +1474,14 @@ void tui()
 					write_settings();
 				}
 			}
-			else if (parts[0] == "sysinfo")
-				sysinfo();
+			else if (parts[0] == "sysinfo") {
+				uint16_t md_limit = 65535;
+#if defined(ESP32)
+				for(auto & t: sp)
+					md_limit = std::min(md_limit, t->md_limit);
+#endif
+				sysinfo(sp.at(0)->cs, md_limit);
+			}
 			else if (parts[0] == "synctime") {
 				if (wifi_ssid.empty())
 					my_printf("Please configure WiFi settings first (\"cfgwifi\")\n");
@@ -1614,14 +1620,8 @@ void tui()
 				show_movelist(sp.at(0)->pos);
 			else if (parts[0] == "board")
 				show_board = true;
-			else if (parts[0] == "stats") {
-				uint16_t md_limit = 65535;
-#if defined(ESP32)
-				for(auto & t: sp)
-					md_limit = std::min(md_limit, t->md_limit);
-#endif
-				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
-			}
+			else if (parts[0] == "stats")
+				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
