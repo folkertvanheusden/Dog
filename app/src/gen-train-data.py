@@ -27,6 +27,8 @@ node_count = 10000
 max_time = 10000
 nth = multiprocessing.cpu_count()
 
+hostname = socket.gethostname()
+
 def help():
     print('-e x  chess-program (UCI) to use')
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
@@ -125,8 +127,7 @@ def process(proc, q):
                     q.put(('gcount', 1))
 
                     if host != None:
-                        j = { 'name1': name1, 'name2': name2, 'host': socket.gethostname() }
-                        j['data'] = {'result': result, 'fens': fens }
+                        j = { 'name1': name1, 'name2': name2, 'host': hostname, 'data': {'result': result, 'fens': fens } }
 
                         while True:
                             try:
