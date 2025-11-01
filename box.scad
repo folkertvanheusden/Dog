@@ -31,7 +31,7 @@ translate([thickness + 3 + 1, thickness + 3 + 17 + 1, thickness + connector_heig
 translate([thickness + 24 + 4 + 1, thickness + 3 + 17 + 1, thickness + connector_height /6]) cylinder(h=connector_height / 3, r1=radius_pcb_holder, r2=radius_pcb_holder, center=true);
 
 
-//// deksel
+//// lid
 translate([-thickness*2,0,0])
 rotate([0,180,0])
 difference() {
