@@ -362,7 +362,7 @@ void restore_cursor_position()
 	}
 }
 
-void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<std::string, std::string> > > & moves, const std::vector<int16_t> & scores)
+void display_board(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<std::string, std::string> > > & moves, const std::vector<int16_t> & scores)
 {
 	std::vector<std::string> lines;
 
@@ -1381,7 +1381,7 @@ void tui()
 			}
 
 			show_board = false;
-			display(sp.at(0)->pos, t, moves_played, scores);
+			display_board(sp.at(0)->pos, t, moves_played, scores);
 
 			std::string result;
 			switch(sp.at(0)->pos.game_state()) {
@@ -1539,12 +1539,10 @@ void tui()
 					my_printf("\n");
 				}
 			}
-			else if (parts[0] == "bench") {
+			else if (parts[0] == "bench")
 				run_bench(parts.size() == 2 && parts[1] == "long", false);
-			}
-			else if (parts[0] == "perft") {
+			else if (parts[0] == "perft")
 				perft(sp.at(0)->pos, parts.size() == 2 ? std::stoi(parts[1]) : 3);
-			}
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
