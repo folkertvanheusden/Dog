@@ -87,12 +87,19 @@ def is_balanced(b):
         balanced -= len(b.pieces(pt, chess.BLACK)) * PIECE_VALUES[pt]
     return not (balanced < -3 or balanced > 3)
 
+def set_minimal_output(e):
+    if 'Minimal' in e.options:
+        e.configure({ 'Minimal': True })
+
 def process(proc, q):
     while True:
         try:
             engine1 = engine2 = None
             engine1 = chess.engine.SimpleEngine.popen_uci(proc)
             engine2 = chess.engine.SimpleEngine.popen_uci(proc)
+
+            set_minimal_output(engine1)
+            set_minimal_output(engine2)
 
             name1 = engine1.id['name']
             name2 = engine2.id['name']
