@@ -1816,7 +1816,7 @@ void tui()
 		else {
 			uint64_t start_search = esp_timer_get_time();
 
-			set_led(0, 255, 0);
+			set_led(128, 0, 64);
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[15;24r\x1b[15;1H");
@@ -1907,8 +1907,6 @@ void tui()
 			p_a_k      = true;
 			show_board = true;
 
-			set_led(0, 0, 255);
-
 			uint64_t all_processing_end_search = esp_timer_get_time();
 			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 			total_dog_time -= time_used;
@@ -1921,6 +1919,8 @@ void tui()
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
+
+			set_led(0, 255, 0);
 		}
 
 		check_not_searching();
