@@ -916,6 +916,9 @@ static void help()
 	my_printf("submit   send current PGN to server, result is shown\n");
 	my_printf("book     check for a move in the book or disable/enable\n");
 	my_printf("hint     show a hint\n");
+#if defined(ESP32)
+	press_any_key();
+#endif
 	my_printf("switch   switch color\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
