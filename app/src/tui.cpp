@@ -611,7 +611,7 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 	my_printf("Book size     : %zu\n", pb.size());
-	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
+	my_printf("TT            : %zu (permille filled), %zu (size)\n", tti.get_per_mille_filled(), size_t(tti.get_n()));
 }
 
 #if defined(ESP32)

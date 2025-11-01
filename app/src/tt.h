@@ -38,11 +38,12 @@ public:
 	tt();
 	~tt();
 
-	void debug_helper();
-	void reset();
-	void set_size(const uint64_t s);
-	int  get_size() const;  // in MB
-	int  get_per_mille_filled();
+	void     debug_helper();
+	void     reset();
+	void     set_size(const uint64_t s);
+	int      get_size() const;  // in MB
+	uint64_t get_n   () const;
+	int      get_per_mille_filled() const;
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
 	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m);
