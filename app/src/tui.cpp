@@ -576,12 +576,10 @@ std::string get_soc_name()
 
 void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
 {
-	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
-	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
+	my_printf("Nodes         : %u\n", cs.data.nodes);
+	my_printf("QS nodes      : %u\n", cs.data.qnodes);
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
-	my_printf("Check-mates   : %u\n", cs.data.n_checkmate);
-	my_printf("Stale-mates   : %u\n", cs.data.n_stalemate);
-	my_printf("Draws         : %u\n", cs.data.n_draws);
+	my_printf("Endings       : %u (check), %u (stale), %u (draw)\n", cs.data.n_checkmate, cs.data.n_stalemate, cs.data.n_draws);
 	my_printf("Asp.win resize: %u\n", cs.data.asp_win_resizes);
 	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,
@@ -604,39 +602,6 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
                 my_printf("Avg. qs cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
-	if (verbose) {
-#if defined(ESP32)
-		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
-				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
-		my_printf("SOC           : %s", get_soc_name().c_str());
-		rtc_cpu_freq_config_t conf;
-		rtc_clk_cpu_freq_get_config(&conf);
-		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
-		my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
-		my_printf("reset reason  : ");
-		switch(esp_reset_reason()) {
-			case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
-			case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
-			case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
-			case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
-			case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
-			case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
-			case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
-			case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
-			case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
-			case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
-			case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
-			case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
-			case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
-			case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
-			case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
-			case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
-			default:
-				my_printf("?\n"); break;
-		}
-#endif
-	}
 	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));
 	auto mobility = count_mobility(pos);
 	my_printf("Mobility      : %d/%d (w/b)\n", mobility.first, mobility.second);
@@ -648,6 +613,41 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("Book size     : %zu\n", pb.size());
 	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
 }
+
+#if defined(ESP32)
+void sysinfo()
+{
+	my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
+			heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+	my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
+	my_printf("SOC           : %s", get_soc_name().c_str());
+	rtc_cpu_freq_config_t conf;
+	rtc_clk_cpu_freq_get_config(&conf);
+	my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
+	my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
+	my_printf("reset reason  : ");
+	switch(esp_reset_reason()) {
+		case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
+		case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
+		case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
+		case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
+		case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
+		case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
+		case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
+		case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
+		case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
+		case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
+		case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
+		case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
+		case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
+		case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
+		case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
+		case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
+		default:
+					 my_printf("?\n"); break;
+	}
+}
+#endif
 
 void show_movelist(const libchess::Position & pos)
 {
@@ -910,6 +910,7 @@ static void help()
 #if defined(ESP32)
 	my_printf("cfgwifi  ssid|password\n");
 	my_printf("synctime\n");
+	my_printf("sysinfo  system info\n");
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
@@ -1473,6 +1474,8 @@ void tui()
 					write_settings();
 				}
 			}
+			else if (parts[0] == "sysinfo")
+				sysinfo();
 			else if (parts[0] == "synctime") {
 				if (wifi_ssid.empty())
 					my_printf("Please configure WiFi settings first (\"cfgwifi\")\n");
