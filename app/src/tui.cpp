@@ -772,11 +772,11 @@ void press_any_key()
 		my_printf("\n");
 }
 
-std::optional<double> compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
+void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
 	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
-		return { };
+		return;
 
 	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
 	if (tt_move != m) {
@@ -786,11 +786,10 @@ std::optional<double> compare_moves(const libchess::Position & pos, libchess::Mo
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
 			my_printf("I would've moved %s (%d > %d)\n", tt_move.to_str().c_str(), eval_me, eval_opp);
-		return { eval_opp * 100. / eval_me };
+		return;
 	}
 
 	(*expected_move_count)++;
-	return { 100.0 };
 }
 
 void show_header(const terminal_t t)
