@@ -785,7 +785,7 @@ std::optional<double> compare_moves(const libchess::Position & pos, libchess::Mo
 		if (eval_opp > eval_me)
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
-			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
+			my_printf("I would've moved %s (%d > %d)\n", tt_move.to_str().c_str(), eval_me, eval_opp);
 		return { eval_opp * 100. / eval_me };
 	}
 
@@ -1843,11 +1843,15 @@ void tui()
 				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 			}
 			else {
-				if (total_dog_time <= 0)
+				if (total_dog_time <= 0) {
 					my_printf("The flag fell for Dog, you won!\n");
-
-				if (clock_type == C_INCREMENTAL)
-					cur_think_time_max = cur_think_time_min = total_dog_time;
+					cur_think_time_max =
+					cur_think_time_min = 1;
+				}
+				else if (clock_type == C_INCREMENTAL) {
+					cur_think_time_max =
+					cur_think_time_min = total_dog_time;
+				}
 				else {
 					cur_think_time_max = total_dog_time / 10;
 					cur_think_time_min = total_dog_time / 20;
