@@ -98,6 +98,11 @@ int tt::get_size() const
 	return n_entries * sizeof(tt_entry);
 }
 
+uint64_t tt::get_n() const
+{
+	return n_entries;
+}
+
 void tt::reset()
 {
 	memset(entries, 0x00, sizeof(tt_entry) * n_entries);
@@ -188,7 +193,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	entries[index] = n;
 }
 
-int tt::get_per_mille_filled()
+int tt::get_per_mille_filled() const
 {
 	int count = 0;
 	for(int i=0; i<1000; i++)

@@ -1450,7 +1450,7 @@ extern "C" void app_main()
 	ESP_ERROR_CHECK(ret_nvs);
 
 	init_flash_filesystem();
-	pb.polyglot_book("/spiffs/dog-book.bin");
+	pb.begin("/spiffs/dog-book.bin");
 
 	init_uart();
 

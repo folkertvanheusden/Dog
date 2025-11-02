@@ -337,7 +337,7 @@ std::string format_move_and_score(const std::string & move, int16_t score)
 	}
 
 	int space_to_add = max_move_len - move.size();
-	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6.2f]", score / 100.);
+	return move + std::string(std::max(1, space_to_add + 1), ' ') + myformat("[%6d]", score);
 }
 
 void store_cursor_position()
@@ -362,7 +362,7 @@ void restore_cursor_position()
 	}
 }
 
-void display(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<std::string, std::string> > > & moves, const std::vector<int16_t> & scores)
+void display_board(const libchess::Position & p, const terminal_t t, const std::optional<std::vector<std::pair<std::string, std::string> > > & moves, const std::vector<int16_t> & scores)
 {
 	std::vector<std::string> lines;
 
@@ -574,14 +574,12 @@ std::string get_soc_name()
 }
 #endif
 
-void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose, const uint16_t md_limit)
+void show_stats(const libchess::Position & pos, const chess_stats & cs, const bool verbose)
 {
-	my_printf("Nodes proc.   : %u\n", cs.data.nodes);
-	my_printf("QS Nodes proc.: %u\n", cs.data.qnodes);
+	my_printf("Nodes         : %u\n", cs.data.nodes);
+	my_printf("QS nodes      : %u\n", cs.data.qnodes);
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
-	my_printf("Check-mates   : %u\n", cs.data.n_checkmate);
-	my_printf("Stale-mates   : %u\n", cs.data.n_stalemate);
-	my_printf("Draws         : %u\n", cs.data.n_draws);
+	my_printf("Endings       : %u (check), %u (stale), %u (draw)\n", cs.data.n_checkmate, cs.data.n_stalemate, cs.data.n_draws);
 	my_printf("Asp.win resize: %u\n", cs.data.asp_win_resizes);
 	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
 			cs.data.tt_query,
@@ -604,39 +602,6 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 		my_printf("Avg. move c/o : %.2f\n", cs.data.n_moves_cutoff / double(cs.data.nmc_nodes));
 	if (cs.data.nmc_qnodes)
                 my_printf("Avg. qs cutoff: %.2f\n", cs.data.n_qmoves_cutoff / double(cs.data.nmc_qnodes));
-	if (verbose) {
-#if defined(ESP32)
-		my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
-				heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
-		my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
-		my_printf("SOC           : %s", get_soc_name().c_str());
-		rtc_cpu_freq_config_t conf;
-		rtc_clk_cpu_freq_get_config(&conf);
-		my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
-		my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
-		my_printf("reset reason  : ");
-		switch(esp_reset_reason()) {
-			case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
-			case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
-			case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
-			case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
-			case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
-			case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
-			case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
-			case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
-			case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
-			case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
-			case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
-			case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
-			case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
-			case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
-			case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
-			case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
-			default:
-				my_printf("?\n"); break;
-		}
-#endif
-	}
 	my_printf("Game phase    : %d (0...255)\n", game_phase(pos));
 	auto mobility = count_mobility(pos);
 	my_printf("Mobility      : %d/%d (w/b)\n", mobility.first, mobility.second);
@@ -646,8 +611,43 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	int complexity_b = get_complexity(sp.at(0)->pos, libchess::constants::BLACK) * 100 / 32;
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 	my_printf("Book size     : %zu\n", pb.size());
-	my_printf("TT filled     : %zu\n", tti.get_per_mille_filled());
+	my_printf("TT            : %zu (permille filled), %zu (size)\n", tti.get_per_mille_filled(), size_t(tti.get_n()));
 }
+
+#if defined(ESP32)
+void sysinfo(const chess_stats & cs, const uint16_t md_limit)
+{
+	my_printf("RAM           : %u (min free), %u (largest free)\n", uint32_t(heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT)),
+			heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT));
+	my_printf("Stack         : %u (errors), %u (max. search depth)\n", cs.data.large_stack, md_limit);
+	my_printf("SOC           : %s", get_soc_name().c_str());
+	rtc_cpu_freq_config_t conf;
+	rtc_clk_cpu_freq_get_config(&conf);
+	my_printf(" @ %u MHz with %u threads\n", unsigned(conf.freq_mhz), unsigned(sp.size()));
+	my_printf("up-time       : %.3f seconds\n", esp_timer_get_time() / 1000000.);
+	my_printf("reset reason  : ");
+	switch(esp_reset_reason()) {
+		case ESP_RST_UNKNOWN:    my_printf("reset reason can not be determined\n"); break;
+		case ESP_RST_POWERON:    my_printf("reset due to power-on event\n"); break;
+		case ESP_RST_EXT:        my_printf("reset by external pin (not applicable for ESP32)\n"); break;
+		case ESP_RST_SW:         my_printf("software reset via esp_restart\n"); break;
+		case ESP_RST_PANIC:      my_printf("software reset due to exception/panic\n"); break;
+		case ESP_RST_INT_WDT:    my_printf("reset (software or hardware) due to interrupt watchdog\n"); break;
+		case ESP_RST_TASK_WDT:   my_printf("reset due to task watchdog\n"); break;
+		case ESP_RST_WDT:        my_printf("reset due to other watchdogs\n"); break;
+		case ESP_RST_DEEPSLEEP:  my_printf("reset after exiting deep sleep mode\n"); break;
+		case ESP_RST_BROWNOUT:   my_printf("brownout reset (software or hardware)\n"); break;
+		case ESP_RST_SDIO:       my_printf("reset over SDIO\n"); break;
+		case ESP_RST_USB:        my_printf("reset by USB peripheral\n"); break;
+		case ESP_RST_JTAG:       my_printf("reset by JTAG\n"); break;
+		case ESP_RST_EFUSE:      my_printf("reset due to efuse error\n"); break;
+		case ESP_RST_PWR_GLITCH: my_printf("reset due to power glitch detected\n"); break;
+		case ESP_RST_CPU_LOCKUP: my_printf("reset due to CPU lock up (double exception)\n"); break;
+		default:
+					 my_printf("?\n"); break;
+	}
+}
+#endif
 
 void show_movelist(const libchess::Position & pos)
 {
@@ -772,11 +772,11 @@ void press_any_key()
 		my_printf("\n");
 }
 
-std::optional<double> compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
+void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
 {
 	auto tt_rc = tti.lookup(pos.hash());
 	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
-		return { };
+		return;
 
 	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
 	if (tt_move != m) {
@@ -785,12 +785,11 @@ std::optional<double> compare_moves(const libchess::Position & pos, libchess::Mo
 		if (eval_opp > eval_me)
 			my_printf("Very good!\n");
 		else if (eval_opp < eval_me)
-			my_printf("I would've moved %s (%.2f > %.2f)\n", tt_move.to_str().c_str(), eval_me / 100., eval_opp / 100.);
-		return { eval_opp * 100. / eval_me };
+			my_printf("I would've moved %s (%d > %d)\n", tt_move.to_str().c_str(), eval_me, eval_opp);
+		return;
 	}
 
 	(*expected_move_count)++;
-	return { 100.0 };
 }
 
 void show_header(const terminal_t t)
@@ -910,12 +909,16 @@ static void help()
 #if defined(ESP32)
 	my_printf("cfgwifi  ssid|password\n");
 	my_printf("synctime\n");
+	my_printf("sysinfo  system info\n");
 #else
 	my_printf("syzygy   probe the syzygy ETB\n");
 #endif
 	my_printf("submit   send current PGN to server, result is shown\n");
 	my_printf("book     check for a move in the book or disable/enable\n");
 	my_printf("hint     show a hint\n");
+#if defined(ESP32)
+	press_any_key();
+#endif
 	my_printf("switch   switch color\n");
 	my_printf("undo     take back last move\n");
 	my_printf("auto     auto play until the end\n");
@@ -1381,7 +1384,7 @@ void tui()
 			}
 
 			show_board = false;
-			display(sp.at(0)->pos, t, moves_played, scores);
+			display_board(sp.at(0)->pos, t, moves_played, scores);
 
 			std::string result;
 			switch(sp.at(0)->pos.game_state()) {
@@ -1473,6 +1476,14 @@ void tui()
 					write_settings();
 				}
 			}
+			else if (parts[0] == "sysinfo") {
+				uint16_t md_limit = 65535;
+#if defined(ESP32)
+				for(auto & t: sp)
+					md_limit = std::min(md_limit, t->md_limit);
+#endif
+				sysinfo(sp.at(0)->cs, md_limit);
+			}
 			else if (parts[0] == "synctime") {
 				if (wifi_ssid.empty())
 					my_printf("Please configure WiFi settings first (\"cfgwifi\")\n");
@@ -1531,12 +1542,10 @@ void tui()
 					my_printf("\n");
 				}
 			}
-			else if (parts[0] == "bench") {
+			else if (parts[0] == "bench")
 				run_bench(parts.size() == 2 && parts[1] == "long", false);
-			}
-			else if (parts[0] == "perft") {
+			else if (parts[0] == "perft")
 				perft(sp.at(0)->pos, parts.size() == 2 ? std::stoi(parts[1]) : 3);
-			}
 			else if (parts[0] == "new") {
 				reset_state();
 				show_board = true;
@@ -1611,14 +1620,8 @@ void tui()
 				show_movelist(sp.at(0)->pos);
 			else if (parts[0] == "board")
 				show_board = true;
-			else if (parts[0] == "stats") {
-				uint16_t md_limit = 65535;
-#if defined(ESP32)
-				for(auto & t: sp)
-					md_limit = std::min(md_limit, t->md_limit);
-#endif
-				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v", md_limit);
-			}
+			else if (parts[0] == "stats")
+				show_stats(sp.at(0)->pos, sp.at(0)->cs, parts.size() == 2 && parts[1] == "-v");
 			else if (parts[0] == "cstats")
 				sp.at(0)->cs.reset();
 			else if (parts[0] == "fen")
@@ -1813,7 +1816,7 @@ void tui()
 		else {
 			uint64_t start_search = esp_timer_get_time();
 
-			set_led(0, 255, 0);
+			set_led(128, 0, 64);
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[15;24r\x1b[15;1H");
@@ -1840,11 +1843,15 @@ void tui()
 				scores.push_back(-nnue_evaluate(sp.at(0)->nnue_eval, sp.at(0)->pos));
 			}
 			else {
-				if (total_dog_time <= 0)
+				if (total_dog_time <= 0) {
 					my_printf("The flag fell for Dog, you won!\n");
-
-				if (clock_type == C_INCREMENTAL)
-					cur_think_time_max = cur_think_time_min = total_dog_time;
+					cur_think_time_max =
+					cur_think_time_min = 1;
+				}
+				else if (clock_type == C_INCREMENTAL) {
+					cur_think_time_max =
+					cur_think_time_min = total_dog_time;
+				}
 				else {
 					cur_think_time_max = total_dog_time / 10;
 					cur_think_time_min = total_dog_time / 20;
@@ -1869,9 +1876,9 @@ void tui()
 				uint64_t     end_search  = esp_timer_get_time();
 
 				if (t == T_ASCII)
-					my_printf("Selected move: %s (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+					my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
 				else
-					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %.2f)\n", best_move.to_str().c_str(), best_score / 100.);
+					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %d)\n", best_move.to_str().c_str(), best_score);
 
 				if (verbose) {
 					uint32_t total = sp.at(0)->cs.win[0] + sp.at(0)->cs.win[1] + sp.at(0)->cs.draw;
@@ -1904,8 +1911,6 @@ void tui()
 			p_a_k      = true;
 			show_board = true;
 
-			set_led(0, 0, 255);
-
 			uint64_t all_processing_end_search = esp_timer_get_time();
 			int32_t time_used = std::max(uint64_t(1), (all_processing_end_search - start_search) / 1000);
 			total_dog_time -= time_used;
@@ -1918,6 +1923,8 @@ void tui()
 
 			if (player.has_value() && (t == T_VT100 || t == T_ANSI))
 				my_printf("\x1b[1;24r\n\x1b[24;1H");
+
+			set_led(0, 255, 0);
 		}
 
 		check_not_searching();
