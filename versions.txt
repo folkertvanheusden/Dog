@@ -7,6 +7,22 @@ f2e0bb4b9d8d5128f4360ecc575fd76a32815511 merged PSRAM
 0fd41465e530f185680f467f34c697313fe751a4 merged killerimprov
 e1f660a54a81010ba1108a1e7f25711a3517244d merged tt-EXACT
 
+net 6, ESP32 net op PC
+	Results of Dog-native-6-fullSMALLNET vs Dog-native-6-SMALLNET (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
+	Elo: -32.42 +/- 12.56, nElo: -45.29 +/- 17.43
+	LOS: 0.00 %, DrawRatio: 36.30 %, PairsRatio: 0.63
+	Games: 1526, Wins: 369, Losses: 511, Draws: 646, Points: 692.0 (45.35 %)
+	Ptnml(0-2): [68, 231, 277, 149, 38], WL/DD Ratio: 1.08
+	LLR: -2.96 (-100.4%) (-2.94, 2.94) [0.00, 5.00]
+
+net 6
+	Results of Dog-native-newnetonly vs Dog-native-base (8+0.08, 1t, 256MB, 8mvs_big_+80_+109.epd):
+	Elo: 11.70 +/- 6.48, nElo: 18.25 +/- 10.10
+	LOS: 99.98 %, DrawRatio: 42.63 %, PairsRatio: 1.23
+	Games: 4546, Wins: 1248, Losses: 1095, Draws: 2203, Points: 2349.5 (51.68 %)
+	Ptnml(0-2): [87, 497, 969, 616, 104], WL/DD Ratio: 0.78
+	LLR: 2.95 (100.2%) (-2.94, 2.94) [0.00, 5.00]
+
 e64a10bffc0f8f30433a99681ccf58469d8cdfb5
 csd = max_depth - depth + 1 (+1 is new)
    # PLAYER             :  RATING  ERROR  POINTS  PLAYED   (%)
