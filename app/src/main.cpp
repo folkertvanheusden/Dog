@@ -879,7 +879,7 @@ void main_task()
 				int ms_opponent  = is_white ? b_time : w_time;
 
 				think_time_max = ms / 10 + time_inc * 2 / 3;
-				think_time_min = ms / 20 + time_inc / 2;
+				think_time_min = ms / 30 + time_inc / 2;
 
 				my_trace("# My time: %d ms, inc: %d ms, opponent time: %d ms, inc: %d ms, full: %d, half: %d, moves_to_go: %d, tt: %d\n", ms, time_inc, ms_opponent, time_inc_opp, sp.at(0)->pos.fullmoves(), sp.at(0)->pos.halfmoves(), moves_to_go, tti.get_per_mille_filled());
 			}
