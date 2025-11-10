@@ -1855,7 +1855,7 @@ void tui()
 				}
 				else {
 					cur_think_time_max = total_dog_time / 10;
-					cur_think_time_min = total_dog_time / 20;
+					cur_think_time_min = total_dog_time / 30;
 				}
 
 				if (verbose)
