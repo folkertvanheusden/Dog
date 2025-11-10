@@ -1044,9 +1044,10 @@ std::string get_local_system_name()
 #elif defined(WIN32)
 	return "127.0.0.1";
 #else
-	char hostname[256] { };
-	gethostname(hostname, sizeof hostname);
-	return hostname;
+	char hostname[255] { };
+	if (gethostname(hostname, sizeof hostname) == 0)
+		return hostname;
+	return "127.0.0.1";
 #endif
 }
 
