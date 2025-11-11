@@ -19,7 +19,6 @@ Note that this requires the Docker framework to be installed first. That is beyo
 ```shell
 git clone --recursive https://github.com/folkertvanheusden/Dog.git
 cd Dog
-git checkout TRAINER
 ./dockerrun
 ```
 
@@ -57,7 +56,6 @@ sudo dnf install cmake git g++ python3-pip
 ```shell
 git clone --recursive https://github.com/folkertvanheusden/Dog.git
 cd Dog/app/src/linux-windows/build/
-git checkout TRAINER
 cmake ..
 make -j4 Dog
 cd ../..
