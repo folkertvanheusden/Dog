@@ -7,7 +7,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 set(PROJECT_VERSION_MAJOR 4)
 set(PROJECT_VERSION_MINOR 10)
-set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.1")
+set(DOG_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.2")
 
 execute_process(
     COMMAND echo `git describe --always --dirty --broken`_`git branch --show-current`
