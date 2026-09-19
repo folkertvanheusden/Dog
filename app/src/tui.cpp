@@ -766,10 +766,10 @@ int wait_for_key()
 
 void press_any_key()
 {
-	my_printf("Press return...");
+//	my_printf("Press return...");
 
-	if (wait_for_key())
-		my_printf("\n");
+//	if (wait_for_key())
+//		my_printf("\n");
 }
 
 void compare_moves(const libchess::Position & pos, libchess::Move & m, int *const expected_move_count)
