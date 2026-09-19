@@ -359,7 +359,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 	const int  csd              = max_depth -  depth + 1;
 	bool       is_root_position = max_depth == depth;
 
-	if (!is_root_position && (sp.pos.is_repeat() || sp.pos.halfmoves() > 100 || is_insufficient_material_draw(sp.pos))) {
+	if (!is_root_position && (sp.pos.is_repeat() || sp.pos.halfmoves() >= 100 || is_insufficient_material_draw(sp.pos))) {
 		pv->clear();
 		if (sp.pos.in_check()) {
 			if (sp.pos.legal_move_list().empty()) {
