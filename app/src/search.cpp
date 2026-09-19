@@ -483,6 +483,15 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 	int                best_score = -32767;
 	libchess::MoveList move_list  = sp.pos.pseudo_legal_move_list();
 
+	if (is_root_position == true && sp.thread_nr > 0) {
+		libchess::MoveList temp_list;
+		for(size_t i=0; i<move_list.size(); i++) {
+			size_t idx = (i + sp.thread_nr) % move_list.size();
+			temp_list.add(move_list.values()[idx]);
+		}
+		move_list = temp_list;
+	}
+
 	sort_movelist_compare smc(sp);
 
 	if (tt_move.has_value())
