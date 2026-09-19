@@ -178,7 +178,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	uint64_t        index = fastrange(hash, n_entries);
 	tt_entry *const e     = &entries[index];
 
-	tt_entry n
+	tt_entry n;
 
 	if (e->hash == uint16_t(hash)) {
 		tt_entry & cur = entries[index];
