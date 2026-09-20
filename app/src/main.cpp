@@ -1410,6 +1410,7 @@ static void init_uart()
 		printf("UART ALREADY INSTALLED\n");
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
 
+#if 1
 	// USB/JTAG for UCI
 	esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
 	esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
@@ -1423,6 +1424,7 @@ static void init_uart()
 		printf("usb_serial_jtag_driver_install failed\n");
 
 	esp_vfs_usb_serial_jtag_use_driver();
+#endif
 }
 
 void init_flash_filesystem()
