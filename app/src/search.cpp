@@ -720,6 +720,7 @@ void emit(const std::string & text, const bool is_tui)
 #else
 	printf("%s", text.c_str());
 #endif
+	fflush(nullptr);
 }
 
 std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
@@ -883,7 +884,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			}
 		}
 	}
-	else {
+	else if (sp->thread_nr == 0) {
 		my_trace("info string only 1 move possible (%s for %s)\n", best_move.to_str().c_str(), sp->pos.fen().c_str());
 		libchess::MoveList pv;
 		pv.add(best_move);
