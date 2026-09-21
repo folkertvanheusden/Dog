@@ -280,6 +280,8 @@ struct {
 void searcher(const int i)
 {
 	printf("# Thread %d started\n", i);
+	std::string t_name { std::format("st_{}", i) };
+	pthread_setname_np(pthread_self(), t_name.c_str());
 
 #if defined(ESP32)
 	sp.at(i)->th = xTaskGetCurrentTaskHandle();
@@ -305,8 +307,6 @@ void searcher(const int i)
 		if (work.reconfigure_threads)
 			break;
 
-		my_trace("# thread %d starts\n", i);
-
 		last_fen_version = work.search_version;
 
 		int  local_search_think_time_min = work.search_think_time_min;
@@ -315,6 +315,8 @@ void searcher(const int i)
 		int  local_search_max_depth      = work.search_max_depth;
 		auto local_search_max_n_nodes    = work.search_max_n_nodes;
 		bool local_search_output         = work.search_output;
+
+		my_trace("# thread %d starts, output: %s\n", i, local_search_output ? "yes" : "no");
 
 		work.search_count_running++;
 		work.search_n_started++;
@@ -571,12 +573,12 @@ void vTaskGetRunTimeStats()
 	uint32_t      ulTotalRunTime    = 0;
 	uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
 
-	ulTotalRunTime /= 100UL;
 	if (ulTotalRunTime > 0) {
-		for(int x = 0; x < uxArraySize; x++) {
-			unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
+		ulTotalRunTime /= 100UL;
 
-			if (ulStatsAsPercentage > 0UL) {
+		for(int x = 0; x < uxArraySize; x++) {
+			if (ulTotalRunTime) {
+				unsigned ulStatsAsPercentage = pxTaskStatusArray[x].ulRunTimeCounter / ulTotalRunTime;
 				my_trace("# %s\t%u%%\t%u\n",
 						pxTaskStatusArray[x].pcTaskName,
 						ulStatsAsPercentage,
@@ -685,6 +687,7 @@ void uci_hello() {
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
 	printf("# GIT revision fathom  : " GIT_REV_FATHOM "\n");
+	printf("# Book size            : %zu\n", pb.size());
 	printf("# Dog is a chess program written by Folkert van Heusden <folkert@vanheusden.com>.\n");
 #endif
 }
@@ -720,6 +723,11 @@ void main_task()
 #endif
 	};
 
+	auto trace_handler = [](std::istringstream&) {
+		trace_enabled = !trace_enabled;
+		printf("# Tracing %s\n", trace_enabled ? "enabled" : "disabled");
+	};
+
 	auto help_handler = [](std::istringstream&) {
 		printf("Apart from the standard UCI commands, the following can be used:\n");
 		printf("play         play game upto the end. optional parameter is think time or depth if preceeded with \"depth\"\n");
@@ -727,6 +735,8 @@ void main_task()
 		printf("fen          show fen of current position\n");
 		printf("d / display  show current board layout\n");
 		printf("perft        perft, parameter is depth\n");
+		printf("status       show system status\n");
+		printf("trace        toggle trace mode\n");
 		printf("quit         exit to main menu\n");
 	};
 
@@ -1018,6 +1028,7 @@ void main_task()
 	uci_service->register_handler("dog",        dog_handler, false);
 	uci_service->register_handler("max",        dog_handler, false);
 	uci_service->register_handler("perft",      perft_handler, true);
+	uci_service->register_handler("trace",      trace_handler, false);
 	uci_service->register_handler("ucinewgame", ucinewgame_handler, true);
 	uci_service->register_handler("status",     status_handler, false);
 	uci_service->register_handler("help",       help_handler, false);
@@ -1243,6 +1254,7 @@ void run_bench(const bool long_bench, const bool via_usb)
 	uint64_t t_diff     = end_ts - start_ts;
 
 	if (via_usb) {
+		fflush(nullptr);
 		printf("===========================\n");
 		printf("Total time (ms) : %" PRIu64 "\n", t_diff / 1000);
 		printf("Nodes searched  : %" PRIu64 "\n", node_count);
@@ -1372,7 +1384,7 @@ int main(int argc, char *argv[])
 }
 #else
 #include <driver/usb_serial_jtag.h>
-#include <esp_vfs_usb_serial_jtag.h>
+//#include <driver/usb_serial_jtag_vfs.h>
 #include <esp_vfs_dev.h>
 
 static void init_uart()
@@ -1410,19 +1422,21 @@ static void init_uart()
 		printf("UART ALREADY INSTALLED\n");
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
 
+#if 0
 	// USB/JTAG for UCI
-	esp_vfs_dev_usb_serial_jtag_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
-	esp_vfs_dev_usb_serial_jtag_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
+	usb_serial_jtag_vfs_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
+	usb_serial_jtag_vfs_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
 
-	usb_serial_jtag_driver_config_t usb_serial_jtag_config;
+	usb_serial_jtag_driver_config_t usb_serial_jtag_config { };
 	usb_serial_jtag_config.rx_buffer_size = 1024;
-	usb_serial_jtag_config.tx_buffer_size = 1024;
+	usb_serial_jtag_config.tx_buffer_size = 8192;
 
 	esp_err_t ret = usb_serial_jtag_driver_install(&usb_serial_jtag_config);
 	if (ret != ESP_OK)
 		printf("usb_serial_jtag_driver_install failed\n");
 
-	esp_vfs_usb_serial_jtag_use_driver();
+	usb_serial_jtag_vfs_use_driver();
+#endif
 }
 
 void init_flash_filesystem()
@@ -1472,8 +1486,8 @@ extern "C" void app_main()
 
 	bootloader_random_enable();
 
-	setvbuf(stdin,  nullptr, _IONBF, 0);
-	setvbuf(stdout, nullptr, _IONBF, 0);
+//	setvbuf(stdin,  nullptr, _IONBF, 0);
+//	setvbuf(stdout, nullptr, _IONBF, 0);
 
 	uci_hello();
 
