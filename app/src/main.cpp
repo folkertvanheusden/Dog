@@ -280,8 +280,8 @@ struct {
 void searcher(const int i)
 {
 	printf("# Thread %d started\n", i);
-	std::string t_name { std::format("st_{}", i) };
-	pthread_setname_np(pthread_self(), t_name.c_str());
+//	std::string t_name { std::format("st_{}", i) };
+//	pthread_setname_np(pthread_self(), t_name.c_str());
 
 #if defined(ESP32)
 	sp.at(i)->th = xTaskGetCurrentTaskHandle();
@@ -341,13 +341,13 @@ void searcher(const int i)
 		search_lck.lock();
 
 		if (max_depth > work.search_best_depth) {
-//			printf("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
+			my_trace("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
 			work.search_best_depth = max_depth;
 		}
 		else if (max_depth == work.search_best_depth && best_score > work.search_best_score) {
-//			printf("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
+			my_trace("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
 			work.search_best_depth = max_depth;
