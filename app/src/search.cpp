@@ -165,7 +165,7 @@ libchess::MoveList gen_qs_moves(libchess::Position & pos)
 	return ml;
 }
 
-int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
+int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search_pars_t & sp)
 {
 #if defined(ESP32)
 	if (qsdepth > sp.md) {
@@ -202,27 +202,30 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	int            start_alpha = alpha;
 
 	// TT //
-	uint64_t       hash        = sp.pos.hash();
 	std::optional<libchess::Move> tt_move;
-	std::optional<tt_entry> te = tti.lookup(hash);
-	sp.cs.data.qtt_query++;
+	std::optional<tt_entry>       te;
+	uint64_t hash = sp.pos.hash();
+	if (qsdepth - max_depth <= 3) {
+		te = tti.lookup(hash);
+		sp.cs.data.qtt_query++;
 
-        if (te.has_value()) {  // TT hit?
-		sp.cs.data.qtt_hit++;
+		if (te.has_value()) {  // TT hit?
+			sp.cs.data.qtt_hit++;
 
-		int  score      = te.value().score;
-		int  work_score = eval_from_tt(score, qsdepth);
-		auto flag       = te.value().flags;
-		bool use        = flag == EXACT ||
+			int  score      = te.value().score;
+			int  work_score = eval_from_tt(score, qsdepth);
+			auto flag       = te.value().flags;
+			bool use        = flag == EXACT ||
 				(flag == LOWERBOUND && work_score >= beta) ||
 				(flag == UPPERBOUND && work_score <= alpha);
-		if (use) {
-			sp.cs.data.qtt_cutoff++;
-			return work_score;
-		}
+			if (use) {
+				sp.cs.data.qtt_cutoff++;
+				return work_score;
+			}
 
-		if (te.value().M)  // move stored in TT?
-			tt_move = uint_to_libchessmove(te.value().M);
+			if (te.value().M)  // move stored in TT?
+				tt_move = uint_to_libchessmove(te.value().M);
+		}
 	}
 	////////
 
@@ -274,7 +277,7 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 		n_played++;
 
 		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
-		int score = -qs(-beta, -alpha, qsdepth + 1, sp);
+		int score = -qs(-beta, -alpha, qsdepth + 1, max_depth, sp);
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
 		if (score > best_score) {
@@ -310,21 +313,23 @@ int qs(int alpha, const int beta, const int qsdepth, search_pars_t & sp)
 	assert(best_score >= -max_eval);
 	assert(best_score <=  max_eval);
 
-	if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
-		sp.cs.data.qtt_store++;
+	if (qsdepth - max_depth <= 3) {
+		if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
+			sp.cs.data.qtt_store++;
 
-		tt_entry_flag flag = EXACT;
-		if (best_score <= start_alpha)
-			flag = UPPERBOUND;
-		else if (best_score >= beta)
-			flag = LOWERBOUND;
+			tt_entry_flag flag = EXACT;
+			if (best_score <= start_alpha)
+				flag = UPPERBOUND;
+			else if (best_score >= beta)
+				flag = LOWERBOUND;
 
-		int work_score = eval_to_tt(best_score, qsdepth);
+			int work_score = eval_to_tt(best_score, qsdepth);
 
-		if (best_score > start_alpha && m.has_value())
-			tti.store(hash, flag, 0, work_score, m.value());
-		else
-			tti.store(hash, flag, 0, work_score);
+			if (best_score > start_alpha && m.has_value())
+				tti.store(hash, flag, 0, work_score, m.value());
+			else
+				tti.store(hash, flag, 0, work_score);
+		}
 	}
 
 	return best_score;
@@ -349,7 +354,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 		return 0;
 
 	if (depth == 0) {
-		int score = qs(alpha, beta, max_depth, sp);
+		int score = qs(alpha, beta, max_depth, max_depth, sp);
 		pv->clear();
 		return score;
 	}
