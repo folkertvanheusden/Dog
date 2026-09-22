@@ -729,7 +729,7 @@ void emit(const std::string & text, const bool is_tui)
 #else
 	printf("%s", text.c_str());
 #endif
-	fflush(nullptr);
+	// fflush(nullptr);
 }
 
 std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
@@ -754,7 +754,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	}
 
 	int best_score = 0;
-	int max_depth  = 1;
+	int max_depth  = 1 + sp->thread_nr;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
@@ -779,7 +779,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			sp->md = 0;
-			if (max_depth >= 4)
+			if (max_depth >= 4 && sp->thread_nr == 0)
 				cur_move = sp->best_moves[max_depth - 3];
 			libchess::MoveList pv;
 			int                score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, &pv);
