@@ -760,7 +760,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 	int best_score = 0;
 	int max_depth  = 1 + (sp->thread_nr % 8);
-	auto move_list = sp->pos.legal_move_list();
+	auto move_list { sp->pos.legal_move_list() };
 	libchess::Move best_move { *move_list.begin() };
 
 	std::string should_output;
