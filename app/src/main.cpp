@@ -491,6 +491,7 @@ void delete_threads()
 void allocate_threads(const int n)
 {
 	delete_threads();
+	work.search_version = -1;  // make sure the threads do not auto-start
 
 	for(int i=0; i<n; i++) {
 		sp.push_back(new search_pars_t({ reinterpret_cast<int16_t *>(calloc(1, history_malloc_size)), new end_t, i }));
