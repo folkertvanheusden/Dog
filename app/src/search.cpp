@@ -731,10 +731,10 @@ void emit(const std::string & text, const bool is_tui)
 		to_uart(text.c_str(), text.size());
 	else
 		printf("%s", text.c_str());
+	fflush(nullptr);
 #else
 	printf("%s", text.c_str());
 #endif
-	// fflush(nullptr);
 }
 
 std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)

@@ -523,7 +523,7 @@ auto thread_count_handler = [](const int value)  {
 
 auto hash_size_handler = [](const int value)  {
 	stop_ponder();
-	tti.set_size(uint64_t(value) * 1024 * 1024);
+	tti.set_size(uint64_t(value) * 1024l * 1024l);
 };
 
 bool allow_ponder         = false;
@@ -1001,7 +1001,7 @@ void main_task()
 #if !defined(ESP32)
 	libchess::UCISpinOption thread_count_option("Threads", sp.size(), 1, 128, thread_count_handler);
 	uci_service->register_option(thread_count_option);
-	libchess::UCISpinOption hash_size_option("Hash", (tti.get_size() + 1023) / (1024 * 1024), 1, 1024, hash_size_handler);
+	libchess::UCISpinOption hash_size_option("Hash", (tti.get_size() + 1023) / (1024l * 1024l), 1, 8192, hash_size_handler);
 	uci_service->register_option(hash_size_option);
 	libchess::UCIStringOption syzygy_path_option("SyzygyPath", "", syzygy_option_handler);
 	uci_service->register_option(syzygy_path_option);
@@ -1342,7 +1342,7 @@ int main(int argc, char *argv[])
                 else if (c == 'r')
                         trace_enabled = true;
 		else if (c == 'H')
-			tti.set_size(uint64_t(atol(optarg)) * 1024 * 1024);
+			tti.set_size(uint64_t(atol(optarg)) * 1024l * 1024l);
 		else {
 			help();
 
