@@ -119,7 +119,7 @@ void my_trace(const char *const fmt, ...)
 			fprintf(fh, "[%d] %04d-%02d-%02d %02d:%02d:%02d.%06d ", getpid(),
 					tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
 					tm->tm_hour, tm->tm_min, tm->tm_sec,
-					now % 1000000);
+					int(now % 1000000));
 
 			va_list ap { };
 			va_start(ap, fmt);
@@ -1189,9 +1189,9 @@ void run_bench(const bool long_bench, const bool via_usb)
 		for(size_t i=0; i<fens.size(); i++) {
 			auto & fen = fens.at(i);
 			if (via_usb)
-				printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+				printf("%s (%zu left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			else
-				my_printf("%s (%d left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
+				my_printf("%s (%zu left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			fflush(stdout);
 			// put
 			{
