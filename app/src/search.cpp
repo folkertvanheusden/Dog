@@ -4,6 +4,7 @@
 #endif
 #include <cinttypes>
 #include <cmath>
+#include <map>
 #include <set>
 #include <libchess/Position.h>
 #include <libchess/UCIService.h>
@@ -737,7 +738,7 @@ void emit(const std::string & text, const bool is_tui)
 #endif
 }
 
-std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
+std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -762,6 +763,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	int max_depth  = 1 + (sp->thread_nr % 8);
 	auto move_list { sp->pos.legal_move_list() };
 	libchess::Move best_move { *move_list.begin() };
+
+	std::map<uint32_t, int> stability;
 
 	std::string should_output;
 
@@ -862,6 +865,9 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				best_move  = cur_move;
 				best_score = score;
 
+				if (auto it = stability.insert({ cur_move.value(), 1}); it.second == false)
+					it.first->second++;
+
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
@@ -931,5 +937,5 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	if (output == O_MINIMAL && should_output.empty() == false)
 		emit(should_output, is_tui);
 
-	return { best_move, best_score, max_depth };
+	return { best_move, best_score, max_depth, stability.find(best_move.value())->second };
 }

@@ -232,7 +232,8 @@ void tests()
 		Move best_move  { 0 };
 		int  best_score { 0 };
 		int  max_depth  { 0 };
-		std::tie(best_move, best_score, max_depth) = search_it(100, 100, false, sp.at(0), -1, { }, O_NONE, false);
+		int  stability  { 0 };
+		std::tie(best_move, best_score, max_depth, stability) = search_it(100, 100, false, sp.at(0), -1, { }, O_NONE, false);
 		
 		my_assert(best_move == *Move::from(entry.second));
 
