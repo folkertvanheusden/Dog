@@ -777,7 +777,7 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 		int beta      =  32767;
 
 		const int adapt = 75;
-		int add_alpha = adapt - sp->thread_nr * sp->thread_nr;
+		int add_alpha = adapt + sp->thread_nr * sp->thread_nr;
 		int add_beta  = adapt - sp->thread_nr * sp->thread_nr;
 
 		libchess::Move cur_move;
@@ -859,7 +859,7 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 				alpha_repeat = 0;
 				beta_repeat  = 0;
 
-				add_alpha = adapt - sp->thread_nr * sp->thread_nr;
+				add_alpha = adapt + sp->thread_nr * sp->thread_nr;
 				add_beta  = adapt - sp->thread_nr * sp->thread_nr;
 
 				alpha = std::max(-max_eval, score - add_alpha);
