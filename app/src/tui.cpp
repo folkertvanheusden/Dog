@@ -1867,31 +1867,27 @@ void tui()
 				sp.at(0)->cs.reset_wdl();
 				chess_stats    cs_before    = calculate_search_statistics();
 				uint64_t       nodes_searched_start_aprox = cs_before.data.nodes + cs_before.data.qnodes;
-				libchess::Move best_move;
-				int            best_score { 0 };
-				int            max_depth  { 0 };
-				int            stability  { 0 };
 				clear_flag(sp.at(0)->stop);
-				std::tie(best_move, best_score, max_depth, stability) = search_it(cur_think_time_min, cur_think_time_max, true, sp.at(0), -1, { }, O_FULL, true);
-				chess_stats cs_after     = calculate_search_statistics();
-				uint64_t     nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
-				uint64_t     end_search  = esp_timer_get_time();
+				auto search_rc { search_it(cur_think_time_min, cur_think_time_max, true, sp.at(0), -1, { }, O_FULL, true) };
+				chess_stats    cs_after     = calculate_search_statistics();
+				uint64_t        nodes_searched_end_aprox = cs_after.data.nodes + cs_after.data.qnodes;
+				uint64_t        end_search  = esp_timer_get_time();
 
 				if (t == T_ASCII)
-					my_printf("Selected move: %s (score: %d)\n", best_move.to_str().c_str(), best_score);
+					my_printf("Selected move: %s (score: %d)\n", search_rc.move.to_str().c_str(), search_rc.score);
 				else
-					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %d)\n", best_move.to_str().c_str(), best_score);
+					my_printf("Selected move: \x1b[1m%s\x1b[m (score: %d)\n", search_rc.move.to_str().c_str(), search_rc.score);
 
 				if (verbose) {
 					uint32_t total = sp.at(0)->cs.win[0] + sp.at(0)->cs.win[1] + sp.at(0)->cs.draw;
 					if (total)
-						my_printf("W/D/L: %d%%/%d%%/%d%%, max. depth: %d/%d\n", sp.at(0)->cs.win[color] * 100 / total, sp.at(0)->cs.draw * 100 / total, sp.at(0)->cs.win[!color] * 100 / total, max_depth, sp.at(0)->md);
+						my_printf("W/D/L: %d%%/%d%%/%d%%, max. depth: %d/%d\n", sp.at(0)->cs.win[color] * 100 / total, sp.at(0)->cs.draw * 100 / total, sp.at(0)->cs.win[!color] * 100 / total, search_rc.depth, sp.at(0)->md);
 				}
 
-				std::string move_str     = move_to_san(sp.at(0)->pos, best_move);
-				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, best_move);
+				std::string move_str     = move_to_san(sp.at(0)->pos, search_rc.move);
+				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, search_rc.move);
 				double      took         = (end_search - start_search) / 1000000.;
-				std::string meta         = myformat("%s%.2f/%d %.1fs", best_score > 0 ? "+":"", best_score / 100., max_depth, took);
+				std::string meta         = myformat("%s%.2f/%d %.1fs", search_rc.score > 0 ? "+":"", search_rc.score / 100., search_rc.depth, took);
 				uint64_t    done_n_nodes = nodes_searched_end_aprox - nodes_searched_start_aprox;
 				if (done_n_nodes > 1000)
 					meta += myformat(" %ukN", unsigned(done_n_nodes / 1000));
@@ -1899,7 +1895,7 @@ void tui()
 					meta += myformat(" %uk",  unsigned(done_n_nodes));
 				moves_played.push_back({ move_str, meta });
 
-				scores.push_back(best_score);
+				scores.push_back(search_rc.score);
 			}
 
 			store_position(sp.at(0)->pos.fen(), total_dog_time);

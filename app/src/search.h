@@ -5,6 +5,15 @@
 #include "main.h"
 
 
+struct it_search_result
+{
+	libchess::Move move;
+	int            score;
+	int            depth;
+	int            stability_count;  // max
+	double         stability_score;  // min
+};
+
 class sort_movelist_compare
 {
 private:
@@ -24,7 +33,7 @@ void sort_movelist(libchess::MoveList & move_list, const sort_movelist_compare &
 bool is_insufficient_material_draw(const libchess::Position & pos);
 
 typedef enum { O_NONE, O_MINIMAL, O_FULL } output_type_t;
-std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui);
+it_search_result search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui);
 
 std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m);
 std::string emit_result(const int best_score, const uint64_t thought_ms, const std::vector<uint64_t> & node_counts, const int max_depth, const std::pair<uint64_t, uint64_t> & nodes, const libchess::MoveList & pv, const bool is_tui, const std::optional<uint32_t> & time_left);

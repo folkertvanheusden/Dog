@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <sys/time.h>
 #endif
+#include <cfloat>
 #include <cinttypes>
 #include <cmath>
 #include <map>
@@ -738,7 +739,7 @@ void emit(const std::string & text, const bool is_tui)
 #endif
 }
 
-std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
+it_search_result search_it(const int search_time_min, const int search_time_max, const bool is_absolute_time, search_pars_t *const sp, const int ultimate_max_depth, std::optional<uint64_t> max_n_nodes, const output_type_t output, const bool is_tui)
 {
 	uint64_t t_offset = esp_timer_get_time();
 
@@ -765,6 +766,9 @@ std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, c
 	libchess::Move best_move { *move_list.begin() };
 
 	std::map<uint32_t, int> stability;
+	double stability_avg   { 0. };
+	double stability_sumsq { 0. };
+	int    stability_n     { 0  };
 
 	std::string should_output;
 
@@ -865,6 +869,10 @@ std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, c
 				best_move  = cur_move;
 				best_score = score;
 
+				stability_avg   += score;
+				stability_sumsq += score * score;
+				stability_n++;
+
 				if (auto it = stability.insert({ cur_move.value(), 1}); it.second == false)
 					it.first->second++;
 
@@ -937,5 +945,9 @@ std::tuple<libchess::Move, int, int, int> search_it(const int search_time_min, c
 	if (output == O_MINIMAL && should_output.empty() == false)
 		emit(should_output, is_tui);
 
-	return { best_move, best_score, max_depth, stability.find(best_move.value())->second };
+	double stability_sd = DBL_MAX;
+	if (stability_n)
+		stability_sd = sqrt(stability_sumsq / double(stability_n) - pow(stability_avg / double(stability_n), 2.));
+
+	return { best_move, best_score, max_depth, stability.find(best_move.value())->second, stability_sd };
 }
