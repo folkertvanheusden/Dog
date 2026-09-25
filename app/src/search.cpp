@@ -776,8 +776,9 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 		int alpha     = -32767;
 		int beta      =  32767;
 
-		int add_alpha = 75 - sp->thread_nr * sp->thread_nr;
-		int add_beta  = 75 - sp->thread_nr * sp->thread_nr;
+		const int adapt = 75;
+		int add_alpha = adapt - sp->thread_nr * sp->thread_nr;
+		int add_beta  = adapt - sp->thread_nr * sp->thread_nr;
 
 		libchess::Move cur_move;
 
@@ -786,8 +787,6 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 
 		std::vector<uint64_t> node_counts;
 		uint64_t              previous_node_count = 0;
-
-		std::set<std::string> itd_moves;  // iterative deepening moves
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			sp->md = 0;
@@ -860,8 +859,8 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 				alpha_repeat = 0;
 				beta_repeat  = 0;
 
-				add_alpha = 75 - sp->thread_nr * sp->thread_nr;
-				add_beta  = 75 - sp->thread_nr * sp->thread_nr;
+				add_alpha = adapt - sp->thread_nr * sp->thread_nr;
+				add_beta  = adapt - sp->thread_nr * sp->thread_nr;
 
 				alpha = std::max(-max_eval, score - add_alpha);
 				beta  = std::min( max_eval, score + add_beta );
@@ -886,10 +885,9 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 						should_output = temp;
 				}
 
-				itd_moves.insert(best_move.to_str());
-
 				if (sp->thread_nr == 0) {
-					int search_time = itd_moves.size() / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
+					size_t n_distinct_moves_seen = stability.size();
+					int search_time = n_distinct_moves_seen / double(max_depth) * (search_time_max - search_time_min) + search_time_min;
 
 					if ((int(thought_ms) > search_time / 2 && search_time > 0 && is_absolute_time == false) ||
 					    (int(thought_ms) >= search_time && is_absolute_time == true)) {
