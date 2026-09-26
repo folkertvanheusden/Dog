@@ -362,7 +362,7 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 			}
 		}
 	}
-	else if (depth >= 4) {  // IIR, Internal Iterative Reductions
+	else if (is_pv && depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
 	////////
@@ -549,8 +549,6 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 		if (best_score > start_alpha && m->value())
 			tti.store(hash, flag, depth, work_score, *m);
-		else if (tt_move.has_value())
-			tti.store(hash, flag, depth, work_score, tt_move.value());
 		else
 			tti.store(hash, flag, depth, work_score);
 	}
