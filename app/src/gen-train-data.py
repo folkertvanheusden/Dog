@@ -1,0 +1,220 @@
+#! /usr/bin/env python3
+
+# written by folkert van heusden
+# mit license
+
+# windows:
+# pyinstaller.exe -F gen-train-data.py --collect-all chess
+
+import chess
+import chess.engine
+import getopt
+import json
+import multiprocessing
+import os
+import random
+import socket
+import sys
+import time
+
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
+
+host = 'dog.vanheusden.com'
+port = 31251
+proc = None
+node_count = 10000
+max_time = 10000
+nth = multiprocessing.cpu_count()
+
+hostname = socket.gethostname()
+
+def help():
+    print('-e x  chess-program (UCI) to use')
+    print(f'-d x  how many nodes to visit per move (default: {node_count})')
+    print(f'-t x  # processes (default: {nth})')
+    print(f'-t M  maximum time usage in milliseconds, a fail safe (default: {max_time / 1000})')
+    print('-h    this help')
+
+def gen_board():
+    b = chess.Board()
+
+    for i in range(random.choice((8, 9))):
+        moves = [m for m in b.legal_moves]
+        b.push(random.choice(moves))
+        if b.outcome() != None:
+            return None
+
+    return b
+
+def play(b, engine1, engine2, q, id_):
+    fens = []
+    first = True
+    was_capture = False
+    while b.outcome() == None:
+        store_fen = None
+        if first:
+            first = False  # was random
+        elif b.is_check() == False and was_capture == False:
+            store_fen = b.fen()
+
+        if b.turn == chess.WHITE:
+            result = engine1.play(b, chess.engine.Limit(nodes=node_count, time=max_time/1000), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
+            was_capture = b.is_capture(result.move)
+            b.push(result.move)
+        else:
+            result = engine2.play(b, chess.engine.Limit(nodes=node_count, time=max_time/1000), info=chess.engine.INFO_BASIC | chess.engine.INFO_SCORE, game=id_)
+            was_capture = b.is_capture(result.move)
+            b.push(result.move)
+
+        if store_fen != None and 'score' in result.info and result.info['score'].is_mate() == False and 'nodes' in result.info:
+            score = result.info['score'].white().score()
+            cur_node_count = result.info['nodes']
+            fens.append({ 'score': score, 'node-count': cur_node_count, 'fen': store_fen })
+
+    return fens
+
+PIECE_VALUES = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9
+        }
+
+def is_balanced(b):
+    balanced = 0
+    for pt in (chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
+        balanced += len(b.pieces(pt, chess.WHITE)) * PIECE_VALUES[pt]
+        balanced -= len(b.pieces(pt, chess.BLACK)) * PIECE_VALUES[pt]
+    return not (balanced < -3 or balanced > 3)
+
+def set_minimal_output(e):
+    if 'Minimal' in e.options:
+        e.configure({ 'Minimal': True })
+
+def process(proc, q):
+    while True:
+        try:
+            engine1 = engine2 = None
+            engine1 = chess.engine.SimpleEngine.popen_uci(proc)
+            engine2 = chess.engine.SimpleEngine.popen_uci(proc)
+
+            set_minimal_output(engine1)
+            set_minimal_output(engine2)
+
+            name1 = engine1.id['name']
+            name2 = engine2.id['name']
+
+            print(name1, name2)
+
+            s = None
+            game = 1
+
+            while True:
+                b = gen_board()
+                if b == None:
+                    continue
+                if not is_balanced(b):
+                    q.put(('unbalanced', 1))
+                    continue
+
+                fens = play(b, engine1, engine2, q, game)
+                if len(fens) > 0 and b.outcome() != None:
+                    result = b.outcome().result()
+
+                    q.put(('count', len(fens)))
+                    q.put(('gcount', 1))
+
+                    if host != None:
+                        j = { 'name1': name1, 'name2': name2, 'host': hostname, 'data': {'result': result, 'fens': fens } }
+
+                        while True:
+                            try:
+                                if s == None:
+                                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    s.connect((host, port))
+
+                                s.send((json.dumps(j) + '\n').encode('ascii'))
+                                break
+                            except Exception as e:
+                                print(f'Socket error: {e}')
+                                s.close()
+                                s = None
+                                time.sleep(0.5)
+                game += 1
+
+        except Exception as e:
+            print(f'failure: {e}')
+
+        finally:
+            try:
+                if engine2:
+                    engine2.quit()
+            except Exception as e:
+                print(f'quit failure (1): {e}')
+            try:
+                if engine1:
+                    engine1.quit()
+            except Exception as e:
+                print(f'quit failure (2): {e}')
+
+    print('PROCESS TERMINATING')
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
+
+    except getopt.GetoptError as err:
+        print(err)
+        help()
+        sys.exit(2)
+
+    for o, a in opts:
+        if o == '-e':
+            proc = a
+        elif o == '-d':
+            node_count = float(a)
+        elif o == '-h':
+            host = a
+        elif o == '-t':
+            nth = int(a)
+        elif o == '-h':
+            help()
+            sys.exit(0)
+
+    if proc == None:
+        help()
+        sys.exit(1)
+
+    q = multiprocessing.Queue()
+
+    processes = []
+    for i in range(0, nth):
+        t = multiprocessing.Process(target=process, args=(proc,q,))
+        processes.append(t)
+        t.start()
+
+    count = 0
+    gcount = 0
+    unbalanced = 0
+
+    start = time.time()
+    while True:
+        item = q.get()
+        if item[0] == 'count':
+            count += item[1]
+        elif item[0] == 'gcount':
+            gcount += item[1]
+        elif item[0] == 'unbalanced':
+            unbalanced += item[1]
+        else:
+            print('Internal error', item[0])
+            continue
+        t_diff = time.time() - start
+        print(f'{time.ctime()}, fen/s: {count / t_diff:.2f}, total fens: {count}, games/minute: {gcount * 60 / t_diff:.2f}, unbalanced: {unbalanced}')
+
+    for t in processes:
+        t.join()
