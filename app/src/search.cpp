@@ -312,14 +312,17 @@ int search(libchess::Position & pos, int8_t depth, int16_t alpha, int16_t beta, 
 
 	sp.cs.data.nodes++;
 
+	const int  csd         = max_depth - depth;
 	bool is_root_position = max_depth == depth;
-	if (!is_root_position && (pos.is_repeat() || is_insufficient_material_draw(pos))) {
-		sp.cs.data.n_draws++;
+        if (!is_root_position && (pos.is_repeat() || pos.halfmoves() >= 100 || is_insufficient_material_draw(pos))) {
+                if (pos.in_check()) {
+                        if (pos.legal_move_list().empty())
+                                return -9800 + csd;
+                }
 		return 0;
 	}
 
 	const int  start_alpha = alpha;
-	const int  csd         = max_depth - depth;
 	const bool is_pv       = alpha != beta -1;
 
 	// TT //
