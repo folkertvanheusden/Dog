@@ -125,23 +125,47 @@ bool is_check(libchess::Position & pos)
 	return pos.attackers_to(pos.piece_type_bb(libchess::constants::KING, !pos.side_to_move()).forward_bitscan(), pos.side_to_move());
 }
 
+// https://www.reddit.com/r/chess/comments/se89db/a_writeup_on_definitions_of_insufficient_material/
 bool is_insufficient_material_draw(const libchess::Position & pos)
 {
-	if (pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::WHITE).popcount() || 
-		pos.piece_type_bb(libchess::constants::PAWN, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::ROOK, libchess::constants::BLACK).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::WHITE).popcount() ||
-		pos.piece_type_bb(libchess::constants::QUEEN, libchess::constants::BLACK).popcount())
+	using namespace libchess::constants;
+
+        // A king + any(pawn, rook, queen) is sufficient.
+	if (pos.piece_type_bb(PAWN) || pos.piece_type_bb(QUEEN) || pos.piece_type_bb(ROOK))
 		return false;
 
-	if ((pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::WHITE).popcount() &&
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::WHITE).popcount()) ||
-		(pos.piece_type_bb(libchess::constants::KNIGHT, libchess::constants::BLACK).popcount() &&
-		pos.piece_type_bb(libchess::constants::BISHOP, libchess::constants::BLACK).popcount()))
+        // A king and more than one other type of piece is sufficient (e.g. knight + bishop).
+	if ((pos.piece_type_bb(KNIGHT, WHITE) && pos.piece_type_bb(BISHOP, WHITE)) ||
+	    (pos.piece_type_bb(KNIGHT, BLACK) && pos.piece_type_bb(BISHOP, BLACK)))
 		return false;
 
-	return true;
+        // A king and two (or more) knights is sufficient
+	if (pos.piece_type_bb(KNIGHT, WHITE).popcount() >= 2 ||
+	    pos.piece_type_bb(KNIGHT, BLACK).popcount() >= 2)
+		return false;
+
+        // King + bishop against king + any(knight, pawn) is sufficient.
+        if ((pos.piece_type_bb(BISHOP, WHITE) && (pos.piece_type_bb(KNIGHT, BLACK) || pos.piece_type_bb(PAWN, BLACK))) ||
+            (pos.piece_type_bb(BISHOP, BLACK) && (pos.piece_type_bb(KNIGHT, WHITE) || pos.piece_type_bb(PAWN, WHITE)))) {
+                return false;
+        }
+
+        // King + knight against king + any(rook, bishop, knight, pawn) is sufficient.
+        if (((pos.piece_type_bb(ROOK, WHITE) || pos.piece_type_bb(BISHOP, WHITE) || pos.piece_type_bb(KNIGHT, WHITE) || pos.piece_type_bb(PAWN, WHITE))
+				&& pos.piece_type_bb(KNIGHT, BLACK)) ||
+            ((pos.piece_type_bb(ROOK, BLACK) || pos.piece_type_bb(BISHOP, BLACK) || pos.piece_type_bb(KNIGHT, BLACK) || pos.piece_type_bb(PAWN, BLACK))
+	    			&& pos.piece_type_bb(KNIGHT, WHITE)))
+		return false;
+
+        // King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
+        constexpr uint64_t white_squares = 0x55aa55aa55aa55aall;
+        constexpr uint64_t black_squares = 0xaa55aa55aa55aa55ll;
+        const libchess::Bitboard piece_bb = pos.piece_type_bb(BISHOP);
+        if ((piece_bb & black_squares) && (piece_bb & white_squares)) {
+                return false;
+        }
+
+        return true;
 }
 
 libchess::MoveList gen_qs_moves(libchess::Position & pos)
