@@ -650,7 +650,7 @@ void main_task()
 		memset(sp1.history, 0x00, history_malloc_size);
 		tti.reset();
 		global_cs.reset();
-		printf("# --- New game ---\n");
+//		printf("# --- New game ---\n");
 	};
 
 	auto play_handler = [](std::istringstream& line_stream) {
