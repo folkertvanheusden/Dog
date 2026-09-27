@@ -23,9 +23,10 @@ import time
 host = 'dog.vanheusden.com'
 port = 31251
 proc = None
-node_count = 10000
-max_time = 10000
+node_count = 25000
+max_time = 25000
 nth = multiprocessing.cpu_count()
+hash_size = 128
 
 hostname = socket.gethostname()
 
@@ -34,6 +35,7 @@ def help():
     print(f'-d x  how many nodes to visit per move (default: {node_count})')
     print(f'-t x  # processes (default: {nth})')
     print(f'-t M  maximum time usage in milliseconds, a fail safe (default: {max_time / 1000})')
+    print('-H x  set hash size to x MB')
     print('-h    this help')
 
 def gen_board():
@@ -93,6 +95,10 @@ def set_minimal_output(e):
     if 'Minimal' in e.options:
         e.configure({ 'Minimal': True })
 
+def set_hash_size(e):
+    if 'Hash' in e.options:
+        e.configure({ 'Hash': hash_size })
+
 def process(proc, q):
     while True:
         try:
@@ -101,7 +107,9 @@ def process(proc, q):
             engine2 = chess.engine.SimpleEngine.popen_uci(proc)
 
             set_minimal_output(engine1)
+            set_hash_size(engine1)
             set_minimal_output(engine2)
+            set_hash_size(engine2)
 
             name1 = engine1.id['name']
             name2 = engine2.id['name']
@@ -165,7 +173,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:h')
+        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:H:h')
 
     except getopt.GetoptError as err:
         print(err)
@@ -181,6 +189,8 @@ if __name__ == '__main__':
             host = a
         elif o == '-t':
             nth = int(a)
+        elif o == '-H':
+            hash_size = int(a)
         elif o == '-h':
             help()
             sys.exit(0)
