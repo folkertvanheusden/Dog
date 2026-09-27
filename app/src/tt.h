@@ -34,10 +34,13 @@ private:
 #if defined(ESP32)
 #define ESP32_TT_RAM_SIZE 49152
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
+#define DEFAULT_TT_SIZE 1
 #elif defined(__ANDROID__)
-	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };
+#define DEFAULT_TT_SIZE 16
+	uint64_t n_entries { DEFAULT_TT_SIZE * 1024 * 1024  / sizeof(tt_entry) };
 #elif defined(linux) || defined(_WIN32) || defined(__APPLE__)
-	uint64_t n_entries { 256 * 1024 * 1024  / sizeof(tt_entry) };
+#define DEFAULT_TT_SIZE 256
+	uint64_t n_entries { DEFAULT_TT_SIZE * 1024 * 1024  / sizeof(tt_entry) };
 #endif
 	void allocate();
 
