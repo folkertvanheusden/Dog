@@ -99,7 +99,7 @@ def set_hash_size(e):
     if 'Hash' in e.options:
         e.configure({ 'Hash': hash_size })
 
-def process(proc, q):
+def process(proc, q, node_count, host, hash_size):
     while True:
         try:
             engine1 = engine2 = None
@@ -146,7 +146,7 @@ def process(proc, q):
                                 s.send((json.dumps(j) + '\n').encode('ascii'))
                                 break
                             except Exception as e:
-                                print(f'Socket error: {e}')
+                                print(f'Socket error: {e} - {host}:{port}')
                                 s.close()
                                 s = None
                                 time.sleep(0.5)
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:H:h')
+        opts, args = getopt.getopt(sys.argv[1:], 'e:d:t:H:hx:')
 
     except getopt.GetoptError as err:
         print(err)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
             proc = a
         elif o == '-d':
             node_count = float(a)
-        elif o == '-h':
+        elif o == '-x':
             host = a
         elif o == '-t':
             nth = int(a)
@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
     processes = []
     for i in range(0, nth):
-        t = multiprocessing.Process(target=process, args=(proc,q,))
+        t = multiprocessing.Process(target=process, args=(proc, q, node_count, host, hash_size))
         processes.append(t)
         t.start()
 
