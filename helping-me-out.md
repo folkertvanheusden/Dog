@@ -6,7 +6,7 @@ You can help generating that!
 Feel free to run it whenever you like and how long you like.
 
 Please always make a clean clone of the github-repository: delete a previous clone.
-That way we're certain that e.g. libchess is always the latest version!
+That way we're certain that e.g. libchess is always the latest version.
 
 
 There are 2 ways:
@@ -19,6 +19,7 @@ Note that this requires the Docker framework to be installed first. That is beyo
 ```shell
 git clone --recursive https://github.com/folkertvanheusden/Dog.git
 cd Dog
+git checkout hce_v2.8
 ./dockerrun
 ```
 
@@ -56,6 +57,7 @@ sudo dnf install cmake git g++ python3-pip
 ```shell
 git clone --recursive https://github.com/folkertvanheusden/Dog.git
 cd Dog/app/src/linux-windows/build/
+git checkout hce_v2.8
 cmake ..
 make -j4 Dog
 cd ../..
@@ -68,3 +70,10 @@ pip install python-chess
 *NOTE: for systems with large amounts of threads, do not forget to run `ulimit -n 32768` ! (or bigger)
 
 Interrupt the program whenever you want.
+
+
+You can limit the number of threads used with -t:
+
+```shell
+./gen-train-data.py -e linux-windows/build/Dog -t 4
+```
