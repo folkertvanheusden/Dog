@@ -1,5 +1,5 @@
-Help me out
-===========
+Help me train Dog
+=================
 
 To be able to generate a strong NNUE network, Dog needs a large set of training data.
 You can help generating that!
