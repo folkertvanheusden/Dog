@@ -735,7 +735,7 @@ std::pair<libchess::Move, int> search_it(libchess::Position & pos, const int sea
 						pv_str += " " + move.to_str();
 
 					double      ebf     = calculate_EBF(node_counts);
-					std::string ebf_str = ebf >= 0 ? std::to_string(ebf) : "";
+					std::string ebf_str = ebf >= 0 ? myformat("%.3f", ebf) : "";
 					if (ebf_str.empty() == false)
 						ebf_str = "ebf " + ebf_str + " ";
 
