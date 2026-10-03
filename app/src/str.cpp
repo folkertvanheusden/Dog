@@ -1,3 +1,4 @@
+#include <cstdarg>
 #include <string>
 #include <vector>
 
@@ -30,4 +31,19 @@ std::vector<std::string> split(std::string in, std::string splitter)
 		out.push_back(in);
 
 	return out;
+}
+
+std::string __attribute__((format (printf, 1, 2) )) myformat(const char *const fmt, ...)
+{
+	char *buffer = NULL;
+	va_list ap;
+
+	va_start(ap, fmt);
+	int len = vasprintf(&buffer, fmt, ap);
+	va_end(ap);
+
+	std::string result(buffer, len);
+	free(buffer);
+
+	return result;
 }

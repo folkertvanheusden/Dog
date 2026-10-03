@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "main.h"
+#include "str.h"
 
 
 bool send_disp_cmd(const int fd, const std::string & cmd)
@@ -31,21 +32,6 @@ bool send_disp_cmd(const int fd, const std::string & cmd)
 	}
 
 	return true;
-}
-
-std::string __attribute__((format (printf, 1, 2) )) myformat(const char *const fmt, ...)
-{
-	char *buffer = NULL;
-	va_list ap;
-
-	va_start(ap, fmt);
-	int len = vasprintf(&buffer, fmt, ap);
-	va_end(ap);
-
-	std::string result(buffer, len);
-	free(buffer);
-
-	return result;
 }
 
 void usb_disp(const std::string & device)
