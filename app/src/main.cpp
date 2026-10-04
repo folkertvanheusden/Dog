@@ -701,9 +701,7 @@ void uci_hello() {
 #else
 	printf("???\n");
 #endif
-#if defined(BUILD_TYPE)
 	printf("# Build type           : " BUILD_TYPE     "\n");
-#endif
 #if defined(INSTRUMENTED)
 	printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
 #else
