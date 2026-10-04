@@ -47,8 +47,9 @@
 #include <driver/uart.h>
 #include <esp_chip_info.h>
 #include <esp_err.h>
-#include <esp_spiffs.h>
+#include <esp_idf_version.h>
 #include <esp_random.h>
+#include <esp_spiffs.h>
 #include <esp_task_wdt.h>
 #include <esp_timer.h>
 #include <nvs_flash.h>
@@ -700,11 +701,16 @@ void uci_hello() {
 #else
 	printf("???\n");
 #endif
+#if defined(BUILD_TYPE)
 	printf("# Build type           : " BUILD_TYPE     "\n");
+#endif
 #if defined(INSTRUMENTED)
 	printf("# Build target         : " BUILD_TARGET   " (INSTRUMENTED!)\n");
 #else
 	printf("# Build target         : " BUILD_TARGET   "\n");
+#endif
+#if defined(IDF_VER)
+	printf("# IDF version          : " IDF_VER        "\n");
 #endif
 	printf("# GIT revision Dog     : " GIT_REV_DOG    "\n");
 	printf("# GIT revision libchess: " GIT_REV_LC     "\n");
