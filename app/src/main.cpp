@@ -782,8 +782,9 @@ void main_task()
 		stop_ponder();
 		sp.at(0)->pos = libchess::Position { position_parameters.fen() };
 		init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
-		if (position_parameters.move_list()) {
-			for (auto & move_str : position_parameters.move_list()->move_list()) {
+		auto ml { position_parameters.move_list() };
+		if (ml.has_value()) {
+			for (auto & move_str : ml->move_list()) {
 				auto m = str_to_move(sp.at(0)->pos, move_str);
 				if (m.has_value() == false) {
 					printf("# %s is invalid in the context of %s\n", move_str.c_str(), sp.at(0)->pos.fen().c_str());
@@ -1412,7 +1413,6 @@ int main(int argc, char *argv[])
 }
 #else
 #include <driver/usb_serial_jtag.h>
-//#include <driver/usb_serial_jtag_vfs.h>
 #include <esp_vfs_dev.h>
 
 static void init_uart()
@@ -1449,22 +1449,6 @@ static void init_uart()
 	if (uart_is_driver_installed(uart_num))
 		printf("UART ALREADY INSTALLED\n");
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, uart_buffer_size, 10, &uart_queue, 0));
-
-#if 0
-	// USB/JTAG for UCI
-	usb_serial_jtag_vfs_set_rx_line_endings(ESP_LINE_ENDINGS_CR  );
-	usb_serial_jtag_vfs_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
-
-	usb_serial_jtag_driver_config_t usb_serial_jtag_config { };
-	usb_serial_jtag_config.rx_buffer_size = 1024;
-	usb_serial_jtag_config.tx_buffer_size = 8192;
-
-	esp_err_t ret = usb_serial_jtag_driver_install(&usb_serial_jtag_config);
-	if (ret != ESP_OK)
-		printf("usb_serial_jtag_driver_install failed\n");
-
-	usb_serial_jtag_vfs_use_driver();
-#endif
 }
 
 void init_flash_filesystem()
@@ -1513,9 +1497,6 @@ extern "C" void app_main()
 	init_uart();
 
 	bootloader_random_enable();
-
-//	setvbuf(stdin,  nullptr, _IONBF, 0);
-//	setvbuf(stdout, nullptr, _IONBF, 0);
 
 	uci_hello();
 
