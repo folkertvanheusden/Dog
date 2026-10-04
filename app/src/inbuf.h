@@ -66,7 +66,7 @@ protected:
 			}
 #if defined(ESP32)
 			// fgetc is non-blocking on ESP32
-			vTaskDelay(10);
+			taskYIELD();
 #endif
 		}
 
