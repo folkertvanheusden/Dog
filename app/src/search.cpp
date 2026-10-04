@@ -733,7 +733,6 @@ void emit(const std::string & text, const bool is_tui)
 		to_uart(text.c_str(), text.size());
 	else
 		printf("%s", text.c_str());
-	fflush(nullptr);
 #else
 	printf("%s", text.c_str());
 #endif
