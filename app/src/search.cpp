@@ -688,7 +688,7 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 {
 	std::string pv_str     = gen_pv_str(pv);
 	double      ebf        = calculate_EBF(node_counts);
-	std::string ebf_str    = ebf >= 0 ? std::to_string(ebf) : "";
+	std::string ebf_str    = ebf >= 0 ? myformat("%.3f", ebf) : "";
 	if (ebf_str.empty() == false)
 		ebf_str = "ebf " + ebf_str + " ";
 
