@@ -12,7 +12,7 @@ while True:
     ser = None
     try:
         fh = open('/tmp/log-dog.dat', 'a+')
-        ser = serial.Serial(sys.argv[1], 115200, timeout=0)
+        ser = serial.Serial(sys.argv[1], 115200, exclusive=True)
 #        ser.dtr = False
 #        time.sleep(0.5)
 #        ser.dtr = True
@@ -28,6 +28,7 @@ while True:
                 if r == 0:
                     new_data = os.read(0, 4096)
                     fh.write(f"{int((time.time() - start) * 1000) / 1000} {new_data.decode('ascii')}")
+                    fh.flush()
                     data += new_data.decode('ascii')
                     if 'quit\r\n' in data or 'quit\n' in data:
                         sys.exit(0)
@@ -36,19 +37,24 @@ while True:
                     bla = new_data
                     while len(bla) > 0:
                         q = len(bla[0:10])
-                        ser.write(bla[0:10])
+                        if ser.write(bla[0:10]) != q:
+                            fh.write('DATA MISSING\n');
+                        ser.flush()
                         bla = bla[q:]
-                        time.sleep(0.05)
+                        time.sleep(0.01)
                 elif r == fd_ser:
-                    new_data = ser.read(4096).decode('ascii')
+                    new_data = ser.read_all().decode('ascii')
                     fh.write(f"{int((time.time() - start) * 1000) / 1000} {new_data.replace('\r', '')}")
+                    fh.flush()
                     print(new_data.replace('\r', ''), end='', flush=True)
                 else:
                     print('Internal error')
                     sys.exit(1)
-            fh.flush()
 
         fh.close()
+
+    except Exception as e:
+        open('/tmp/log-dog.dat', 'a+').write(f'Exception: {e}')
 
     finally:
         if ser != None:
