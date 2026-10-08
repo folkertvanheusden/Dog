@@ -204,8 +204,8 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 	int            start_alpha = alpha;
 
 	// TT //
-	std::optional<libchess::Move> tt_move;
-	std::optional<tt_entry>       te;
+	std::optional<libchess::Move>       tt_move;
+	std::optional<tt_entries::tt_entry> te;
 	uint64_t hash = sp.pos.hash();
 	if (qsdepth - max_depth <= 3) {
 		te = tti.lookup(hash);
@@ -386,7 +386,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 	// TT //
 	std::optional<libchess::Move> tt_move { };
 	uint64_t       hash        = sp.pos.hash();
-	std::optional<tt_entry> te = tti.lookup(hash);
+	std::optional<tt_entries::tt_entry> te = tti.lookup(hash);
 	sp.cs.data.tt_query++;
 
         if (te.has_value()) {  // TT hit?
