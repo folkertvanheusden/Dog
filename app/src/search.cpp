@@ -946,5 +946,7 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 	if (stability_n)
 		stability_sd = sqrt(stability_sumsq / double(stability_n) - pow(stability_avg / double(stability_n), 2.));
 
-	return { best_move, best_score, max_depth, stability.find(best_move.value())->second, stability_sd };
+	int stability_count { stability.empty() ? 0 : stability.find(best_move.value())->second };
+
+	return { best_move, best_score, max_depth, stability_count, stability_sd };
 }
