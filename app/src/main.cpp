@@ -341,47 +341,17 @@ void searcher(const int i)
 		// notify finished
 		search_lck.lock();
 
-		bool use = false;
-		if (search_result.depth > work.search_best_depth) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER DEPTH %d > %d\n", i, search_result.depth, work.search_best_depth);
-			use = true;
-		}
-		else if (search_result.depth == work.search_best_depth && search_result.score > work.search_best_score) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER SCORE %d > %d\n", i, search_result.score, work.search_best_score);
-			use = true;
-		}
-		else if (search_result.depth == work.search_best_depth && search_result.score == work.search_best_score &&
-				search_result.stability_count > work.search_stability) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER COUNT STABILITY COUNT %d > %d\n", i, search_result.stability_count, work.search_stability);
-			use = true;
-		}
-		else if (search_result.depth == work.search_best_depth && search_result.score == work.search_best_score &&
-				search_result.stability_count == work.search_stability &&
-				search_result.stability_score < work.search_stability_score) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER COUNT STABILITY SCORE %f < %f\n", i, search_result.stability_count, work.search_stability);
-			use = true;
-		}
+                if (i == 0) {
+                        work.search_best_move  = search_result.move;
+                        work.search_best_score = search_result.score;
 
-		if (use) {
-			work.search_best_move       = search_result.move;
-			work.search_best_score      = search_result.score;
-			work.search_best_depth      = search_result.depth;
-			work.search_stability       = search_result.stability_count;
-			work.search_stability_score = search_result.stability_score;
-		}
+                        // stop other threads
+                        for(auto & thread_pars : sp)
+                                set_flag(thread_pars->stop);
+                }
 
-		if (i == 0) {
-			// stop other threads
-			for(auto & thread_pars : sp)
-				set_flag(thread_pars->stop);
-		}
-
-		work.search_count_running--;
-		work.search_cv_finished.notify_one();
+                work.search_count_running--;
+                work.search_cv_finished.notify_one();
 	}
 
 	my_trace("Thread %d stops\n", i);
