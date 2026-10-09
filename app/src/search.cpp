@@ -384,7 +384,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 	// TT //
 	std::optional<libchess::Move> tt_move { };
 	uint64_t       hash        = sp.pos.hash();
-	std::optional<tt_entries::tt_entry> te = tti.lookup(hash);
+	std::optional<tt_entry> te = tti.lookup(hash);
 	sp.cs.data.tt_query++;
 
         if (te.has_value()) {  // TT hit?
