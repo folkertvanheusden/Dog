@@ -276,7 +276,6 @@ struct {
 	int                     search_best_depth    { 0     };
 	bool                    search_output        { false };
 	int                     search_count_running { 0     };
-	int                     search_stability     { 0     };
 } work;
 
 void searcher(const int i)
@@ -335,37 +334,24 @@ void searcher(const int i)
 		libchess::Move best_move;
 		int            best_score { 0 };
 		int            max_depth  { 0 };
-		int            stability  { 0 };
-		std::tie(best_move, best_score, max_depth, stability) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
+		std::tie(best_move, best_score, max_depth) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
 
-		my_trace("# thread %d finished | %s | %d | %d\n", i, best_move.to_str().c_str(), best_score, max_depth);
+		my_trace("# thread %d finished\n", i);
 
 		// notify finished
 		search_lck.lock();
 
 		if (max_depth > work.search_best_depth) {
-			if (work.search_best_move != best_move)
-				my_trace("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
+			my_trace("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
 			work.search_best_depth = max_depth;
-			work.search_stability  = stability;
 		}
 		else if (max_depth == work.search_best_depth && best_score > work.search_best_score) {
-			if (work.search_best_move != best_move)
-				my_trace("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
+			my_trace("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
 			work.search_best_move  = best_move;
 			work.search_best_score = best_score;
 			work.search_best_depth = max_depth;
-			work.search_stability  = stability;
-		}
-		else if (max_depth == work.search_best_depth && best_score == work.search_best_score && stability > work.search_stability) {
-			if (work.search_best_move != best_move)
-				my_trace("%d BETTER STABILITY %d > %d\n", i, stability, work.search_stability);
-			work.search_best_move  = best_move;
-			work.search_best_score = best_score;
-			work.search_best_depth = max_depth;
-			work.search_stability  = stability;
 		}
 
 		if (i == 0) {
