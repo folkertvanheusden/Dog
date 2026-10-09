@@ -4,7 +4,6 @@
 // above it for details.
 #include <atomic>
 #include <cassert>
-#include <cfloat>
 #include <chrono>
 #include <cinttypes>
 #include <condition_variable>
@@ -278,7 +277,6 @@ struct {
 	bool                    search_output        { false };
 	int                     search_count_running { 0     };
 	int                     search_stability     { 0     };
-	double                  search_stability_score { DBL_MAX };
 } work;
 
 void searcher(const int i)
@@ -334,44 +332,40 @@ void searcher(const int i)
 			o = allow_minimal ? O_MINIMAL : O_FULL;
 
 		// search!
-		auto search_result = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
+		libchess::Move best_move;
+		int            best_score { 0 };
+		int            max_depth  { 0 };
+		int            stability  { 0 };
+		std::tie(best_move, best_score, max_depth, stability) = search_it(local_search_think_time_min, local_search_think_time_max, local_search_is_abs_time, sp.at(i), local_search_max_depth, local_search_max_n_nodes, o, false);
 
-		my_trace("# thread %d finished | %s | %d | %d\n", i, search_result.move.to_str().c_str(), search_result.score, search_result.depth);
+		my_trace("# thread %d finished | %s | %d | %d\n", i, best_move.to_str().c_str(), best_score, max_depth);
 
 		// notify finished
 		search_lck.lock();
 
-		bool use = false;
-		if (search_result.depth > work.search_best_depth) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER DEPTH %d > %d\n", i, search_result.depth, work.search_best_depth);
-			use = true;
+		if (max_depth > work.search_best_depth) {
+			if (work.search_best_move != best_move)
+				my_trace("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
+			work.search_best_depth = max_depth;
+			work.search_stability  = stability;
 		}
-		else if (search_result.depth == work.search_best_depth && search_result.score > work.search_best_score) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER SCORE %d > %d\n", i, search_result.score, work.search_best_score);
-			use = true;
+		else if (max_depth == work.search_best_depth && best_score > work.search_best_score) {
+			if (work.search_best_move != best_move)
+				my_trace("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
+			work.search_best_depth = max_depth;
+			work.search_stability  = stability;
 		}
-		else if (search_result.depth == work.search_best_depth && search_result.score == work.search_best_score &&
-				search_result.stability_count > work.search_stability) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER COUNT STABILITY COUNT %d > %d\n", i, search_result.stability_count, work.search_stability);
-			use = true;
-		}
-		else if (search_result.depth == work.search_best_depth && search_result.score == work.search_best_score &&
-				search_result.stability_count == work.search_stability &&
-				search_result.stability_score < work.search_stability_score) {
-			if (work.search_best_move != search_result.move)
-				my_trace("%d BETTER COUNT STABILITY SCORE %f < %f\n", i, search_result.stability_count, work.search_stability);
-			use = true;
-		}
-
-		if (use) {
-			work.search_best_move       = search_result.move;
-			work.search_best_score      = search_result.score;
-			work.search_best_depth      = search_result.depth;
-			work.search_stability       = search_result.stability_count;
-			work.search_stability_score = search_result.stability_score;
+		else if (max_depth == work.search_best_depth && best_score == work.search_best_score && stability > work.search_stability) {
+			if (work.search_best_move != best_move)
+				my_trace("%d BETTER STABILITY %d > %d\n", i, stability, work.search_stability);
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
+			work.search_best_depth = max_depth;
+			work.search_stability  = stability;
 		}
 
 		if (i == 0) {
@@ -842,11 +836,9 @@ void main_task()
 					work.search_max_n_nodes.reset();
 					work.search_version++;
 					work.search_best_move.reset();
-					work.search_best_score      = -32768;
-					work.search_best_depth      = 0;
-					work.search_output          = true;
-					work.search_stability       = 0;
-					work.search_stability_score = DBL_MAX;
+					work.search_best_score = -32768;
+					work.search_best_depth = 0;
+					work.search_output     = true;
 					work.search_cv.notify_all();
 				}
 				wait_searches_started(true);
@@ -1237,8 +1229,6 @@ void run_bench(const bool long_bench, const bool via_usb)
 				work.search_best_score     = -32768;
 				work.search_best_depth     = 0;
 				work.search_output         = false;
-				work.search_stability       = 0;
-				work.search_stability_score = DBL_MAX;
 				work.search_cv.notify_all();
 			}
 			wait_searches_started(true);
@@ -1268,8 +1258,6 @@ void run_bench(const bool long_bench, const bool via_usb)
 			work.search_best_score     = -32768;
 			work.search_best_depth     = 0;
 			work.search_output         = true;
-			work.search_stability       = 0;
-			work.search_stability_score = DBL_MAX;
 			work.search_cv.notify_all();
 		}
 		wait_searches_started(true);
