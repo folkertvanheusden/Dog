@@ -21,8 +21,6 @@
 
 static_assert(sizeof(tt_entry) == 8, "tt_entry must be 8 bytes in size");
 
-#define MASK_20_BIT 0xf'ffff
-
 tt tti;
 
 tt::tt()
@@ -131,7 +129,7 @@ std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 	uint64_t   index = fastrange(hash, n_entries);
 	tt_entry & cur   = entries[index];
 
-	if (cur.hash == uint32_t(hash & MASK_20_BIT))
+	if (cur.hash == uint16_t(hash))
 		return cur;
 
 	return { };
@@ -169,7 +167,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n.depth = uint8_t(d);
 	n.flags = f;
 	n.M     = libchessmove_to_uint(m);
-	n.hash  = hash & MASK_20_BIT;
+	n.hash  = uint16_t(hash);
 
 	uint64_t index = fastrange(hash, n_entries);
 	entries[index] = n;
@@ -182,7 +180,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 	tt_entry n;
 
-	if (e->hash == uint32_t(hash & MASK_20_BIT)) {
+	if (e->hash == uint16_t(hash)) {
 		tt_entry & cur = entries[index];
 		n.M = cur.M;
 	}
@@ -190,7 +188,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
-	n.hash  = uint32_t(hash & MASK_20_BIT);
+	n.hash  = uint16_t(hash);
 
 	entries[index] = n;
 }
