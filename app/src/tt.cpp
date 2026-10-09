@@ -19,7 +19,7 @@
 #include "tt.h"
 
 
-static_assert(sizeof(tt_entry) == 8, "tt_entry must be 8 bytes in size");
+static_assert(sizeof(tt_entries::tt_entry) == 8, "tt_entry must be 8 bytes in size");
 
 tt tti;
 
@@ -38,7 +38,7 @@ void tt::debug_helper()
 {
 #if !defined(NDEBUG)
 #if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
-	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_entry));
+	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_entries));
 #endif
 #endif
 }
@@ -51,42 +51,42 @@ void tt::allocate()
 		constexpr const size_t max_sp_size = 4 * 1024l * 1024l;
 		psram_size = std::min(psram_size, max_sp_size);
 		printf("Using %zu bytes of PSRAM\n", psram_size);
-		n_entries = psram_size / sizeof(tt_entry);
-		entries = reinterpret_cast<tt_entry *>(heap_caps_malloc(n_entries * sizeof(tt_entry), MALLOC_CAP_SPIRAM));
+		n_entries = psram_size / sizeof(tt_entries);
+		entries = reinterpret_cast<tt_entry *>(heap_caps_malloc(n_entries * sizeof(tt_entries), MALLOC_CAP_SPIRAM));
 	}
 	else {
 		printf("No PSRAM\n");
 		for(;;) {
-			auto n_bytes = n_entries * sizeof(tt_entry);
+			auto n_bytes = n_entries * sizeof(tt_entries);
 			printf("Using %zu bytes of RAM\n", size_t(n_bytes));
 			entries = reinterpret_cast<tt_entry *>(malloc(n_bytes));
 			if (entries)
 				break;
-			n_entries = std::max(uint64_t(0), n_entries - 1024 / sizeof(tt_entry));
+			n_entries = std::max(uint64_t(0), n_entries - 1024 / sizeof(tt_entries));
 			if (n_entries == 0)
 				break;
 		}
 	}
 #else
-	size_t s = n_entries * sizeof(tt_entry);
+	size_t s = n_entries * sizeof(tt_entries);
 #if defined(linux)
 	if (posix_memalign(reinterpret_cast<void **>(&entries), 1024 * 1024 * 2, s)) {
 		printf("# posix_memalign failed: %s\n", strerror(errno));
-		entries = reinterpret_cast<tt_entry *>(malloc(s));
+		entries = reinterpret_cast<tt_entries *>(malloc(s));
 	}
 	else {
 		if (madvise(entries, s, MADV_HUGEPAGE) == -1)
 			printf("# madvise failed: %s\n", strerror(errno));
 	}
 #else
-	entries = reinterpret_cast<tt_entry *>(malloc(s));
+	entries = reinterpret_cast<tt_entries *>(malloc(s));
 #endif
 #endif
 }
 
 void tt::set_size(const uint64_t s)
 {
-	n_entries = std::max(uint64_t(2), s / sizeof(tt_entry));
+	n_entries = std::max(uint64_t(2), s / sizeof(tt_entries));
 	free(entries);
 	allocate();
 	reset();
@@ -95,7 +95,7 @@ void tt::set_size(const uint64_t s)
 
 int tt::get_size() const
 {
-	return n_entries * sizeof(tt_entry);
+	return n_entries * sizeof(tt_entries);
 }
 
 uint64_t tt::get_n() const
@@ -105,7 +105,7 @@ uint64_t tt::get_n() const
 
 void tt::reset()
 {
-	memset(entries, 0x00, sizeof(tt_entry) * n_entries);
+	memset(entries, 0x00, sizeof(tt_entries) * n_entries);
 }
 
 // see https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
@@ -124,13 +124,15 @@ inline uint64_t fastrange64(uint64_t word, uint64_t p)
 #define fastrange fastrange64
 #endif
 
-std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
+std::optional<tt_entries::tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 {
 	uint64_t   index = fastrange(hash, n_entries);
-	tt_entry & cur   = entries[index];
 
-	if (cur.hash == uint16_t(hash))
-		return cur;
+	tt_entries & cur   = entries[index];
+	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
+		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT))
+			return cur.entries[i];
+	}
 
 	return { };
 }
@@ -162,7 +164,7 @@ libchess::Move uint_to_libchessmove(const uint32_t v)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
-	tt_entry n;
+	tt_entries::tt_entry n;
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
@@ -170,34 +172,48 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	n.hash  = uint16_t(hash);
 
 	uint64_t index = fastrange(hash, n_entries);
-	entries[index] = n;
+	tt_entries & cur = entries[index];
+	bool set = false;
+	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
+		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT)) {
+			cur.entries[i] = n;
+			set = true;
+			break;
+		}
+	}
+	if (!set)
+		cur.entries[0] = n;
 }
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
 {
 	uint64_t        index = fastrange(hash, n_entries);
-	tt_entry *const e     = &entries[index];
 
-	tt_entry n;
-
-	if (e->hash == uint16_t(hash)) {
-		tt_entry & cur = entries[index];
-		n.M = cur.M;
-	}
-
+	tt_entries::tt_entry n{};
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
 	n.hash  = uint16_t(hash);
 
-	entries[index] = n;
+	tt_entries & cur = entries[index];
+	bool set = false;
+	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
+		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT)) {
+			n.M = cur.entries[i].M;
+			cur.entries[i] = n;
+			set = true;
+			break;
+		}
+	}
+	if (!set)
+		cur.entries[0] = n;
 }
 
 int tt::get_per_mille_filled() const
 {
 	int count = 0;
 	for(int i=0; i<1000; i++)
-		count += entries[i].hash != 0;
+		count += entries[i].entries[0].hash != 0;
 	return count;
 }
 
