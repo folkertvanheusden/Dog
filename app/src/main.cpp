@@ -404,23 +404,6 @@ void prepare_threads_state()
 	}
 }
 
-void reset_work()
-{
-	work.search_think_time_min = -1;
-	work.search_think_time_max = -1;
-	work.search_is_abs_time    = false;
-	work.search_max_depth      = -1;
-	work.search_max_n_nodes.reset();
-	work.search_version++;
-	work.search_best_move.reset();
-	work.search_best_score     = -32768;
-	work.search_best_depth     = 0;
-	work.search_output         = false;
-	work.search_n_started      = 0;
-	work.search_stability_score = DBL_MAX;
-	work.search_stability      = 0;
-}
-
 void start_ponder()
 {
 	my_trace("# start ponder\n");
@@ -428,7 +411,18 @@ void start_ponder()
 		std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 		prepare_threads_state();
-		reset_work();
+
+		work.search_think_time_min = -1;
+		work.search_think_time_max = -1;
+		work.search_is_abs_time    = false;
+		work.search_max_depth      = -1;
+		work.search_max_n_nodes.reset();
+		work.search_version++;
+		work.search_best_move.reset();
+		work.search_best_score     = -32768;
+		work.search_best_depth     = 0;
+		work.search_output         = false;
+		work.search_n_started      = 0;
 		work.search_cv.notify_all();
 	}
 
@@ -841,12 +835,18 @@ void main_task()
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
-					reset_work();
 					work.search_think_time_min = think_time_min.has_value() ? think_time_min.value() : -1;
 					work.search_think_time_max = think_time_max.has_value() ? think_time_max.value() : -1;
 					work.search_is_abs_time = true;
 					work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
+					work.search_max_n_nodes.reset();
+					work.search_version++;
+					work.search_best_move.reset();
+					work.search_best_score      = -32768;
+					work.search_best_depth      = 0;
 					work.search_output          = true;
+					work.search_stability       = 0;
+					work.search_stability_score = DBL_MAX;
 					work.search_cv.notify_all();
 				}
 				wait_searches_started(true);
@@ -973,12 +973,16 @@ void main_task()
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);
 
 					prepare_threads_state();
-					reset_work();
+
 					work.search_think_time_min = depth.has_value() && think_time_min == 0 ? -1 : think_time_min;
 					work.search_think_time_max = depth.has_value() && think_time_max == 0 ? -1 : think_time_max;
 					work.search_is_abs_time    = is_absolute_time;
 					work.search_max_depth      = depth.has_value() ? depth.value() : -1;
 					work.search_max_n_nodes    = nodes;
+					work.search_version++;
+					work.search_best_move.reset();
+					work.search_best_score     = -32768;
+					work.search_best_depth     = 0;
 					work.search_output         = true;
 					work.search_cv.notify_all();
 				}
