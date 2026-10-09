@@ -791,8 +791,6 @@ it_search_result search_it(const int search_time_min, const int search_time_max,
 			sp->md = 0;
 			if (max_depth >= 4 && sp->thread_nr == 0)
 				cur_move = sp->best_moves[max_depth - 3];
-			else
-				cur_move = libchess::Move{};
 			libchess::MoveList pv;
 			int                score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, &pv);
 			assert(score >= -max_eval && score <= max_eval);
