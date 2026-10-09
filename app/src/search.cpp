@@ -753,7 +753,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 	}
 
 	int best_score = 0;
-	int max_depth  = 1 + sp->thread_nr;
+	int max_depth  = 1;
 	auto move_list = sp->pos.legal_move_list();
 	libchess::Move best_move { *move_list.begin() };
 
@@ -778,7 +778,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 		while(ultimate_max_depth == -1 || max_depth <= ultimate_max_depth) {
 			sp->md = 0;
-			if (max_depth >= 4 && sp->thread_nr == 0)
+			if (max_depth >= 4)
 				cur_move = sp->best_moves[max_depth - 3];
 			libchess::MoveList pv;
 			int                score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, &pv);
