@@ -273,7 +273,6 @@ struct {
 	std::condition_variable search_cv_finished;
 	std::optional<libchess::Move> search_best_move;
 	int                     search_best_score    { 0     };
-	int                     search_best_depth    { 0     };
 	bool                    search_output        { false };
 	int                     search_count_running { 0     };
 } work;
@@ -341,20 +340,10 @@ void searcher(const int i)
 		// notify finished
 		search_lck.lock();
 
-		if (max_depth > work.search_best_depth) {
-			my_trace("%d BETTER DEPTH %d > %d\n", i, max_depth, work.search_best_depth);
-			work.search_best_move  = best_move;
-			work.search_best_score = best_score;
-			work.search_best_depth = max_depth;
-		}
-		else if (max_depth == work.search_best_depth && best_score > work.search_best_score) {
-			my_trace("%d BETTER SCORE %d > %d\n", i, best_score, work.search_best_score);
-			work.search_best_move  = best_move;
-			work.search_best_score = best_score;
-			work.search_best_depth = max_depth;
-		}
-
 		if (i == 0) {
+			work.search_best_move  = best_move;
+			work.search_best_score = best_score;
+
 			// stop other threads
 			for(auto & thread_pars : sp)
 				set_flag(thread_pars->stop);
@@ -400,7 +389,6 @@ void start_ponder()
 		work.search_version++;
 		work.search_best_move.reset();
 		work.search_best_score     = -32768;
-		work.search_best_depth     = 0;
 		work.search_output         = false;
 		work.search_n_started      = 0;
 		work.search_cv.notify_all();
@@ -823,7 +811,6 @@ void main_task()
 					work.search_version++;
 					work.search_best_move.reset();
 					work.search_best_score = -32768;
-					work.search_best_depth = 0;
 					work.search_output     = true;
 					work.search_cv.notify_all();
 				}
@@ -960,7 +947,6 @@ void main_task()
 					work.search_version++;
 					work.search_best_move.reset();
 					work.search_best_score     = -32768;
-					work.search_best_depth     = 0;
 					work.search_output         = true;
 					work.search_cv.notify_all();
 				}
@@ -1213,7 +1199,6 @@ void run_bench(const bool long_bench, const bool via_usb)
 				work.search_version++;
 				work.search_best_move.reset();
 				work.search_best_score     = -32768;
-				work.search_best_depth     = 0;
 				work.search_output         = false;
 				work.search_cv.notify_all();
 			}
@@ -1242,7 +1227,6 @@ void run_bench(const bool long_bench, const bool via_usb)
 			work.search_version++;
 			work.search_best_move.reset();
 			work.search_best_score     = -32768;
-			work.search_best_depth     = 0;
 			work.search_output         = true;
 			work.search_cv.notify_all();
 		}
@@ -1395,7 +1379,7 @@ int main(int argc, char *argv[])
 
 static void init_uart()
 {
-	int   bps = 1200;
+	int   bps = 9600;
 	FILE *fh  = fopen(uart_settings_file, "r");
 	if (fh) {
 		char buffer[16] { };
