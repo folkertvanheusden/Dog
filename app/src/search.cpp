@@ -203,7 +203,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 	// TT //
 	std::optional<libchess::Move>       tt_move;
-	std::optional<tt_entry> te;
+	std::optional<tt_entries::tt_entry> te;
 	uint64_t hash = sp.pos.hash();
 	if (qsdepth - max_depth <= 3) {
 		te = tti.lookup(hash);
