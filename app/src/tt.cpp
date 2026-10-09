@@ -21,8 +21,6 @@
 
 static_assert(sizeof(tt_entries::tt_entry) == 8, "tt_entry must be 8 bytes in size");
 
-#define MASK_20_BIT 0xf'ffff
-
 tt tti;
 
 tt::tt()
@@ -128,11 +126,13 @@ inline uint64_t fastrange64(uint64_t word, uint64_t p)
 
 std::optional<tt_entries::tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 {
-	uint64_t   index = fastrange(hash, n_entries);
+	uint64_t   index = fastrange(hash & 0xFFF'FFFF'FFFFll, n_entries);
+
+	uint32_t hash_work { hash >> 44 };
 
 	tt_entries & cur   = entries[index];
 	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
-		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT))
+		if (cur.entries[i].hash == hash_work)
 			return cur.entries[i];
 	}
 
@@ -166,18 +166,19 @@ libchess::Move uint_to_libchessmove(const uint32_t v)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
+	uint32_t hash_work { hash >> 44 };
 	tt_entries::tt_entry n;
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
 	n.M     = libchessmove_to_uint(m);
-	n.hash  = hash & MASK_20_BIT;
+	n.hash  = hash_work;
 
-	uint64_t index = fastrange(hash, n_entries);
+	uint64_t   index = fastrange(hash & 0xFFF'FFFF'FFFFll, n_entries);
 	tt_entries & cur = entries[index];
 	bool set = false;
 	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
-		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT)) {
+		if (cur.entries[i].hash == hash_work) {
 			cur.entries[i] = n;
 			set = true;
 			break;
@@ -189,18 +190,19 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
 {
-	uint64_t        index = fastrange(hash, n_entries);
+	uint64_t   index = fastrange(hash & 0xFFF'FFFF'FFFFll, n_entries);
 
 	tt_entries::tt_entry n{};
 	n.score = int16_t(score);
 	n.depth = uint8_t(d);
 	n.flags = f;
-	n.hash  = uint32_t(hash & MASK_20_BIT);
+	uint32_t hash_work { hash >> 44 };
+	n.hash  = hash_work;
 
 	tt_entries & cur = entries[index];
 	bool set = false;
 	for(int i=0; i<TT_ENTRY_N_ENTRIES; i++) {
-		if (cur.entries[i].hash == uint32_t(hash & MASK_20_BIT)) {
+		if (cur.entries[i].hash == hash_work) {
 			n.M = cur.entries[i].M;
 			cur.entries[i] = n;
 			set = true;

@@ -12,8 +12,7 @@ typedef enum { NOTVALID = 0, EXACT = 1, LOWERBOUND = 2, UPPERBOUND = 3 } tt_entr
 
 #define TT_ENTRY_N_ENTRIES 4
 
-typedef struct
-{
+typedef struct {
 	struct __PRAGMA_PACKED__ tt_entry {
 		int16_t  score;
 		uint32_t hash   : 20;
