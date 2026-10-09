@@ -759,8 +759,8 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		int alpha     = -32767;
 		int beta      =  32767;
 
-		int add_alpha = 75 - sp->thread_nr * sp->thread_nr;
-		int add_beta  = 75 - sp->thread_nr * sp->thread_nr;
+		int add_alpha = 75 - std::min(64, sp->thread_nr * sp->thread_nr);
+		int add_beta  = 75 - std::min(64, sp->thread_nr * sp->thread_nr);
 
 		libchess::Move cur_move;
 
