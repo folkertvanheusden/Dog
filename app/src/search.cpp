@@ -446,8 +446,10 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	}
 #endif
 
-	// mate distance pruning
+	bool in_check = sp.pos.in_check();
+
 	if (!is_root_position) {
+		// mate distance pruning
 		alpha = std::max(alpha, -max_eval + csd);
 		beta  = std::min(beta,   max_eval - csd - 1);
 
@@ -455,44 +457,44 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 			sp.cs.data.mate_distance_pruning_hits++;
 			return alpha;
 		}
-	}
 
-	////////
-	bool in_check = sp.pos.in_check();
+		////////
+		if (!in_check) {
+			if (depth <= 6 && beta <= max_non_mate) {
+				sp.cs.data.n_static_eval++;
+				int staticeval = nnue_evaluate(sp.nnue_eval, sp.pos);
 
-	if (!is_root_position && !in_check && depth <= 6 && beta <= max_non_mate) {
-		sp.cs.data.n_static_eval++;
-		int staticeval = nnue_evaluate(sp.nnue_eval, sp.pos);
-
-		// static null pruning (reverse futility pruning)
-		if (staticeval - depth * 121 > beta) {
-			sp.cs.data.n_static_eval_hit++;
-			pv->clear();
-			return (beta + staticeval) / 2;
-		}
-	}
-
-	///// null move
-	int nm_reduce_depth = depth > 6 ? 4 : 3;
-	if (depth >= 2 && !in_check && !is_root_position && null_move_depth < 2) {
-		sp.cs.data.n_null_move++;
-
-		sp.pos.make_null_move();
-		libchess::MoveList ignore_pv;
-		libchess::Move     ignore_move { };
-		int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore_move, sp, &ignore_pv);
-		sp.pos.unmake_move();
-
-                if (nmscore >= beta) {
-			libchess::MoveList ignore_pv2;
-			libchess::Move     ignore2 { };
-			int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &ignore2, sp, &ignore_pv2);
-			if (verification >= beta) {
-				sp.cs.data.n_null_move_hit++;
-				pv->clear();
-				return abs(nmscore) >= max_non_mate ? beta : nmscore;
+				// static null pruning (reverse futility pruning)
+				if (staticeval - depth * 121 > beta) {
+					sp.cs.data.n_static_eval_hit++;
+					pv->clear();
+					return (beta + staticeval) / 2;
+				}
 			}
-                }
+
+			///// null move
+			int nm_reduce_depth = depth > 6 ? 4 : 3;
+			if (depth >= 2 && null_move_depth < 2) {
+				sp.cs.data.n_null_move++;
+
+				sp.pos.make_null_move();
+				libchess::MoveList ignore_pv;
+				libchess::Move     ignore_move { };
+				int nmscore = -search(std::max(0, depth - nm_reduce_depth), -beta, -beta + 1, null_move_depth + 1, max_depth, &ignore_move, sp, &ignore_pv);
+				sp.pos.unmake_move();
+
+				if (nmscore >= beta) {
+					libchess::MoveList ignore_pv2;
+					libchess::Move nm_check_result;
+					int verification = search(std::max(0, depth - nm_reduce_depth), beta - 1, beta, null_move_depth, max_depth, &nm_check_result, sp, &ignore_pv2);
+					if (verification >= beta) {
+						sp.cs.data.n_null_move_hit++;
+						pv->clear();
+						return abs(nmscore) >= max_non_mate ? beta : nmscore;
+					}
+				}
+			}
+		}
 	}
 	///////////////
 
