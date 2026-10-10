@@ -448,8 +448,8 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 
 	////////
 	bool in_check = sp.pos.in_check();
-#if 0
-	if (!is_root_position && !in_check && depth <= 7 && beta <= max_non_mate) {
+
+	if (!is_root_position && !in_check && depth <= 6 && beta <= max_non_mate) {
 		sp.cs.data.n_static_eval++;
 		int staticeval = nnue_evaluate(sp.nnue_eval, sp.pos);
 
@@ -460,7 +460,7 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 			return (beta + staticeval) / 2;
 		}
 	}
-#endif
+
 	///// null move
 	int nm_reduce_depth = depth > 6 ? 4 : 3;
 	if (depth >= 2 && !in_check && !is_root_position && null_move_depth < 2) {
