@@ -154,14 +154,13 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	uint64_t        index = fastrange(hash, n_entries);
 	tt_entry *const e     = &entries[index];
 
-	tt_entry n {
+	*e = {
 		.hash  { uint16_t(hash) },
 		.score { int16_t(score) },
 		.depth { uint8_t(d)     },
 		.M     { e->hash == uint16_t(hash) ? entries[index].M : 0 },
 		.flags { f              },
 	};
-	*e = n;
 }
 
 int tt::get_per_mille_filled() const
