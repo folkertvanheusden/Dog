@@ -434,6 +434,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 			std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
 
 			if (syzygy_score.has_value()) {
+				pv->clear();
 				sp.cs.data.syzygy_query_hits++;
 				int score = syzygy_score.value();
 				if (score < 0)
@@ -454,6 +455,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		beta  = std::min(beta,   max_eval - csd - 1);
 
 		if (alpha >= beta) {
+			pv->clear();
 			sp.cs.data.mate_distance_pruning_hits++;
 			return alpha;
 		}
@@ -568,11 +570,15 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 			score = -search(new_depth, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 
-			if (is_lmr && score > alpha)
+			if (is_lmr && score > alpha) {
+				child_pv.clear();
 				score = -search(depth -1, -alpha - 1, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
+			}
 
-			if (score > alpha && score < beta)
+			if (score > alpha && score < beta) {
+				child_pv.clear();
 				score = -search(depth - 1, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
+			}
 		}
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
