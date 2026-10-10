@@ -53,6 +53,8 @@ void chess_stats::add(const chess_stats & source)
 	this->data.n_static_eval     += source.data.n_static_eval;
 	this->data.n_static_eval_hit += source.data.n_static_eval_hit;
 
+	this->data.mate_distance_pruning_hits += source.data.mate_distance_pruning_hits;
+
 	this->data.n_moves_cutoff  += source.data.n_moves_cutoff;
 	this->data.nmc_nodes       += source.data.nmc_nodes;
 	this->data.n_qmoves_cutoff += source.data.n_qmoves_cutoff;

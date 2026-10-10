@@ -348,7 +348,7 @@ void update_history(const search_pars_t & sp, const int index, const int bonus)
 	sp.history[index] += final_value;
 }
 
-int search(int depth, int alpha, const int beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
+int search(int depth, int alpha, int beta, const int null_move_depth, const int16_t max_depth, libchess::Move *const m, search_pars_t & sp, libchess::MoveList *const pv)
 {
 	if (sp.stop->flag)
 		return 0;
@@ -445,6 +445,17 @@ int search(int depth, int alpha, const int beta, const int null_move_depth, cons
 		}
 	}
 #endif
+
+	// mate distance pruning
+	if (!is_root_position) {
+		alpha = std::max(alpha, -max_eval + csd);
+		beta  = std::min(beta,   max_eval - csd - 1);
+
+		if (alpha >= beta) {
+			sp.cs.data.mate_distance_pruning_hits++;
+			return alpha;
+		}
+	}
 
 	////////
 	bool in_check = sp.pos.in_check();

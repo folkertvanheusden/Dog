@@ -47,6 +47,8 @@ public:
 		uint64_t  syzygy_query_hits;
 
 		uint32_t  large_stack;
+
+		uint32_t  mate_distance_pruning_hits;
 	} data;
 
 	uint32_t win[2], draw;
