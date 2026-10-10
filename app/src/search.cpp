@@ -25,14 +25,14 @@
 
 std::optional<libchess::Move> str_to_move(const libchess::Position & p, const std::string & m)
 {
-	auto m_obj = libchess::Move::from(m);
+	auto m_obj { libchess::Move::from(m) };
 	if (m_obj.has_value() == false)
 		return { };
 
 	if (m_obj.value().type() != libchess::Move::Type::NONE)
 		return m_obj;
 
-	for(auto m_compare: p.legal_move_list()) {
+	for(auto & m_compare: p.legal_move_list()) {
 		if (m_compare == m_obj.value())  // compare is without type
 			return m_compare;
 	}
@@ -64,9 +64,9 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 	}
 
 	int  score      = 0;
-	auto piece_from = sp.pos.piece_on(move.from_square());
-	auto from_type  = piece_from->type();
-	auto to_type    = from_type;
+	auto piece_from { sp.pos.piece_on(move.from_square()) };
+	auto from_type  { piece_from->type() };
+	auto to_type    { from_type };
 
 	if (sp.pos.is_promotion_move(move)) {
 		to_type = *move.promotion_piece_type();
@@ -81,7 +81,7 @@ int sort_movelist_compare::move_evaluater(const libchess::Move move) const
 			score += libchess::constants::PAWN << 19;
 		}
 		else {
-			auto piece_to = sp.pos.piece_on(move.to_square());
+			auto piece_to { sp.pos.piece_on(move.to_square()) };
 
 			// victim
 			int victim_val = piece_to->type();
@@ -143,7 +143,7 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
         // King + bishop(s) is also sufficient if there's bishops on opposite colours (even king + bishop against king + bishop).
         constexpr uint64_t white_squares = 0x55aa55aa55aa55aall;
         constexpr uint64_t black_squares = 0xaa55aa55aa55aa55ll;
-        const libchess::Bitboard piece_bb = pos.piece_type_bb(BISHOP);
+        const libchess::Bitboard piece_bb { pos.piece_type_bb(BISHOP) };
         if ((piece_bb & black_squares) && (piece_bb & white_squares)) {
                 return false;
         }
@@ -153,7 +153,7 @@ bool is_insufficient_material_draw(const libchess::Position & pos)
 
 libchess::MoveList gen_qs_moves(libchess::Position & pos)
 {
-	libchess::Color side = pos.side_to_move();
+	libchess::Color side { pos.side_to_move() };
 
 	if (pos.checkers_to(side))
 		return pos.pseudo_legal_move_list();
@@ -214,7 +214,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 			int  score      = te.value().score;
 			int  work_score = eval_from_tt(score, qsdepth);
-			auto flag       = te.value().flags;
+			auto flag       { te.value().flags };
 			bool use        = flag == EXACT ||
 				(flag == LOWERBOUND && work_score >= beta) ||
 				(flag == UPPERBOUND && work_score <= alpha);
@@ -244,7 +244,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 	}
 
 	int  n_played  = 0;
-	auto move_list = gen_qs_moves(sp.pos);
+	auto move_list { gen_qs_moves(sp.pos) };
 	std::optional<libchess::Move> m;
 
 	sort_movelist_compare smc(sp);
@@ -252,14 +252,14 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		smc.add_first_move(tt_move.value());
 
 	// generate list of scores
-	size_t           n_moves = move_list.size();
+	size_t           n_moves { move_list.size() };
 	std::vector<int> move_scores(n_moves);
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
 	size_t m_idx  = 0;
 	while(m_idx < n_moves) {
-		size_t selected_idx = m_idx;
+		size_t selected_idx { m_idx };
 		for(size_t i=m_idx; i<n_moves; i++) {
 			if (move_scores[i] > move_scores[selected_idx])
 				selected_idx = i;
@@ -268,7 +268,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		std::swap(move_scores[selected_idx], move_scores[m_idx]);
 		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
 
-		auto & move = *(move_list.begin() + m_idx);
+		auto & move { *(move_list.begin() + m_idx) };
 		m_idx++;
 
 		if (sp.pos.is_legal_generated_move(move) == false)
@@ -276,7 +276,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 		n_played++;
 
-		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
+		auto undo_actions { make_move(sp.nnue_eval, sp.pos, move) };
 		int score = -qs(-beta, -alpha, qsdepth + 1, max_depth, sp);
 		unmake_move(sp.nnue_eval, sp.pos, undo_actions);
 
@@ -317,7 +317,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		if (sp.stop->flag == false && (te.has_value() == false || te.value().depth == 0)) {
 			sp.cs.data.qtt_store++;
 
-			tt_entry_flag flag = EXACT;
+			tt_entry_flag flag { EXACT };
 			if (best_score <= start_alpha)
 				flag = UPPERBOUND;
 			else if (best_score >= beta)
@@ -384,7 +384,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	// TT //
 	std::optional<libchess::Move> tt_move { };
 	uint64_t       hash        = sp.pos.hash();
-	std::optional<tt_entry> te = tti.lookup(hash);
+	std::optional<tt_entry> te { tti.lookup(hash) };
 	sp.cs.data.tt_query++;
 
         if (te.has_value()) {  // TT hit?
@@ -400,7 +400,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		if (te.value().depth >= depth && !is_pv) {
 			int score      = te.value().score;
 			int work_score = eval_from_tt(score, csd);
-			auto flag      = te.value().flags;
+			auto flag      { te.value().flags };
                         bool use       = flag == EXACT ||
                                         (flag == LOWERBOUND && work_score >= beta) ||
                                         (flag == UPPERBOUND && work_score <= alpha);
@@ -431,7 +431,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		// syzygy count?
 		if (counts <= TB_LARGEST) {
 			sp.cs.data.syzygy_queries++;
-			std::optional<int> syzygy_score = probe_fathom_nonroot(sp.pos);
+			std::optional<int> syzygy_score { probe_fathom_nonroot(sp.pos) };
 
 			if (syzygy_score.has_value()) {
 				pv->clear();
@@ -447,7 +447,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	}
 #endif
 
-	bool in_check = sp.pos.in_check();
+	const bool in_check { sp.pos.in_check() };
 
 	if (!is_root_position) {
 		// mate distance pruning
@@ -501,7 +501,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	///////////////
 
 	int                best_score = -32767;
-	libchess::MoveList move_list  = sp.pos.pseudo_legal_move_list();
+	libchess::MoveList move_list  { sp.pos.pseudo_legal_move_list() };
 
 	sort_movelist_compare smc(sp);
 
@@ -514,8 +514,8 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
 	// generate list of scores
-	size_t           n_moves = move_list.size();
-	std::vector<int> move_scores(n_moves);
+	size_t           n_moves { move_list.size() };
+ 	std::vector<int> move_scores(n_moves);
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
@@ -527,7 +527,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	libchess::MoveList child_pv;
 	size_t             m_idx    = 0;
 	while(m_idx < n_moves) {
-		size_t selected_idx = m_idx;
+		size_t selected_idx { m_idx };
 		for(size_t i=m_idx; i<n_moves; i++) {
 			if (move_scores[i] > move_scores[selected_idx])
 				selected_idx = i;
@@ -536,7 +536,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		std::swap(move_scores[selected_idx], move_scores[m_idx]);
 		std::swap(*(move_list.begin() + selected_idx), *(move_list.begin() + m_idx));
 
-		auto & move = *(move_list.begin() + m_idx);
+		auto & move { *(move_list.begin() + m_idx) };
 		m_idx++;
 
 		if (sp.pos.is_legal_generated_move(move) == false)
@@ -547,7 +547,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
                 bool is_lmr = false;
                 int  score  = -max_eval;
 
-		auto undo_actions = make_move(sp.nnue_eval, sp.pos, move);
+		auto undo_actions { make_move(sp.nnue_eval, sp.pos, move) };
 		if (n_played == 0)
 			score = -search(new_depth_basic, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
 		else {
@@ -585,8 +585,8 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		n_played++;
 
 		if (score > best_score) {
-			best_score         = score;
-			*m                 = move;
+			best_score = score;
+			*m         = move;
 
 			pv->clear();
 			pv->add(move);
@@ -607,8 +607,8 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
 	if (beta_cutoff_move.has_value()) {
-		const int bonus = depth * 30 - 25;
-		for(auto move : move_list) {
+		const int bonus { depth * 30 - 25 };
+		for(auto & move : move_list) {
 			if (sp.pos.is_capture_move(move))
 				continue;
 			auto piece_type_from { sp.pos.piece_type_on(move.from_square()) };
@@ -646,7 +646,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		else if (best_score >= beta)
 			flag = LOWERBOUND;
 
-		int work_score = eval_to_tt(best_score, csd);
+		const int work_score = eval_to_tt(best_score, csd);
 
 		if (best_score > start_alpha && m->value())
 			tti.store(hash, flag, depth, work_score, *m);
@@ -660,7 +660,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 void timer(const int think_time, end_t *const ei)
 {
 	if (think_time > 0) {
-		auto end_time = std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time};
+		const auto end_time { std::chrono::high_resolution_clock::now() += std::chrono::milliseconds{think_time} };
 
 		std::unique_lock<std::mutex> lk(ei->cv_lock);
 		while(!ei->flag) {
@@ -704,7 +704,7 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 	std::string score_str_human;
 	if (abs(best_score) > max_non_mate) {
 		int mate_moves = (max_eval - abs(best_score) + 1) / 2 * (best_score < 0 ? -1 : 1);
-		auto mate_str = std::to_string(mate_moves);
+		auto mate_str { std::to_string(mate_moves) };
 		score_str = "score mate " + mate_str;
 		score_str_human = "mate in " + mate_str;
 	}
@@ -768,7 +768,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 
 	int best_score = 0;
 	int max_depth  = 1;
-	auto move_list = sp->pos.legal_move_list();
+	auto move_list { sp->pos.legal_move_list() };
 	libchess::Move best_move { *move_list.begin() };
 
 	std::string should_output;
@@ -798,14 +798,14 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 			int                score = search(max_depth, alpha, beta, 0, max_depth, &cur_move, *sp, &pv);
 			assert(score >= -max_eval && score <= max_eval);
 
-			auto counts = simple_search_statistics();
+			auto counts { simple_search_statistics() };
 			if (sp->stop->flag) {
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
 					my_trace("info string stop flag set\n");
 					uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 					libchess::MoveList l_pv;
 					l_pv.add(best_move);
-					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv, is_tui, search_time_max - thought_ms);
+					auto temp { emit_result(best_score, thought_ms, node_counts, max_depth, counts, l_pv, is_tui, search_time_max - thought_ms) };
 					if (output == O_FULL)
 						emit(temp, is_tui);
 					else
@@ -873,7 +873,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 				uint64_t thought_ms = (esp_timer_get_time() - t_offset) / 1000;
 
 				if (sp->thread_nr == 0 && output >= O_MINIMAL) {
-					auto temp = emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv, is_tui, search_time_max - thought_ms);
+					auto temp { emit_result(best_score, thought_ms, node_counts, max_depth, counts, pv, is_tui, search_time_max - thought_ms) };
 					if (output == O_FULL)
 						emit(temp, is_tui);
 					else
@@ -912,7 +912,7 @@ std::tuple<libchess::Move, int, int> search_it(const int search_time_min, const 
 		pv.add(best_move);
 		best_score = nnue_evaluate(sp->nnue_eval, sp->pos);
 
-		auto temp = emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, is_tui, search_time_max);
+		auto temp { emit_result(best_score, 0, { }, 0, { 0, 0 }, pv, is_tui, search_time_max) };
 		if (output == O_FULL)
 			emit(temp, is_tui);
 		else

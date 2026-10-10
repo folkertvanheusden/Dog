@@ -757,7 +757,7 @@ void main_task()
 		auto ml { position_parameters.move_list() };
 		if (ml.has_value()) {
 			for (auto & move_str : ml->move_list()) {
-				auto m = str_to_move(sp.at(0)->pos, move_str);
+				auto m { str_to_move(sp.at(0)->pos, move_str) };
 				if (m.has_value() == false) {
 					printf("# %s is invalid in the context of %s\n", move_str.c_str(), sp.at(0)->pos.fen().c_str());
 					break;
@@ -907,7 +907,7 @@ void main_task()
 			if (with_syzygy) {
 				sp.at(0)->cs.data.syzygy_queries++;
 
-				auto probe_result = probe_fathom_root(sp.at(0)->pos);
+				auto probe_result { probe_fathom_root(sp.at(0)->pos) };
 				if (probe_result.has_value()) {
 					sp.at(0)->cs.data.syzygy_query_hits++;
 
@@ -924,7 +924,7 @@ void main_task()
 			}
 #endif
 
-			auto book_move = pb.query(sp.at(0)->pos, false);
+			auto book_move { pb.query(sp.at(0)->pos, false) };
 			if (book_move.has_value()) {
 				my_trace("# book suggestion: %s\n", book_move.value().to_str().c_str());
 				best_move = book_move.value();
@@ -1179,7 +1179,7 @@ void run_bench(const bool long_bench, const bool via_usb)
 		};
 
 		for(size_t i=0; i<fens.size(); i++) {
-			auto & fen = fens.at(i);
+			auto & fen { fens.at(i) };
 			if (via_usb)
 				printf("%s (%zu left, running for %.3f seconds)\n", fen.c_str(), fens.size() - i, (esp_timer_get_time() - start_ts) / 1000000.);
 			else
@@ -1300,8 +1300,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (c == 'Q') {
-			auto parts = split(optarg, ":");
-			if (parts[0] == "matefinder")
+			auto parts { split(optarg, ":") };
+ 			if (parts[0] == "matefinder")
 				test_mate_finder(parts[1], std::stoi(parts[2]));
 			else {
 				printf("Test type %s not known\n", parts[0].c_str());
