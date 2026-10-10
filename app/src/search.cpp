@@ -584,8 +584,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 			pv->clear();
 			pv->add(move);
-			for(auto & child_pv_move: child_pv)
-				pv->add(child_pv_move);
+			pv->add(child_pv);
 
 			if (score > alpha) {
 				if (score >= beta) {
