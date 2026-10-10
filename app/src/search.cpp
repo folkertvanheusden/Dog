@@ -224,7 +224,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 			}
 
 			if (te.value().M)  // move stored in TT?
-				tt_move.emplace(uint_to_libchessmove(te.value().M));
+				tt_move.emplace(libchess::Move(te.value().M));
 		}
 	}
 	////////
@@ -390,7 +390,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.tt_hit++;
 		if (te.value().M) {  // move stored in TT?
-			tt_move.emplace(uint_to_libchessmove(te.value().M));
+			tt_move.emplace(libchess::Move(te.value().M));
 			if (sp.pos.is_legal_move(tt_move.value()) == false) {
 				sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
 				tt_move.reset();

@@ -676,7 +676,7 @@ void tt_lookup()
 		my_printf("Depth: %d\n", te.value().depth);
 		std::optional<libchess::Move> tt_move;
 		if (te.value().M)
-			tt_move = uint_to_libchessmove(te.value().M);
+			tt_move.emplace(libchess::Move(te.value().M));
 		if (tt_move.has_value() && sp.at(0)->pos.is_legal_move(tt_move.value()))
 			my_printf("Move: %s\n", tt_move.value().to_str().c_str());
 	}
@@ -778,7 +778,7 @@ void compare_moves(const libchess::Position & pos, libchess::Move & m, int *cons
 	if (tt_rc.has_value() == false || tt_rc.value().M == 0)
 		return;
 
-	auto tt_move = libchess::Move(uint_to_libchessmove(tt_rc.value().M));
+	auto tt_move = libchess::Move(tt_rc.value().M);
 	if (tt_move != m) {
 		int eval_me  = get_score(sp.at(0)->pos, tt_move);
 		int eval_opp = get_score(sp.at(0)->pos, m);

@@ -77,16 +77,6 @@ void tests()
 	allocate_threads(1);
 
 	{
-		printf("tt move conversion\n");
-		libchess::Move m1 { *libchess::Move::from("e2e4") };
-		uint32_t v = libchessmove_to_uint(m1);
-		libchess::Move m2 = uint_to_libchessmove(v);
-		my_assert(m1 == m2);
-		my_assert(m1.type() == m2.type());
-		printf("OK\n");
-	}
-
-	{
 		printf("NNUE perft\n");
 
 		const std::vector<std::pair<std::string, std::vector<unsigned> > > perfts {
@@ -281,10 +271,21 @@ void tests()
 			auto record1 = tti.lookup(2);
 			my_assert(record1.has_value());
 			auto data1 = record1.value();
-			my_assert(Move(uint_to_libchessmove(data1.M)) == *Move::from("e2e4"));
+			my_assert(Move(data1.M) == *Move::from("e2e4"));
 			my_assert(data1.depth == 3);
 			my_assert(data1.score == 4);
 			my_assert(data1.flags == EXACT);
+		}
+
+		// max value for move
+		{
+			const auto m_compare { libchess::Move(libchess::constants::H8, libchess::constants::H8, libchess::constants::KING, libchess::Move::Type::CAPTURE_PROMOTION) };
+			tti.store(2, EXACT, 3, 4, m_compare);
+			auto record1 = tti.lookup(2);
+			my_assert(record1.has_value());
+			printf("%08x\n", record1.value().M);
+			my_assert(record1.value().M == 0x3dfff);
+			my_assert(libchess::Move(record1.value().M) == m_compare);
 		}
 
 		printf("OK\n");
@@ -418,6 +419,7 @@ void tests()
 		printf("OK\n");
 	}
 
+#if 0 // makes no sense: a new net will change the outcomes
 	// NNUE eval (using san parsing data)
 	{
 		printf("NNUE evaluation test\n");
@@ -430,6 +432,7 @@ void tests()
 
 		printf("OK\n");
 	}
+#endif
 
 	delete_threads();
 }

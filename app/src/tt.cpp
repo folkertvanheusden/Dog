@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
@@ -135,40 +136,16 @@ std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 	return { };
 }
 
-uint32_t libchessmove_to_uint(const libchess::Move & m)
-{
-	uint32_t v = m.from_square().file() | (m.from_square().rank() << 3) |
-		(m.to_square().file() << 6) | (m.to_square().rank() << 9) |
-		(int(m.type()) << 15);
-
-	if (m.promotion_piece_type().has_value())
-		v |= m.promotion_piece_type().value() << 12;
-
-	return v;
-}
-
-libchess::Move uint_to_libchessmove(const uint32_t v)
-{
-	auto promo = libchess::PieceType((v >> 12) & 7);
-	auto from  = libchess::Square::from(libchess::File(v & 7), libchess::Rank((v >> 3) & 7)).value();
-	auto to    = libchess::Square::from(libchess::File((v >> 6) & 7), libchess::Rank((v >> 9) & 7)).value();
-	auto type  = libchess::Move::Type(v >> 15);
-
-	if (promo)
-		return libchess::Move{ from, to, promo, type };
-
-	return libchess::Move{ from, to, type };
-}
-
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
+	assert(m.value() < 0x40000);
 	uint64_t index = fastrange(hash, n_entries);
 	entries[index] = {
-		.hash  = uint16_t(hash),
-		.score = int16_t(score),
-		.depth = uint8_t(d),
-		.M     = libchessmove_to_uint(m),
-		.flags = f,
+		.hash  { uint16_t(hash) },
+		.score { int16_t(score) },
+		.depth { uint8_t(d)     },
+		.M     { m.value()      },
+		.flags { f              },
 	};
 }
 
@@ -178,11 +155,11 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	tt_entry *const e     = &entries[index];
 
 	tt_entry n {
-		.hash  = uint16_t(hash),
-		.score = int16_t(score),
-		.depth = uint8_t(d),
-		.M     = e->hash == uint16_t(hash) ? entries[index].M : 0,
-		.flags = f,
+		.hash  { uint16_t(hash) },
+		.score { int16_t(score) },
+		.depth { uint8_t(d)     },
+		.M     { e->hash == uint16_t(hash) ? entries[index].M : 0 },
+		.flags { f              },
 	};
 	*e = n;
 }

@@ -52,7 +52,5 @@ public:
 
 int eval_to_tt  (const int eval, const int ply);
 int eval_from_tt(const int eval, const int ply);
-uint32_t       libchessmove_to_uint(const libchess::Move & m);
-libchess::Move uint_to_libchessmove(const uint32_t v);
 
 extern tt tti;
