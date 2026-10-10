@@ -9,12 +9,12 @@ constexpr int SCALE = 400;
 constexpr std::int16_t QA = 255;
 constexpr std::int16_t QB = 64;
 
-struct Accumulator
+struct Accumulator final
 {
     alignas(64) std::array<std::int16_t, HIDDEN_SIZE> vals;
 };
 
-class Eval
+class Eval final
 {
 private:
 	Accumulator white;

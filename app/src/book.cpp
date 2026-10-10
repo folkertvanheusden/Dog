@@ -38,7 +38,7 @@ uint32_t my_NTOHL(const uint32_t x)
         return my_HTONL(x);
 }
 
-struct polyglot_entry {
+struct polyglot_entry final {
 	uint64_t hash;
 	uint16_t move;
 	uint16_t weight;

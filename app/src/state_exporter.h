@@ -7,7 +7,7 @@
 #include "stats.h"
 
 
-class state_exporter
+class state_exporter final
 {
 private:
 	std::atomic_bool stop { false   };
@@ -18,7 +18,7 @@ private:
 	int              fd   { -1      };
 
 public:
-	struct _export_structure_ {
+	struct _export_structure_ final {
 		pthread_mutex_t      mutex;
 		int                  revision;
 		chess_stats::_data_  counters;

@@ -5,7 +5,7 @@
 #include "main.h"
 
 
-class sort_movelist_compare
+class sort_movelist_compare final
 {
 private:
 	const search_pars_t         & sp;

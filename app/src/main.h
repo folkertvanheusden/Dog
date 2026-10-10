@@ -13,7 +13,7 @@
 constexpr const int max_eval = 30000;
 constexpr const int max_non_mate = 29500;
 
-typedef struct {
+typedef struct final {
 	std::atomic_bool        flag;
 	std::condition_variable cv;
 	std::mutex              cv_lock;

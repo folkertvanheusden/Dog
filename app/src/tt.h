@@ -20,7 +20,7 @@ typedef struct __PRAGMA_PACKED__
 	uint8_t  filler : 4;
 } tt_entry;
 
-class tt
+class tt final
 {
 private:
 	tt_entry *entries { nullptr };

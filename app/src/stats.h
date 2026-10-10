@@ -1,10 +1,10 @@
 #pragma once
 #include <cstdint>
 
-class chess_stats
+class chess_stats final
 {
 public:
-	struct _data_ {
+	struct _data_ final {
 		uint32_t  nodes;
 		uint32_t  qnodes;
 		uint32_t  n_standing_pat;

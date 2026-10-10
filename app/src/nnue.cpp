@@ -10,7 +10,7 @@
 #include "nnue.h"
 
 
-struct Network {
+struct Network final {
 	Accumulator feature_weights[2 * 6 * 64];
 	Accumulator feature_bias;
 	Accumulator output_weights[2];

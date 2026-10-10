@@ -6,7 +6,7 @@
 #include "fathom/src/tbprobe.h"
 #include "libchess/Position.h"
 
-struct pos {
+struct pos final {
 	uint64_t white;
 	uint64_t black;
 	uint64_t kings;
