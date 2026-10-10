@@ -22791,3 +22791,5 @@ alignas(64) constexpr const uint8_t weights_data[] {
   0x6c, 0x6c, 0x65, 0x74, 0x62, 0x75
 };
 #endif
+
+static_assert(sizeof(weights_data) == weights_size, "weights data size");
