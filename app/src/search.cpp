@@ -606,13 +606,13 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	}
 
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
-	if (beta_cutoff_move.has_value() && sp.pos.is_capture_move(beta_cutoff_move.value()) == false) {
-		int bonus = depth * 30 - 25;
+	if (beta_cutoff_move.has_value()) {
+		const int bonus = depth * 30 - 25;
 		for(auto move : move_list) {
 			if (sp.pos.is_capture_move(move))
 				continue;
-			auto piece_type_from = sp.pos.piece_type_on(move.from_square());
-			int  index           = history_index(sp.pos.side_to_move(), piece_type_from.value(), move.to_square());
+			auto piece_type_from { sp.pos.piece_type_on(move.from_square()) };
+ 			int  index           = history_index(sp.pos.side_to_move(), piece_type_from.value(), move.to_square());
 			if (move == beta_cutoff_move.value()) {
 				update_history(sp, index, bonus);
 				break;
