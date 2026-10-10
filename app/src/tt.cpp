@@ -162,15 +162,14 @@ libchess::Move uint_to_libchessmove(const uint32_t v)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
-	tt_entry n;
-	n.score = int16_t(score);
-	n.depth = uint8_t(d);
-	n.flags = f;
-	n.M     = libchessmove_to_uint(m);
-	n.hash  = uint16_t(hash);
-
 	uint64_t index = fastrange(hash, n_entries);
-	entries[index] = n;
+	entries[index] = {
+		.hash  = uint16_t(hash),
+		.score = int16_t(score),
+		.depth = uint8_t(d),
+		.M     = libchessmove_to_uint(m),
+		.flags = f,
+	};
 }
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
@@ -178,19 +177,14 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	uint64_t        index = fastrange(hash, n_entries);
 	tt_entry *const e     = &entries[index];
 
-	tt_entry n;
-
-	if (e->hash == uint16_t(hash)) {
-		tt_entry & cur = entries[index];
-		n.M = cur.M;
-	}
-
-	n.score = int16_t(score);
-	n.depth = uint8_t(d);
-	n.flags = f;
-	n.hash  = uint16_t(hash);
-
-	entries[index] = n;
+	tt_entry n {
+		.hash  = uint16_t(hash),
+		.score = int16_t(score),
+		.depth = uint8_t(d),
+		.M     = e->hash == uint16_t(hash) ? entries[index].M : 0,
+		.flags = f,
+	};
+	*e = n;
 }
 
 int tt::get_per_mille_filled() const
