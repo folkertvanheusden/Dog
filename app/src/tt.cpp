@@ -139,18 +139,24 @@ std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
 {
+	uint64_t index = fastrange(hash, n_entries);
+	tt_internal_entry *const e     = &entries[index];
+	tt_entry                 cur   = std::bit_cast<tt_entry>(*e);
+
 	assert(m.value() < 0x40000);
 
-	tt_entry ie {
-		.hash  { uint16_t(hash) },
-		.score { int16_t(score) },
-		.depth { uint8_t(d)     },
-		.M     { m.value()      },
-		.flags { f              },
-	};
-
-	uint64_t index = fastrange(hash, n_entries);
-	entries[index] = std::bit_cast<tt_internal_entry>(ie);
+	uint16_t compare_hash { hash };
+	if (compare_hash != cur.hash || cur.age != age || d > cur.depth) {
+		cur = {
+			.hash  { compare_hash   },
+			.score { int16_t(score) },
+			.depth { uint8_t(d)     },
+			.M     { m.value()      },
+			.flags { f              },
+			.age   { age            },
+		};
+		*e = std::bit_cast<tt_internal_entry>(cur);
+	}
 }
 
 void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
@@ -159,14 +165,18 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	tt_internal_entry *const e     = &entries[index];
 	tt_entry                 cur   = std::bit_cast<tt_entry>(*e);
 
-	cur = {
-		.hash  { uint16_t(hash) },
-		.score { int16_t(score) },
-		.depth { uint8_t(d)     },
-		.M     { cur.hash == uint16_t(hash) ? cur.M : 0 },
-		.flags { f              },
-	};
-	entries[index] = std::bit_cast<tt_internal_entry>(cur);
+	uint16_t compare_hash { hash };
+	if (compare_hash != cur.hash || cur.age != age || d > cur.depth) {
+		cur = {
+			.hash  { compare_hash   },
+			.score { int16_t(score) },
+			.depth { uint8_t(d)     },
+			.M     { cur.hash == uint16_t(hash) ? cur.M : 0 },
+			.flags { f              },
+			.age   { age            },
+		};
+		*e = std::bit_cast<tt_internal_entry>(cur);
+	}
 }
 
 int tt::get_per_mille_filled() const

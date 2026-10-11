@@ -933,6 +933,8 @@ void main_task()
 
 			// main search
 			if (!has_best) {
+				tti.inc_age();
+
 				// put
 				{
 					std::unique_lock<std::mutex> lck(work.search_fen_lock);

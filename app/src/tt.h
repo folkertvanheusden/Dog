@@ -17,7 +17,7 @@ typedef struct __PRAGMA_PACKED__
 	uint8_t  depth  : 8;
 	uint32_t M      : 18;
 	uint8_t  flags  : 2;
-	uint8_t  filler : 4;
+	uint8_t  age    : 4;
 } tt_entry;
 
 typedef uint64_t tt_internal_entry;
@@ -36,6 +36,8 @@ private:
 #endif
 	void allocate();
 
+	int  age { };
+
 public:
 	tt();
 	~tt();
@@ -46,6 +48,8 @@ public:
 	int      get_size() const;  // in MB
 	uint64_t get_n   () const;
 	int      get_per_mille_filled() const;
+
+	void     inc_age() { age++; }
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
 	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m);
