@@ -20,10 +20,12 @@ typedef struct __PRAGMA_PACKED__
 	uint8_t  filler : 4;
 } tt_entry;
 
+typedef uint64_t tt_internal_entry;
+
 class tt final
 {
 private:
-	tt_entry *entries { nullptr };
+	tt_internal_entry *entries { nullptr };
 #if defined(ESP32)
 #define ESP32_TT_RAM_SIZE 98304
 	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
