@@ -5,9 +5,9 @@
 #include "weights.h"
 
 
-constexpr int SCALE = 400;
-constexpr std::int16_t QA = 255;
-constexpr std::int16_t QB = 64;
+constexpr int          SCALE = 400;
+constexpr std::int16_t QA    = 255;
+constexpr std::int16_t QB    = 64;
 
 struct Accumulator final
 {

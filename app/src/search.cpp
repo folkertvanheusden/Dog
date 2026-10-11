@@ -252,7 +252,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		smc.add_first_move(tt_move.value());
 
 	// generate list of scores
-	size_t           n_moves { move_list.size() };
+	size_t           n_moves = move_list.size();
 	std::vector<int> move_scores(n_moves);
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
