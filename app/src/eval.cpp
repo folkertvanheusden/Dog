@@ -49,13 +49,13 @@ std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, Position & pos, 
 		{ libchess::constants::A1, libchess::constants::PAWN, false, false }
 	} };
 
-	Square from_square = move.from_square();
-	Square to_square   = move.to_square  ();
+	Square from_square { move.from_square() };
+	Square to_square   { move.to_square  () };
 
-	auto moving_pt    = pos.piece_type_on(from_square);
+	auto moving_pt    { pos.piece_type_on(from_square) };
 	assert(moving_pt.has_value());
-	auto captured_pt  = pos.piece_type_on(to_square  );
-	auto promotion_pt = move.promotion_piece_type();
+	auto captured_pt  { pos.piece_type_on(to_square  ) };
+	auto promotion_pt { move.promotion_piece_type()    };
 
 	bool is_white     = pos.side_to_move() == constants::WHITE;
 
@@ -142,7 +142,7 @@ std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, Position & pos, 
 
 #if !defined(NDEBUG)
 	if (pos.enpassant_square().has_value()) {
-		auto file = pos.enpassant_square().value().file();
+		auto file { pos.enpassant_square().value().file() };
 		if (is_white) {
 			assert(pos.enpassant_square().value().rank() == 2);
 			assert(pos.piece_on(libchess::Square::from(file, libchess::Rank(1)).value()).has_value() == false);
