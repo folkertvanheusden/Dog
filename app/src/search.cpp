@@ -562,9 +562,10 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 					new_depth = std::max(depth - reduction, 0);
 				}
 				else if (n_played >= lmr_start + 2)
-					new_depth = (depth - 1) * 2 / 3;
+					new_depth = new_depth * 2 / 3;
 				else {
 					new_depth = depth - 2;
+					assert(new_depth >= 0);
 				}
 			}
 
