@@ -1,3 +1,4 @@
+#include <bit>
 #include <cassert>
 #include <cinttypes>
 #include <cstdlib>
