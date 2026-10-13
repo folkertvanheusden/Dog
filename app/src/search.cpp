@@ -231,7 +231,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 	int  best_score = -32767;
 
-	bool in_check   = sp.pos.in_check();
+	const bool in_check = sp.pos.in_check();
 	if (!in_check) {
 		// standing pat
 		best_score = nnue_evaluate(sp.nnue_eval, sp.pos);
@@ -252,7 +252,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		smc.add_first_move(tt_move.value());
 
 	// generate list of scores
-	size_t           n_moves = move_list.size();
+	const size_t     n_moves = move_list.size();
 	std::vector<int> move_scores(n_moves);
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
@@ -522,7 +522,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	bool beta_cutoff_move { };
 	libchess::Move new_move;
 
-	int new_depth_basic = sp.pos.in_check() || n_moves == 1 ? depth : depth -1;
+	int new_depth_basic = in_check || n_moves == 1 ? depth : depth -1;
 
 	libchess::MoveList child_pv;
 	size_t             m_idx    = 0;
@@ -548,8 +548,9 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
                 int  score  = -max_eval;
 
 		auto undo_actions { make_move(sp.nnue_eval, sp.pos, move) };
-		if (n_played == 0)
+		if (n_played == 0) {
 			score = -search(new_depth_basic, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
+		}
 		else {
 			int new_depth = depth - 1;
 
