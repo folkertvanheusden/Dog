@@ -612,6 +612,7 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("Pos.complexity: %d (white), %d (black)\n", complexity_w, complexity_b);
 	my_printf("Book size     : %zu\n", pb.size());
 	my_printf("TT            : %zu (permille filled), %zu (size)\n", tti.get_per_mille_filled(), size_t(tti.get_n()));
+	my_printf("mate distance : %zu\n", size_t(cs.data.mate_distance_pruning_hits));
 }
 
 #if defined(ESP32)
@@ -1285,6 +1286,7 @@ void tui()
 
 		uint64_t start_position_count = sp.at(0)->cs.data.nodes + sp.at(0)->cs.data.qnodes;
 
+		// TODO check total_dog_time
 		bool finished = sp.at(0)->pos.game_state() != libchess::Position::GameState::IN_PROGRESS;
 		if (finished && game_took == 0) {
 			time_end   = esp_timer_get_time();
