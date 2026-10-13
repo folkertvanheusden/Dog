@@ -25,14 +25,14 @@ void remove_piece(Eval *const e, const Square & loc, const PieceType & pt, const
 {
 	e->remove_piece(pt, loc, is_white);
 	undos->at((*n_undos)++) = { loc, pt, is_white, true };
-	assert(n_undos <= 4);
+	assert(*n_undos <= 4);
 }
 
 void add_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
 {
 	e->add_piece(pt, loc, is_white);
 	undos->at((*n_undos)++) = { loc, pt, is_white, false };
-	assert(n_undos <= 4);
+	assert(*n_undos <= 4);
 }
 
 void move_piece(Eval *const e, const Square & from, const Square & to, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
