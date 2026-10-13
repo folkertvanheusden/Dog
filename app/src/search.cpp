@@ -519,7 +519,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
-	std::optional<libchess::Move> beta_cutoff_move;
+	bool beta_cutoff_move { };
 	libchess::Move new_move;
 
 	int new_depth_basic = sp.pos.in_check() || n_moves == 1 ? depth : depth -1;
@@ -595,8 +595,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 			if (score > alpha) {
 				if (score >= beta) {
-					if (!sp.pos.is_capture_move(move))
-						beta_cutoff_move = move;
+					beta_cutoff_move = !sp.pos.is_capture_move(move);
 					sp.cs.data.n_lmr_hit += is_lmr;
 					break;
 				}
@@ -607,14 +606,14 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	}
 
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
-	if (beta_cutoff_move.has_value()) {
+	if (beta_cutoff_move) {
 		const int bonus { depth * 30 - 25 };
 		for(auto & move : move_list) {
 			if (sp.pos.is_capture_move(move))
 				continue;
 			auto piece_type_from { sp.pos.piece_type_on(move.from_square()) };
  			int  index           = history_index(sp.pos.side_to_move(), piece_type_from.value(), move.to_square());
-			if (move == beta_cutoff_move.value()) {
+			if (move == *m) {
 				update_history(sp, index, bonus);
 				break;
 			}
