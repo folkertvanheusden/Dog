@@ -132,11 +132,14 @@ std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 	tt_internal_bins *const e     = &entries[index];
 
 	for(int i=0; i<N_ITEMS_PER_BIN; i++) {
-		tt_entry cur = std::bit_cast<tt_entry>(e->item[i]);
-		if (cur.hash == uint16_t(hash)) {
-			cur.age = age;
-			e->item[i] = std::bit_cast<tt_internal_entry>(cur);
-			return cur;
+		tt_entry cur_data = std::bit_cast<tt_entry>(e->item[i].data);
+		uint64_t cur_hash = e->item[i].hash;
+		if ((cur_hash ^ e->item[i].data) == hash) {
+			cur_data.age = age;
+			uint64_t record = std::bit_cast<uint64_t>(cur_data);
+			cur_hash    ^= record;
+			e->item[i] = { cur_hash, record };
+			return cur_data;
 		}
 	}
 
@@ -147,19 +150,21 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 {
 	const uint64_t          index { fastrange(hash, n_entries) };
 	tt_internal_bins *const e     { &entries[index]            };
-	const uint16_t          compare_hash { hash    };
 	int                     use_item     { 0       };
 	int                     best_depth   { INT_MAX };
 
 	assert(m.has_value() == false || m.value() < 0x40000);
 
 	for(int i=0; i<N_ITEMS_PER_BIN; i++) {
-		tt_entry cur = std::bit_cast<tt_entry>(e->item[i]);
+		tt_entry cur_data = std::bit_cast<tt_entry>(e->item[i].data);
+		uint64_t cur_hash = e->item[i].hash;
 
-		if (compare_hash == cur.hash) {
-                        if (cur.depth > d || (f != EXACT && cur.depth == d)) {
-                                cur.age = age;
-				e->item[i] = std::bit_cast<tt_internal_entry>(cur);
+		if ((cur_hash ^ e->item[i].data) == hash) {
+                        if (cur_data.depth > d || (f != EXACT && cur_data.depth == d)) {
+                                cur_data.age = age;
+				uint64_t record = std::bit_cast<uint64_t>(cur_data);
+				cur_hash = hash ^ record;
+				e->item[i] = { cur_hash, record };
                                 return;
                         }
 
@@ -167,8 +172,8 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 			break;
 		}
 
-		if (cur.age != age || cur.depth < best_depth) {
-			best_depth = cur.depth;
+		if (cur_data.age != age || cur_data.depth < best_depth) {
+			best_depth = cur_data.depth;
 			use_item   = i;
 		}	
 	 }
@@ -177,29 +182,28 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
 	if (m.has_value())
 		new_M = m->value();
 	else {
-		auto tt_item = std::bit_cast<tt_entry>(e->item[use_item]);
-	       	if (tt_item.hash == compare_hash)
+		auto item    = e->item[use_item];
+		auto tt_item = std::bit_cast<tt_entry>(item.data);
+	       	if (item.hash == hash)
 			new_M = tt_item.M;
 	}
 
-	tt_entry cur = {
-		.hash  { compare_hash   },
-		.score { int16_t(score) },
-		.depth { uint8_t(d)     },
+	tt_entry cur_data = {
 		.M     { new_M          },
 		.flags { f              },
+		.score { int16_t(score) },
+		.depth { uint8_t(d)     },
 		.age   { age            },
 	};
-	e->item[use_item] = std::bit_cast<tt_internal_entry>(cur);
+	uint64_t record = std::bit_cast<uint64_t>(cur_data);
+	e->item[use_item] = { hash ^ record, record };
 }
 
 int tt::get_per_mille_filled() const
 {
 	int count = 0;
-	for(int i=0; i<1000; i++) {
-		tt_entry cur = std::bit_cast<tt_entry>(entries[i].item[0]);
-		count += !!cur.hash;
-	}
+	for(int i=0; i<1000; i++)
+		count += !!entries[i].item[0].hash;
 	return count;
 }
 
