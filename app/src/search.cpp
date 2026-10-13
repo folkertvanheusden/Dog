@@ -328,7 +328,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 			if (best_score > start_alpha && m.has_value())
 				tti.store(hash, flag, 0, work_score, m.value());
 			else
-				tti.store(hash, flag, 0, work_score);
+				tti.store(hash, flag, 0, work_score, {});
 		}
 	}
 
@@ -652,7 +652,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		if (best_score > start_alpha && m->value())
 			tti.store(hash, flag, depth, work_score, *m);
 		else
-			tti.store(hash, flag, depth, work_score);
+			tti.store(hash, flag, depth, work_score, {});
 	}
 
 	return best_score;

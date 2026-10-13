@@ -22,17 +22,23 @@ typedef struct __PRAGMA_PACKED__
 
 typedef uint64_t tt_internal_entry;
 
+#define N_ITEMS_PER_BIN 4
+typedef struct __PRAGMA_PACKED__
+{
+	tt_internal_entry item[N_ITEMS_PER_BIN];
+} tt_internal_bins;
+
 class tt final
 {
 private:
-	tt_internal_entry *entries { nullptr };
+	tt_internal_bins *entries { nullptr };
 #if defined(ESP32)
 #define ESP32_TT_RAM_SIZE 98304
-	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_entry) };
+	uint64_t n_entries { ESP32_TT_RAM_SIZE / sizeof(tt_internal_bins) };
 #elif defined(__ANDROID__)
-	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_entry) };
+	uint64_t n_entries { 16 * 1024 * 1024  / sizeof(tt_internal_bins) };
 #elif defined(linux) || defined(_WIN32) || defined(__APPLE__)
-	uint64_t n_entries { 256 * 1024 * 1024  / sizeof(tt_entry) };
+	uint64_t n_entries { 256 * 1024 * 1024  / sizeof(tt_internal_bins) };
 #endif
 	void allocate();
 
@@ -52,8 +58,7 @@ public:
 	void     inc_age() { age++; }
 
 	std::optional<tt_entry> lookup(const uint64_t board_hash);
-	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m);
-	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score);
+	void store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const std::optional<libchess::Move> & m);
 };
 
 int eval_to_tt  (const int eval, const int ply);

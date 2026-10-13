@@ -21,7 +21,7 @@
 #include "tt.h"
 
 
-static_assert(sizeof(tt_internal_entry) == 8, "tt_internal_entry must be 8 bytes in size");
+static_assert(sizeof(tt_entry) == 8, "tt_entry must be 8 bytes in size");
 
 tt tti;
 
@@ -40,7 +40,7 @@ void tt::debug_helper()
 {
 #if !defined(NDEBUG)
 #if !defined(_WIN32) && !defined(ESP32) && !defined(__ANDROID__) && !defined(__APPLE__)
-	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_internal_entry));
+	VALGRIND_HG_DISABLE_CHECKING(entries, n_entries * sizeof(tt_internal_bins));
 #endif
 #endif
 }
@@ -53,42 +53,42 @@ void tt::allocate()
 		constexpr const size_t max_sp_size = 4 * 1024l * 1024l;
 		psram_size = std::min(psram_size, max_sp_size);
 		printf("Using %zu bytes of PSRAM\n", psram_size);
-		n_entries = psram_size / sizeof(tt_internal_entry);
-		entries = reinterpret_cast<tt_internal_entry *>(heap_caps_malloc(n_entries * sizeof(tt_internal_entry), MALLOC_CAP_SPIRAM));
+		n_entries = psram_size / sizeof(tt_internal_bins);
+		entries = reinterpret_cast<tt_internal_bins *>(heap_caps_malloc(n_entries * sizeof(tt_internal_bins), MALLOC_CAP_SPIRAM));
 	}
 	else {
 		printf("No PSRAM\n");
 		for(;;) {
-			auto n_bytes = n_entries * sizeof(tt_internal_entry);
+			auto n_bytes = n_entries * sizeof(tt_internal_bins);
 			printf("Using %zu bytes of RAM\n", size_t(n_bytes));
-			entries = reinterpret_cast<tt_internal_entry *>(malloc(n_bytes));
+			entries = reinterpret_cast<tt_internal_bins *>(malloc(n_bytes));
 			if (entries)
 				break;
-			n_entries = std::max(uint64_t(0), n_entries - 1024 / sizeof(tt_internal_entry));
+			n_entries = std::max(uint64_t(0), n_entries - 1024 / sizeof(tt_internal_bins));
 			if (n_entries == 0)
 				break;
 		}
 	}
 #else
-	size_t s = n_entries * sizeof(tt_internal_entry);
+	size_t s = n_entries * sizeof(tt_internal_bins);
 #if defined(linux)
 	if (posix_memalign(reinterpret_cast<void **>(&entries), 1024 * 1024 * 2, s)) {
 		printf("# posix_memalign failed: %s\n", strerror(errno));
-		entries = reinterpret_cast<tt_internal_entry *>(malloc(s));
+		entries = reinterpret_cast<tt_internal_bins *>(malloc(s));
 	}
 	else {
 		if (madvise(entries, s, MADV_HUGEPAGE) == -1)
 			printf("# madvise failed: %s\n", strerror(errno));
 	}
 #else
-	entries = reinterpret_cast<tt_internal_entry *>(malloc(s));
+	entries = reinterpret_cast<tt_internal_bins *>(malloc(s));
 #endif
 #endif
 }
 
 void tt::set_size(const uint64_t s)
 {
-	n_entries = std::max(uint64_t(2), s / sizeof(tt_internal_entry));
+	n_entries = std::max(uint64_t(2), s / sizeof(tt_internal_bins));
 	free(entries);
 	allocate();
 	reset();
@@ -97,7 +97,7 @@ void tt::set_size(const uint64_t s)
 
 int tt::get_size() const
 {
-	return n_entries * sizeof(tt_internal_entry);
+	return n_entries * sizeof(tt_internal_bins);
 }
 
 uint64_t tt::get_n() const
@@ -107,7 +107,7 @@ uint64_t tt::get_n() const
 
 void tt::reset()
 {
-	memset(entries, 0x00, sizeof(tt_internal_entry) * n_entries);
+	memset(entries, 0x00, sizeof(tt_internal_bins) * n_entries);
 }
 
 // see https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
@@ -128,66 +128,70 @@ inline uint64_t fastrange64(uint64_t word, uint64_t p)
 
 std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 {
-	uint64_t index = fastrange(hash, n_entries);
-	tt_internal_entry *const e     = &entries[index];
-	tt_entry                 cur   = std::bit_cast<tt_entry>(*e);
+	uint64_t                index = fastrange(hash, n_entries);
+	tt_internal_bins *const e     = &entries[index];
 
-	if (cur.hash == uint16_t(hash)) {
-		cur.age = age;
-		*e = std::bit_cast<tt_internal_entry>(cur);
-		return cur;
+	for(int i=0; i<N_ITEMS_PER_BIN; i++) {
+		tt_entry cur   = std::bit_cast<tt_entry>(e->item[i]);
+		if (cur.hash == uint16_t(hash)) {
+			cur.age = age;
+			e->item[i] = std::bit_cast<tt_internal_entry>(cur);
+			return cur;
+		}
 	}
 
 	return { };
 }
 
-void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const libchess::Move & m)
+void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score, const std::optional<libchess::Move> & m)
 {
-	uint64_t index = fastrange(hash, n_entries);
-	tt_internal_entry *const e     = &entries[index];
-	tt_entry                 cur   = std::bit_cast<tt_entry>(*e);
+	const uint64_t          index { fastrange(hash, n_entries) };
+	tt_internal_bins *const e     { &entries[index]            };
+	const uint16_t          compare_hash { hash    };
+	int                     use_item     { 0       };
+	int                     best_depth   { INT_MAX };
 
-	assert(m.value() < 0x40000);
+	assert(m.has_value() == false || m.value() < 0x40000);
 
-	uint16_t compare_hash { hash };
-	if (compare_hash != cur.hash || cur.age != age || d > cur.depth) {
-		cur = {
-			.hash  { compare_hash   },
-			.score { int16_t(score) },
-			.depth { uint8_t(d)     },
-			.M     { m.value()      },
-			.flags { f              },
-			.age   { age            },
-		};
-		*e = std::bit_cast<tt_internal_entry>(cur);
+	for(int i=0; i<N_ITEMS_PER_BIN; i++) {
+		tt_entry cur = std::bit_cast<tt_entry>(e->item[i]);
+
+		if (compare_hash == cur.hash) {
+			use_item = i;
+			break;
+		}
+
+		if ((cur.age != age && use_item == -1) || cur.depth < best_depth) {
+			best_depth = cur.depth;
+			use_item   = i;
+		}	
+	 }
+
+	uint32_t new_M { };
+	if (m.has_value())
+		new_M = m->value();
+	else {
+		auto tt_item = std::bit_cast<tt_entry>(e->item[use_item]);
+	       	if (tt_item.hash == compare_hash)
+			new_M = tt_item.M;
 	}
-}
 
-void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const int score)
-{
-	uint64_t                 index = fastrange(hash, n_entries);
-	tt_internal_entry *const e     = &entries[index];
-	tt_entry                 cur   = std::bit_cast<tt_entry>(*e);
-
-	uint16_t compare_hash { hash };
-	if (compare_hash != cur.hash || cur.age != age || d > cur.depth) {
-		cur = {
-			.hash  { compare_hash   },
-			.score { int16_t(score) },
-			.depth { uint8_t(d)     },
-			.M     { cur.hash == uint16_t(hash) ? cur.M : 0 },
-			.flags { f              },
-			.age   { age            },
-		};
-		*e = std::bit_cast<tt_internal_entry>(cur);
-	}
+	tt_entry cur = {
+		.hash  { compare_hash   },
+		.score { int16_t(score) },
+		.depth { uint8_t(d)     },
+		.M     { new_M          },
+		.flags { f              },
+		.age   { age            },
+	};
+	e->item[use_item] = std::bit_cast<tt_internal_entry>(cur);
 }
 
 int tt::get_per_mille_filled() const
 {
 	int count = 0;
 	for(int i=0; i<1000; i++) {
-		tt_entry cur = std::bit_cast<tt_entry>(entries[i]);
+		tt_entry cur = std::bit_cast<tt_entry>(entries[i].item[0]);
 		count += !!cur.hash;
 	}
 	return count;
