@@ -25,12 +25,14 @@ void remove_piece(Eval *const e, const Square & loc, const PieceType & pt, const
 {
 	e->remove_piece(pt, loc, is_white);
 	undos->at((*n_undos)++) = { loc, pt, is_white, true };
+	assert(n_undos <= 4);
 }
 
 void add_piece(Eval *const e, const Square & loc, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
 {
 	e->add_piece(pt, loc, is_white);
 	undos->at((*n_undos)++) = { loc, pt, is_white, false };
+	assert(n_undos <= 4);
 }
 
 void move_piece(Eval *const e, const Square & from, const Square & to, const PieceType & pt, const bool is_white, std::array<undo_t, 4> *const undos, int *const n_undos)
@@ -110,9 +112,11 @@ std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, Position & pos, 
 					assert(pos.piece_type_on(constants::F8).has_value() == false);
 					move_piece(e, constants::H8, constants::F8, constants::ROOK, false, &actions, &n_actions);
 					break;
+#if !defined(NDEBUG)
 				default:
 					assert(false);
 					break;
+#endif
 			}
 			break;
 		case Move::Type::PROMOTION:
@@ -132,10 +136,12 @@ std::pair<int, std::array<undo_t, 4> > make_move(Eval *const e, Position & pos, 
 			remove_piece(e, from_square, constants::PAWN, is_white, &actions, &n_actions);
 			add_piece   (e, to_square,  *promotion_pt,    is_white, &actions, &n_actions);
 			break;
+#if !defined(NDEBUG)
 		default:
 			printf("type is %d\n", int(move.type()));
 			assert(false);
 			break;
+#endif
 	}
 
 	pos.make_move(move);
@@ -162,7 +168,7 @@ void unmake_move(Eval *const e, Position & pos, const std::pair<int, std::array<
 	for(int i=0; i<actions.first; i++) {
 		auto & action = actions.second[i];
 		if (action.is_put)
-			e->add_piece(action.type, action.location, action.is_white);
+			e->add_piece   (action.type, action.location, action.is_white);
 		else
 			e->remove_piece(action.type, action.location, action.is_white);
 	}
