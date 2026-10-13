@@ -132,12 +132,12 @@ std::optional<tt_entry> IRAM_ATTR tt::lookup(const uint64_t hash)
 	tt_internal_bins *const e     = &entries[index];
 
 	for(int i=0; i<N_ITEMS_PER_BIN; i++) {
-		tt_entry cur_data = std::bit_cast<tt_entry>(e->item[i].data);
 		uint64_t cur_hash = e->item[i].hash;
+		tt_entry cur_data = std::bit_cast<tt_entry>(e->item[i].data);
 		if ((cur_hash ^ e->item[i].data) == hash) {
 			cur_data.age = age;
 			uint64_t record = std::bit_cast<uint64_t>(cur_data);
-			cur_hash    ^= record;
+			cur_hash    = hash ^ record;
 			e->item[i] = { cur_hash, record };
 			return cur_data;
 		}
@@ -163,8 +163,7 @@ void tt::store(const uint64_t hash, const tt_entry_flag f, const int d, const in
                         if (cur_data.depth > d || (f != EXACT && cur_data.depth == d)) {
                                 cur_data.age = age;
 				uint64_t record = std::bit_cast<uint64_t>(cur_data);
-				cur_hash = hash ^ record;
-				e->item[i] = { cur_hash, record };
+				e->item[i] = { hash ^ record, record };
                                 return;
                         }
 
