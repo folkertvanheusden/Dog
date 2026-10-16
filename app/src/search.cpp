@@ -514,7 +514,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	int     lmr_start  = !in_check && depth >= 2 ? 4 : 999;
 
 	// generate list of scores
-	size_t           n_moves { move_list.size() };
+	size_t           n_moves { size_t(move_list.size()) };
  	std::vector<int> move_scores(n_moves);
 	for(size_t i=0; i<n_moves; i++)
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
@@ -734,7 +734,7 @@ std::string emit_result(const int best_score, const uint64_t thought_ms, const s
 			nodes.second, tti.get_per_mille_filled(), pv_str.c_str());
 }
 
-void emit(const std::string & text, const bool is_tui)
+void emit(const std::string & text, const bool)
 {
 #if defined(ESP32)
 	if (is_tui)
