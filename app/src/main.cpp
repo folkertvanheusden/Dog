@@ -184,7 +184,7 @@ void set_led(const uint8_t r, const uint8_t g, const uint8_t b)
 	set_ws2812(r, g, b);
 }
 #else
-void set_led(const uint8_t r, const uint8_t g, const uint8_t b)
+void set_led(const uint8_t, const uint8_t, const uint8_t)
 {
 }
 #endif
@@ -522,7 +522,7 @@ auto allow_ponder_handler = [](const bool value) {
 	printf("# Ponder %s\n", value ? "enabled" : "disabled");
 };
 
-auto commerial_option_handler = [](const std::string & value) { };
+auto commerial_option_handler = [](const std::string &) { };
 
 auto opponent_option_handler = [](const std::string & value) {
 	my_trace("# Playing against %s\n", value.c_str());
@@ -621,7 +621,7 @@ int check_min_stack_size(const search_pars_t & sp)
 #endif
 
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
-void gpio_set_level(int a, int b)
+void gpio_set_level(int, int)
 {
 }
 #endif
