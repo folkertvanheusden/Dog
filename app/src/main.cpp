@@ -654,6 +654,52 @@ std::pair<uint64_t, uint64_t> simple_search_statistics()
 	return { nodes_visited, syzygy_query_hits };
 }
 
+void auto_play(std::optional<int> think_time_min, std::optional<int> think_time_max, std::optional<int> max_depth)
+{
+	init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
+
+	chess_stats cs_sum;
+	while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
+		reset_search_statistics();
+
+		prepare_threads_state();
+
+		set_led(0, 255, 0);
+
+		// put
+		{
+			std::unique_lock<std::mutex> lck(work.search_fen_lock);
+			work.search_think_time_min = think_time_min.has_value() ? think_time_min.value() : -1;
+			work.search_think_time_max = think_time_max.has_value() ? think_time_max.value() : -1;
+			work.search_is_abs_time = true;
+			work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
+			work.search_max_n_nodes.reset();
+			work.search_version++;
+			work.search_best_move.reset();
+			work.search_best_score = -32768;
+			work.search_output     = true;
+			work.search_cv.notify_all();
+		}
+		wait_searches_started(true);
+		// get
+		{
+			std::unique_lock<std::mutex> lck(work.search_fen_lock);
+			while(work.search_best_move.has_value() == false || work.search_count_running != 0)
+				work.search_cv_finished.wait(lck);
+		}
+
+		set_led(0, 0, 255);
+
+		cs_sum.add(calculate_search_statistics());
+
+		printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.value().to_str().c_str(), work.search_best_score);
+
+		make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, work.search_best_move.value());
+	}
+
+	printf("\nFinished.\n");
+}
+
 void uci_hello() {
 #if defined(__ANDROID__)
 	__android_log_print(ANDROID_LOG_INFO, APPNAME, "HELLO, THIS IS DOG");
@@ -785,53 +831,13 @@ void main_task()
 					think_time_min = std::stoi(temp);
 					think_time_max = think_time_min;
 				}
+
+				auto_play(think_time_min, think_time_max, max_depth);
 			}
 			catch(...) {
 				printf("No or invalid think time (ms) given, using %d instead\n", think_time_min.value());
 			}
 
-			init_move(sp.at(0)->nnue_eval, sp.at(0)->pos);
-
-			chess_stats cs_sum;
-			while(sp.at(0)->pos.game_state() == libchess::Position::GameState::IN_PROGRESS) {
-				reset_search_statistics();
-
-				prepare_threads_state();
-
-				set_led(0, 255, 0);
-
-				// put
-				{
-					std::unique_lock<std::mutex> lck(work.search_fen_lock);
-					work.search_think_time_min = think_time_min.has_value() ? think_time_min.value() : -1;
-					work.search_think_time_max = think_time_max.has_value() ? think_time_max.value() : -1;
-					work.search_is_abs_time = true;
-					work.search_max_depth   = max_depth.has_value() ? max_depth.value() : - 1;
-					work.search_max_n_nodes.reset();
-					work.search_version++;
-					work.search_best_move.reset();
-					work.search_best_score = -32768;
-					work.search_output     = true;
-					work.search_cv.notify_all();
-				}
-				wait_searches_started(true);
-				// get
-				{
-					std::unique_lock<std::mutex> lck(work.search_fen_lock);
-					while(work.search_best_move.has_value() == false || work.search_count_running != 0)
-						work.search_cv_finished.wait(lck);
-				}
-
-				set_led(0, 0, 255);
-
-				cs_sum.add(calculate_search_statistics());
-
-				printf("# %s %s [%d]\n", sp.at(0)->pos.fen().c_str(), work.search_best_move.value().to_str().c_str(), work.search_best_score);
-
-				make_move(sp.at(0)->nnue_eval, sp.at(0)->pos, work.search_best_move.value());
-			}
-
-			printf("\nFinished.\n");
 		}
 		catch(const std::exception& e) {
 #if defined(__ANDROID__)
@@ -1293,7 +1299,7 @@ int main(int argc, char *argv[])
 	bool tui          = false;
 	int  thread_count =  1;
 	int  c            = -1;
-	while((c = getopt(argc, argv, "b:Tt:ps:UR:rH:Q:h")) != -1) {
+	while((c = getopt(argc, argv, "b:Tt:ps:UR:rH:Q:Ah")) != -1) {
 		if (c == 'U') {
 			run_tests();
 			return 1;
@@ -1331,6 +1337,12 @@ int main(int argc, char *argv[])
 			my_trace_file = optarg;
                 else if (c == 'r')
                         trace_enabled = true;
+                else if (c == 'A') {
+			allocate_threads(thread_count);
+			auto_play(1000, 2000, { });
+			delete_threads();
+			return 0;
+		}
 		else if (c == 'H')
 			tti.set_size(uint64_t(atol(optarg)) * 1024l * 1024l);
 		else {
