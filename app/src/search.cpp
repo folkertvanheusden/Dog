@@ -241,6 +241,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 				continue;
 		}
 
+		// TODO: before the see-alike check above?
 		n_played++;
 
 		pos.make_move(move);
