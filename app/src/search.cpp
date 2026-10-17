@@ -223,6 +223,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	}
 
 	int  n_played  = 0;
+	bool any_legal = 0;
 	auto move_list = gen_qs_moves(pos);
 
 	sort_movelist_compare smc(pos, sp);
@@ -231,6 +232,8 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 	for(auto move : move_list) {
 		if (pos.is_legal_generated_move(move) == false)
 			continue;
+
+		any_legal = true;
 
 		if (!in_check && pos.is_capture_move(move)) {
 			auto piece_to    = pos.piece_on(move.to_square());
@@ -241,7 +244,6 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 				continue;
 		}
 
-		// TODO: before the see-alike check above?
 		n_played++;
 
 		pos.make_move(move);
@@ -266,7 +268,7 @@ int qs(libchess::Position & pos, int alpha, int beta, int qsdepth, search_pars_t
 			break;
 	}
 
-	if (n_played == 0) {
+	if (any_legal == false) {
 		if (in_check)
 			best_score = -10000 + qsdepth;
 		else if (best_score == -32767)
