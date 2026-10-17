@@ -28,6 +28,7 @@ public:
 		uint32_t  qtt_hit;
 		uint32_t  qtt_store;
 		uint32_t  qtt_cutoff;
+		uint32_t  qtt_invalid;
 
 		uint32_t  n_null_move;
 		uint32_t  n_null_move_hit;

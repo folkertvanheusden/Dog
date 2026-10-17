@@ -212,19 +212,28 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 		if (te.has_value()) {  // TT hit?
 			sp.cs.data.qtt_hit++;
 
-			int  score      = te.value().score;
-			int  work_score = eval_from_tt(score, qsdepth);
-			auto flag       { te.value().flags };
-			bool use        = flag == EXACT ||
-				(flag == LOWERBOUND && work_score >= beta) ||
-				(flag == UPPERBOUND && work_score <= alpha);
-			if (use) {
-				sp.cs.data.qtt_cutoff++;
-				return work_score;
+			bool valid = true;
+			if (te.value().M) {  // move stored in TT?
+				tt_move.emplace(libchess::Move(te.value().M));
+				if (sp.pos.is_legal_move(tt_move.value()) == false) {
+					sp.cs.data.qtt_invalid++; // move stored in TT is not valid - TT-collision
+					tt_move.reset();
+					valid = false;
+				}
 			}
 
-			if (te.value().M)  // move stored in TT?
-				tt_move.emplace(libchess::Move(te.value().M));
+			if (valid) {
+				int  score      = te.value().score;
+				int  work_score = eval_from_tt(score, qsdepth);
+				auto flag       { te.value().flags };
+				bool use        = flag == EXACT ||
+					(flag == LOWERBOUND && work_score >= beta) ||
+					(flag == UPPERBOUND && work_score <= alpha);
+				if (use) {
+					sp.cs.data.qtt_cutoff++;
+					return work_score;
+				}
+			}
 		}
 	}
 	////////

@@ -586,10 +586,11 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
 			cs.data.tt_store,
 			cs.data.tt_invalid, perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
-	my_printf("QS TT queries : %u (total), %s (hits), %u (store)\n",
+	my_printf("QS TT queries : %u (total), %s (hits), %u (store), %u/%s (invalid)\n",
 			cs.data.qtt_query,
 			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),
-			cs.data.qtt_store);
+			cs.data.qtt_store,
+			cs.data.qtt_invalid, perc(cs.data.qtt_query, cs.data.qtt_invalid).c_str());
 	my_printf("TT cut-off    : %s (search), %s (qs)\n",
 			perc(cs.data.tt_query,  cs.data.tt_cutoff ).c_str(),
 			perc(cs.data.qtt_query, cs.data.qtt_cutoff).c_str());

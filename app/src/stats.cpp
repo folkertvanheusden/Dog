@@ -43,6 +43,7 @@ void chess_stats::add(const chess_stats & source)
 	this->data.qtt_hit    += source.data.qtt_hit;
 	this->data.qtt_store  += source.data.qtt_store;
         this->data.qtt_cutoff += source.data.qtt_cutoff;
+        this->data.qtt_invalid += source.data.qtt_invalid;
 
 	this->data.n_null_move     += source.data.n_null_move;
 	this->data.n_null_move_hit += source.data.n_null_move_hit;
