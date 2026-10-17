@@ -581,11 +581,11 @@ void show_stats(const libchess::Position & pos, const chess_stats & cs, const bo
 	my_printf("Standing pats : %u\n", cs.data.n_standing_pat);
 	my_printf("Endings       : %u (check), %u (stale), %u (draw)\n", cs.data.n_checkmate, cs.data.n_stalemate, cs.data.n_draws);
 	my_printf("Asp.win resize: %u\n", cs.data.asp_win_resizes);
-	my_printf("TT queries    : %u (total), %s (hits), %u (store), %s (invalid)\n",
+	my_printf("TT queries    : %u (total), %s (hits), %u (store), %u/%s (invalid)\n",
 			cs.data.tt_query,
 			perc(cs.data.tt_query, cs.data.tt_hit).c_str(),
 			cs.data.tt_store,
-			perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
+			cs.data.tt_invalid, perc(cs.data.tt_query, cs.data.tt_invalid).c_str());
 	my_printf("QS TT queries : %u (total), %s (hits), %u (store)\n",
 			cs.data.qtt_query,
 			perc(cs.data.qtt_query, cs.data.qtt_hit).c_str(),

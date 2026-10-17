@@ -389,15 +389,17 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
         if (te.has_value()) {  // TT hit?
 		sp.cs.data.tt_hit++;
+		bool valid { true };
 		if (te.value().M) {  // move stored in TT?
 			tt_move.emplace(libchess::Move(te.value().M));
 			if (sp.pos.is_legal_move(tt_move.value()) == false) {
 				sp.cs.data.tt_invalid++; // move stored in TT is not valid - TT-collision
 				tt_move.reset();
+				valid = false;
 			}
 		}
 
-		if (te.value().depth >= depth && !is_pv) {
+		if (valid && te.value().depth >= depth && !is_pv) {
 			int score      = te.value().score;
 			int work_score = eval_from_tt(score, csd);
 			auto flag      { te.value().flags };
@@ -422,6 +424,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	else if (is_pv && depth >= 4) {  // IIR, Internal Iterative Reductions
 		depth--;
 	}
+
 	////////
 #if defined(linux) || defined(_WIN32) || defined(__ANDROID__) || defined(__APPLE__)
 	if (with_syzygy && !is_root_position) {
