@@ -254,7 +254,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 	int  n_played  = 0;
 	auto move_list { gen_qs_moves(sp.pos) };
-	std::optional<libchess::Move> m;
+	libchess::Move m;
 
 	sort_movelist_compare smc(sp);
 	if (tt_move.has_value())
@@ -291,7 +291,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 		if (score > best_score) {
 			best_score = score;
-			m.emplace(move);
+			m = move;
 
 			if (score > alpha) {
 				if (score >= beta) {
@@ -334,8 +334,8 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 
 			int work_score = eval_to_tt(best_score, qsdepth);
 
-			if (best_score > start_alpha && m.has_value())
-				tti.store(hash, flag, 0, work_score, m.value());
+			if (best_score > start_alpha && m.value())
+				tti.store(hash, flag, 0, work_score, m);
 			else
 				tti.store(hash, flag, 0, work_score);
 		}
