@@ -204,7 +204,7 @@ int qs(int alpha, const int beta, const int qsdepth, const int max_depth, search
 	// TT //
 	std::optional<libchess::Move> tt_move;
 	uint64_t   hash       = sp.pos.hash();
-	const bool perform_tt = qsdepth - max_depth <= 3;
+	const bool perform_tt = qsdepth - max_depth <= 4;
 	if (perform_tt) {
 		std::optional<tt_entry> te { tti.lookup(hash) };
 		sp.cs.data.qtt_query++;
