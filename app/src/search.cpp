@@ -536,7 +536,6 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 	int new_depth_basic = in_check || n_moves == 1 ? depth : depth -1;
 
-	libchess::MoveList child_pv;
 	size_t             m_idx    = 0;
 	while(m_idx < n_moves) {
 		size_t selected_idx { m_idx };
@@ -559,6 +558,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
                 bool is_lmr = false;
                 int  score  = -max_eval;
 
+		libchess::MoveList child_pv;
 		auto undo_actions { make_move(sp.nnue_eval, sp.pos, move) };
 		if (n_played == 0) {
 			score = -search(new_depth_basic, -beta, -alpha, null_move_depth, max_depth, &new_move, sp, &child_pv);
