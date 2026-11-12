@@ -532,6 +532,8 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 		move_scores[i] = smc.move_evaluater(*(move_list.begin() + i));
 
 	bool beta_cutoff_move { };
+	libchess::MoveList bco_list;
+
 	libchess::Move new_move;
 
 	int new_depth_basic = in_check || n_moves == 1 ? depth : depth -1;
@@ -555,6 +557,9 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 		sp.cur_move = move.value();
 
+		if (sp.pos.is_capture_move(move) == false)
+			bco_list.add(move);
+
                 bool is_lmr = false;
                 int  score  = -max_eval;
 
@@ -572,7 +577,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 
 				if (alpha == beta -1) {
 					int reduction = lmr_reductions[std::min(N_LMR_DEPTH - 1, int(depth))][std::min(N_LMR_MOVES - 1, n_played)];
-					new_depth = std::max(depth - reduction, 0);
+					new_depth = std::max(depth - 1 - reduction, 0);
 				}
 				else if (n_played >= lmr_start + 2)
 					new_depth = new_depth * 2 / 3;
@@ -621,7 +626,7 @@ int search(int depth, int alpha, int beta, const int null_move_depth, const int1
 	// https://www.chessprogramming.org/History_Heuristic#History_Bonuses
 	if (beta_cutoff_move) {
 		const int bonus { depth * 30 - 25 };
-		for(auto & move : move_list) {
+		for(auto & move : bco_list) {
 			if (sp.pos.is_capture_move(move))
 				continue;
 			auto piece_type_from { sp.pos.piece_type_on(move.from_square()) };
